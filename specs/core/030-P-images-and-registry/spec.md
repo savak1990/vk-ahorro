@@ -1,0 +1,50 @@
+---
+id: "CORE-030"
+status: "DRAFT"
+updated: "2026-09-21"
+---
+# 030 — Container images, registry, and CI
+
+**Status note:** Draft.
+
+**Complexity:** Medium
+**Risk:** Medium — a CI loop (the SHA commit retriggers the build) or a `latest` tag breaks Argo's diff.
+**Estimated cost:** ~1 day
+**Recommended model:** Sonnet.
+**Depends on:** 020-go-hello-service, 070-flutter-shell-trim (for the web image)
+**Lifecycle class(es) touched:** None in AWS. GHCR packages are persistent by nature: they survive a platform `make down`.
+
+## Scope
+
+Multi-arch images for `hello` and `web`, pushed to GHCR, built locally by
+Make and in CI by GitHub Actions. The CD handoff is a Git commit of the new
+SHA into `gitops/values.yaml` (platform ADR 0015).
+
+Excludes: Helm chart packaging and push (040), the runtime `config.json`
+content for web (080).
+
+## Requirements
+
+1. `deploy/docker/hello.Dockerfile`: builder `golang:1.26` with `--platform=$BUILDPLATFORM`, `CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH`, final stage `gcr.io/distroless/static-debian12:nonroot`, `EXPOSE 8080`, `ENTRYPOINT ["/hello"]`.
+2. `deploy/docker/web.Dockerfile`: build stage `ghcr.io/cirruslabs/flutter:<pinned>` with `--platform=$BUILDPLATFORM` running `flutter build web --release`; final stage `nginxinc/nginx-unprivileged:<pinned>` serving `/usr/share/nginx/html` on port 8080 with SPA fallback (`try_files $uri /index.html`) and `Cache-Control: no-store` for `config.json` and `index.html`. `config.json` MUST be replaceable at runtime by a mounted file.
+3. Both images MUST be built for `linux/amd64,linux/arm64` with `docker buildx` (the platform runs arm64 Karpenter nodes on AWS and amd64 on Civo).
+4. Tags MUST be the full commit SHA: `ghcr.io/savak1990/vk-ahorro/hello:<sha>`, `.../web:<sha>`. `latest` MUST NOT be pushed (constitution §5).
+5. Make targets: `image-build SVC=<hello|web>` (single arch, `--load`, for local runs), `image-push SVC=<hello|web>` (multi-arch, push), `images-push` (both). Variables `REGISTRY ?= ghcr.io/savak1990/vk-ahorro`, `IMAGE_TAG ?= $(shell git rev-parse HEAD)`.
+6. `.github/workflows/ci.yml` runs on pull requests: `go test`, `golangci-lint`, `helm lint`, `flutter analyze`, `flutter test`, `terraform fmt -check`, and the root-domain grep from 000.
+7. `.github/workflows/release.yml` runs on push to `main` with `paths-ignore: [gitops/**, docs/**, specs/**]`: builds and pushes both images, packages and pushes both charts (040), then commits the new SHA into `gitops/values.yaml` with a `[skip ci]` message. Permissions: `contents: write`, `packages: write`. No AWS credentials in this workflow.
+8. GHCR packages `hello`, `web`, `charts/hello`, `charts/web` MUST be public so the cluster pulls without a secret.
+
+## Implementation hints
+
+- Copy the login and `docker/build-push-action@v6` steps from `vk-lab-platform/.github/workflows/sidecar-image.yml`; add `platforms: linux/amd64,linux/arm64`.
+- Buildx needs a `docker-container` driver for multi-arch: `docker buildx create --use --name vk` once, wrapped in a `buildx-init` target.
+- The Flutter build stage is slow (5–8 min). Cache `~/.pub-cache` with `actions/cache` keyed on `pubspec.lock`.
+- Package visibility is set once in GitHub UI (Packages → package → settings → Change visibility) or via `gh api -X PATCH /user/packages/container/<name>` when the API supports it.
+
+## Testing / acceptance criteria
+
+- `make image-build SVC=hello && docker run --rm -p 8080:8080 -e AUTH_DISABLED=true ghcr.io/savak1990/vk-ahorro/hello:<sha>` answers `curl localhost:8080/healthz` on an arm64 Mac.
+- `make images-push` then `docker buildx imagetools inspect ghcr.io/savak1990/vk-ahorro/hello:<sha>` lists `linux/amd64` and `linux/arm64`; same for `web`.
+- `docker run --rm -p 8081:8080 -v $PWD/flutter-ui/web/config.json:/usr/share/nginx/html/config.json:ro .../web:<sha>` serves the Flutter app and the mounted `config.json`.
+- A merged pull request to `main` produces exactly one `release` run, one image push per service, and one `[skip ci]` commit; that commit does not start a second run.
+- `docker pull` of each image works from a machine with no GitHub login.

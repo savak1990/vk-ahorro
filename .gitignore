@@ -1,56 +1,48 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# OS / editor
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
+*.swp
+*.log
 .idea/
+*.iml
+.vscode/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
+# Flutter / Dart (any depth: the app lives under flutter-ui/)
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
 **/doc/api/
 **/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-
-# Symbolication related
+**/ios/Pods/
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
+.env
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Generated per-environment Flutter config (make ui-config)
+flutter-ui/config/*.json
 
-# Terraform state and crash files
+# Go
+bin/
+coverage.out
+
+# Helm
+dist/
+*.tgz
+
+# Terraform / Terragrunt
+**/.terraform/
+**/.terragrunt-cache/
 *.tfstate
 *.tfstate.*
 crash.log
 crash.*.log
-.terraform/
 terraform.tfvars
 terraform.tfvars.json
 
-.env
+# Local kubeconfigs
+.kube/
