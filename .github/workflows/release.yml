@@ -1,6 +1,6 @@
-# Push to main builds and pushes every image. Spec 040 adds the chart push
-# and spec 060 adds the commit of the new SHA into gitops/values.yaml, which
-# is why gitops/** is already ignored here.
+# Push to main builds and pushes every image, then packages and pushes every
+# chart. Spec 060 adds the commit of the new SHA into gitops/values.yaml,
+# which is why gitops/** is already ignored here.
 #
 # Every action is pinned to a full commit SHA; see ci.yml for why.
 name: release
@@ -66,3 +66,39 @@ jobs:
             echo "$HELLO_REF"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # A separate job, so a chart failure does not hide a successful image push.
+  charts:
+    needs: images
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - name: Package and push every chart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "$GITHUB_TOKEN" | helm registry login ghcr.io \
+            --username '${{ github.actor }}' --password-stdin
+          {
+            echo "### Charts"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for dir in deploy/helm/*/; do
+            chart="$(basename "${dir%/}")"
+            make helm-push CHART="$chart"
+            version="$(sed -n 's/^version: *//p' "$dir/Chart.yaml")"
+            echo "oci://ghcr.io/${{ github.repository }}/charts/$chart:$version" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push
 
 .DEFAULT_GOAL := help
 
@@ -21,6 +21,16 @@ BUILDER := vk
 DOCKERFILE = deploy/docker/$(SVC).Dockerfile
 IMAGE = $(REGISTRY)/$(SVC):$(IMAGE_TAG)
 PLATFORMS := linux/amd64,linux/arm64
+
+# Chart coordinates. CHART names a directory under deploy/helm.
+CHART ?=
+CHART_DIR = deploy/helm/$(CHART)
+CHART_VERSION = $(shell sed -n 's/^version: *//p' $(CHART_DIR)/Chart.yaml)
+CHARTS_REGISTRY ?= oci://$(REGISTRY)/charts
+DIST_DIR := $(CURDIR)/dist
+
+# A documented placeholder. The real hostname exists only at install time.
+TEMPLATE_HOST := api-ahorro.lab.example.com
 
 ## Print this help
 help:
@@ -77,3 +87,30 @@ image-push: require-svc buildx-init
 ## Build and push every image
 images-push:
 	@$(MAKE) image-push SVC=hello
+
+## Fail unless CHART names an existing chart
+require-chart:
+	@test -n "$(CHART)" || { echo "set CHART=<chart>, for example: make helm-template CHART=hello" >&2; exit 1; }
+	@test -f "$(CHART_DIR)/Chart.yaml" || { echo "no $(CHART_DIR)/Chart.yaml" >&2; exit 1; }
+
+## Lint every chart
+# lint renders the templates, so the required values must be present or every
+# chart fails on its own guard rather than on a real defect.
+helm-lint:
+	@for c in deploy/helm/*/; do \
+	  helm lint "$$c" --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG); \
+	done
+
+## Render one chart to stdout with a placeholder host. Usage: make helm-template CHART=hello
+helm-template: require-chart
+	@helm template $(CHART) $(CHART_DIR) \
+	  --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG)
+
+## Package one chart into dist/. Usage: make helm-package CHART=hello
+helm-package: require-chart
+	@mkdir -p $(DIST_DIR)
+	helm package $(CHART_DIR) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
+
+## Push one packaged chart to GHCR. Usage: make helm-push CHART=hello
+helm-push: helm-package
+	helm push $(DIST_DIR)/$(CHART)-$(CHART_VERSION).tgz $(CHARTS_REGISTRY)
