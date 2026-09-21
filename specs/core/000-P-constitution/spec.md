@@ -5,7 +5,9 @@ updated: "2026-09-21"
 ---
 # 000 — Constitution
 
-**Status note:** Draft. Becomes DONE when every rule below has one enforcing check (a Make target, a CI job, or a review checklist item).
+**Status note:** Draft. `make specs-check` and `make help` exist since spec 020.
+The remaining criterion is the CI guard against the root domain, which needs the
+workflows of spec 030.
 
 **Complexity:** Small
 **Risk:** Low — a document, but every other spec cites it.

@@ -24,23 +24,23 @@ as-built.
 
 ```text
 vk-ahorro/
-  go.mod                         (planned) module github.com/savak1990/vk-ahorro
-  cmd/hello/main.go              (planned) one entry point per service
-  internal/hello/                (planned) service code: server, handlers, tests
-  internal/platform/auth/        (planned) Cognito JWT verification, shared by every service
-  internal/platform/httpx/       (planned) JSON helpers, request id, CORS, logging
+  go.mod                                   module github.com/savak1990/vk-ahorro
+  cmd/hello/main.go                        one entry point per service
+  internal/hello/                          service code: server, handlers, tests
+  internal/platform/auth/                  Cognito JWT verification, shared by every service
+  internal/platform/httpx/                 JSON helpers, request id, CORS, logging
   deploy/docker/                 (planned) hello.Dockerfile, web.Dockerfile (multi-arch)
   deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
   deploy/terraform/live/         (planned) Terragrunt units: state, persistent/cognito
   deploy/terraform/modules/      (planned) terraform-state, cognito
   gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
   flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
-  scripts/                       (planned) e2e-smoke.sh, tf state bootstrap
+  scripts/                                 specs-check.sh; later e2e-smoke.sh, tf state bootstrap
   specs/core/                    milestone specs
   docs/architecture.md           this document
   docs/adr/                      decisions
   .github/workflows/             (planned) ci.yml (pull requests), release.yml (main)
-  Makefile                       (planned) the only supported entry points
+  Makefile                                 the only supported entry points
 ```
 
 Rule: platform code never lives here. A platform change is a pull request

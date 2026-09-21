@@ -11,7 +11,7 @@ updated: "2026-09-21"
 **Risk:** Low — deletions only; the compiler reports every dangling reference.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** 010-repo-bootstrap, 090-local-toolchain (to run `flutter analyze`)
+**Depends on:** [010-repo-bootstrap](../010-D-repo-bootstrap/spec.md), 090-local-toolchain (to run `flutter analyze`)
 **Lifecycle class(es) touched:** None.
 
 ## Scope

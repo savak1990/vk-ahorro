@@ -10,24 +10,23 @@ architecture, [`docs/adr/`](docs/adr/) for decisions, and
 
 ## Status
 
-Milestone 0: specs and architecture written. No code beyond the imported
-Flutter client (`flutter-ui/`, the former `ahorro-ui` repository).
-Milestone 1 is `specs/core/`, implemented in numeric order:
+Milestone 1 is `specs/core/`, implemented in numeric order. The Go `hello`
+service runs locally; nothing is containerized or deployed yet.
 
-| Spec | Delivers |
-|---|---|
-| 000 | Constitution |
-| 010 | Repository bootstrap, GitHub publication |
-| 020 | Go `hello` service with Cognito JWT verification |
-| 030 | Multi-arch images on GHCR, CI |
-| 040 | Helm charts on GHCR |
-| 050 | Terraform: state bucket, Cognito |
-| 060 | GitOps chart and the platform pointer |
-| 070 | Flutter trimmed to the shell |
-| 080 | Flutter runtime config and the "+" → hello call |
-| 090 | Local toolchain |
-| 100 | Android, iOS, web |
-| 110 | End-to-end verification |
+| Spec | Delivers | State |
+|---|---|---|
+| 000 | Constitution | open: the CI domain guard arrives with 030 |
+| 010 | Repository bootstrap, GitHub publication | done |
+| 020 | Go `hello` service with Cognito JWT verification | done |
+| 030 | Multi-arch images on GHCR, CI | planned |
+| 040 | Helm charts on GHCR | planned |
+| 050 | Terraform: state bucket, Cognito | planned |
+| 060 | GitOps chart and the platform pointer | planned |
+| 070 | Flutter trimmed to the shell | planned |
+| 080 | Flutter runtime config and the "+" → hello call | planned |
+| 090 | Local toolchain | planned |
+| 100 | Android, iOS, web | planned |
+| 110 | End-to-end verification | planned |
 
 ## Relationship to vk-lab-platform
 
@@ -39,8 +38,8 @@ repository plugs in through one pointer `Application` in the platform
 ## Layout
 
 ```text
-cmd/              service entry points          (planned)
-internal/         service and shared Go code    (planned)
+cmd/hello         the hello service entry point
+internal/         service and shared Go code
 deploy/docker     Dockerfiles                    (planned)
 deploy/helm       one chart per service         (planned)
 deploy/terraform  Terragrunt: state, Cognito    (planned)
@@ -50,7 +49,10 @@ specs/core/       milestone specs
 docs/             architecture, ADRs
 ```
 
-## Make targets (planned)
+## Make targets
+
+Targets without a repository folder yet are planned; `make help` lists the
+ones that exist.
 
 | Group | Targets |
 |---|---|
