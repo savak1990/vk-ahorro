@@ -1,3 +1,5 @@
+// Package httpx holds the HTTP helpers and middleware every Ahorro service
+// shares: JSON responses, request ids, CORS and request logging.
 package httpx
 
 import (
