@@ -11,7 +11,7 @@ updated: "2026-09-21"
 **Risk:** Low — verification only; it consumes platform runtime cost while the cluster is up.
 **Estimated cost:** ~0.5 day · AWS runtime: the platform's `make up` cost for the duration of the run.
 **Recommended model:** Sonnet.
-**Depends on:** every other `core/` spec.
+**Depends on:** every other `core/` spec, 105 included.
 **Lifecycle class(es) touched:** None (reads only).
 
 ## Scope
