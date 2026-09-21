@@ -17,7 +17,7 @@ spec 050, which creates the pool. This spec also added the repository's first
 **Risk:** Low — the JWT middleware is the only part with a security consequence.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** 000-constitution, [010-repo-bootstrap](../010-A-repo-bootstrap/spec.md)
+**Depends on:** 000-constitution, [010-repo-bootstrap](../010-D-repo-bootstrap/spec.md)
 **Lifecycle class(es) touched:** None (source code only).
 
 ## Scope

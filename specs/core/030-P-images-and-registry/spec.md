@@ -48,3 +48,5 @@ content for web (080).
 - `docker run --rm -p 8081:8080 -v $PWD/flutter-ui/web/config.json:/usr/share/nginx/html/config.json:ro .../web:<sha>` serves the Flutter app and the mounted `config.json`.
 - A merged pull request to `main` produces exactly one `release` run, one image push per service, and one `[skip ci]` commit; that commit does not start a second run.
 - `docker pull` of each image works from a machine with no GitHub login.
+- CI fails when a committed file contains the root domain (constitution §4). The
+  check reads the domain from a secret, never from Git.

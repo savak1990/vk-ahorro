@@ -1,13 +1,14 @@
 ---
 id: "CORE-000"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-09-21"
 ---
 # 000 — Constitution
 
-**Status note:** Draft. `make specs-check` and `make help` exist since spec 020.
-The remaining criterion is the CI guard against the root domain, which needs the
-workflows of spec 030.
+**Status note:** Done on 2026-09-21: `make specs-check` and `make help` ship with
+spec 020. The CI guard against the root domain moved to spec 030, which creates
+the workflows. Requirement 4 still binds every spec; only its enforcing job
+lives elsewhere.
 
 **Complexity:** Small
 **Risk:** Low — a document, but every other spec cites it.
@@ -50,5 +51,4 @@ does not restate or override them.
 ## Testing / acceptance criteria
 
 - `make specs-check` exists and passes: every `specs/core/*/spec.md` has front matter, an id, and a status that matches its folder letter.
-- CI fails when a committed file contains the root domain (the check reads the domain from a secret, never from Git).
 - Every `make` target prints a one-line description under `make help`.
