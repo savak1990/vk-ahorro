@@ -30,7 +30,7 @@ spec:
       containers:
         - name: {{ include "svc.name" . }}
           image: {{ include "svc.image" . }}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: {{ include "svc.pullPolicy" . }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
