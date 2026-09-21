@@ -70,6 +70,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      id-token: write
     concurrency:
       group: ci-repo-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
@@ -82,8 +83,20 @@ jobs:
 
       - run: make specs-check
 
-      # Fails closed when the secret is missing: an unset domain must never
-      # look like a clean result.
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      # The parameter is the one delivery path for this value, written by the
+      # platform from its KMS ciphertext. An SSM value is not masked the way a
+      # GitHub secret is, so register the mask before anything can print it.
+      - name: Read the root domain
+        run: |
+          value="$(aws ssm get-parameter --name /account/root_domain \
+            --query Parameter.Value --output text)"
+          echo "::add-mask::$value"
+          echo "ROOT_DOMAIN=$value" >> "$GITHUB_ENV"
+
+      # Fails closed: no role, no parameter, no green.
       - run: make domain-check
-        env:
-          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
