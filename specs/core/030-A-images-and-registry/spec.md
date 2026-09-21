@@ -8,10 +8,12 @@ updated: "2026-09-21"
 **Status note:** The `hello` half is done. Requirements 1, 3, 4, 5 (for
 `hello`) and the root-domain guard of 6 ship in `deploy/docker/hello.Dockerfile`,
 `scripts/domain-guard.sh`, the `image-*` Make targets, `.github/workflows/ci.yml`
-and `.github/workflows/release.yml`. The guard reads a `ROOT_DOMAIN` repository
-secret: `vk-lab-platform` reads the same value from KMS through an OIDC role,
-which this repository cannot do before 050 creates one, and requirement 7 forbids
-AWS credentials in the release workflow. Deferred, with the spec that unblocks
+and `.github/workflows/release.yml`. The guard reads the root domain from the
+platform's SSM parameter `/account/root_domain`, over the `ahorro-ci-role` OIDC
+role that `vk-lab-platform` defines; see ADR 0003. `release.yml` holds no AWS
+credentials, per requirement 7. The `hello` image is public at
+`ghcr.io/savak1990/vk-ahorro/hello:<sha>` for `linux/amd64` and `linux/arm64`.
+Deferred, with the spec that unblocks
 each: requirement 2 and the `web` parts of 3, 4, 5 and 8 (070, and 090 for the
 Flutter toolchain); the `helm lint` step of 6 (040); the `terraform fmt -check`
 step of 6 (050); the `flutter analyze` and `flutter test` steps of 6 (070, 090);
