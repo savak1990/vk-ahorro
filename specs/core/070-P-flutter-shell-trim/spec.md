@@ -32,6 +32,7 @@ Excludes: runtime configuration and the hello call (080), platform folders
 5. `app_state_provider.dart` keeps only `amplify`; `main.dart` keeps the Amplify configure, `Authenticator`, `PlatformProvider`/`PlatformTheme`, and a routes map with `/` only. `dotenv.load` is removed.
 6. `AccountTab` placeholder MUST keep a sign-out button that calls `AmplifyProvider.signOut()`.
 7. One widget test MUST pump `AppShell` with three tabs and a `floatingButtonAction`, tap the FAB, and assert the callback ran.
+8. `.github/workflows/ci.yml` MUST gain `flutter analyze` and `flutter test` steps on pull requests. 030 created the workflow; these steps belong here because this spec is what makes the Flutter code lint-clean. 090 installs the tool locally, not in CI.
 
 ## Implementation hints
 

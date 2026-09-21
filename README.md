@@ -18,14 +18,15 @@ service runs locally; nothing is containerized or deployed yet.
 | 000 | Constitution | done |
 | 010 | Repository bootstrap, GitHub publication | done |
 | 020 | Go `hello` service with Cognito JWT verification | done |
-| 030 | Multi-arch images on GHCR, CI | in progress (`hello` only) |
-| 040 | Helm charts on GHCR | planned |
+| 030 | The `hello` image on GHCR, CI | done |
+| 040 | Helm chart for `hello` on GHCR | planned |
 | 050 | Terraform: state bucket, Cognito | planned |
 | 060 | GitOps chart and the platform pointer | planned |
 | 070 | Flutter trimmed to the shell | planned |
 | 080 | Flutter runtime config and the "+" → hello call | planned |
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | planned |
+| 105 | Web delivery: image, chart, Argo Application | planned |
 | 110 | End-to-end verification | planned |
 
 ## Relationship to vk-lab-platform

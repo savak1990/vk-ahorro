@@ -33,6 +33,7 @@ custom domain for managed login.
 5. Outputs: `user_pool_id`, `client_id`, `e2e_client_id`, `region`, `issuer` (`https://cognito-idp.eu-west-1.amazonaws.com/<pool id>`). The same values MUST be written to SSM as `String` parameters `/vk-ahorro/persistent/cognito/{user_pool_id,client_id,issuer}` so a future in-cluster consumer can read them without Git.
 6. Make targets: `tf-state-up` (idempotent first-run bootstrap, copy `vk-lab-platform/scripts/state-up.sh`), `tf-plan`, `tf-apply`, `tf-outputs` (JSON of every output), `tf-destroy` (refuses unless `CONFIRM_DESTROY=vk-ahorro`; never destroys the state bucket), `tf-fmt`, `tf-validate`.
 7. Terraform MUST never read or write anything under the platform's state buckets.
+8. `.github/workflows/ci.yml` MUST gain a `terraform fmt -check` step on pull requests. 030 created the workflow; the step belongs to the spec that adds the Terraform code.
 
 ## Implementation hints
 
