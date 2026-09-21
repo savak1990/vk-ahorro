@@ -41,7 +41,7 @@ Helm chart packaging and push (040), the CD commit into `gitops/values.yaml`
 
 1. `deploy/docker/hello.Dockerfile`: builder `golang:1.26` with `--platform=$BUILDPLATFORM`, `CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH`, final stage `gcr.io/distroless/static-debian12:nonroot`, `EXPOSE 8080`, `ENTRYPOINT ["/hello"]`.
 2. The image MUST be built for `linux/amd64,linux/arm64` with `docker buildx` (the platform runs arm64 Karpenter nodes on AWS and amd64 on Civo).
-3. Tags MUST be the full commit SHA: `ghcr.io/savak1990/vk-ahorro/hello:<sha>`. `latest` MUST NOT be pushed (constitution §5).
+3. Every push MUST publish the full commit SHA tag `ghcr.io/savak1990/vk-ahorro/hello:<sha>` (constitution §5). It MAY publish additional moving tags for the branch or release tag being built, as a convenience for local runs. `latest` MUST NOT be pushed. GitOps MUST pin the SHA and never a moving tag: Argo diffs manifest text, so a moving tag leaves the rendered manifest unchanged and the old image running.
 4. Make targets: `image-build SVC=<svc>` (single arch, `--load`, for local runs), `image-push SVC=<svc>` (multi-arch, push), `images-push` (every image). Variables `REGISTRY ?= ghcr.io/savak1990/vk-ahorro`, `IMAGE_TAG ?= $(shell git rev-parse HEAD)`. The `SVC` argument MUST work for any service, so 105 adds `web` without changing a target.
 5. `.github/workflows/ci.yml` runs on pull requests: `go test`, `golangci-lint`, a multi-arch image build that is not pushed, `make specs-check`, and the root-domain check from 000. Later specs add their own jobs and steps here.
 6. `.github/workflows/release.yml` runs on push to `main` with `paths-ignore: [gitops/**, docs/**, specs/**]` and builds and pushes the image. Permissions: `contents: read`, `packages: write`. No AWS credentials in this workflow. 060 raises `contents` to `write` when it adds the CD commit.
@@ -58,6 +58,7 @@ Helm chart packaging and push (040), the CD commit into `gitops/values.yaml`
 
 - `make image-build SVC=hello && docker run --rm -p 8080:8080 -e AUTH_DISABLED=true ghcr.io/savak1990/vk-ahorro/hello:<sha>` answers `curl localhost:8080/healthz` on an arm64 Mac.
 - `make images-push` then `docker buildx imagetools inspect ghcr.io/savak1990/vk-ahorro/hello:<sha>` lists `linux/amd64` and `linux/arm64`.
+- After a merge to `main`, `docker pull ghcr.io/savak1990/vk-ahorro/hello:main` resolves to the same digest as that run's SHA tag.
 - `docker pull` of that tag works from a machine with no GitHub login.
 - A merged pull request to `main` produces exactly one `release` run and one image push.
 - CI fails when a committed file contains the root domain (constitution §4). The

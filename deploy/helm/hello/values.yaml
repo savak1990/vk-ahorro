@@ -1,7 +1,10 @@
 image:
   repository: ghcr.io/savak1990/vk-ahorro/hello
-  # Required. The full commit SHA; never latest.
+  # Required. GitOps always pins a commit SHA. A branch or release tag also
+  # works for a local install; never latest.
   tag: ""
+  # Empty derives it from the tag: IfNotPresent for a SHA, Always otherwise.
+  pullPolicy: ""
 
 # Required. The hostname arrives from the platform at install time and is
 # never committed.

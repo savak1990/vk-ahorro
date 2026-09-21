@@ -35,3 +35,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $tag := required "image.tag is required: the full commit SHA, never latest" .Values.image.tag -}}
 {{- printf "%s:%s" .Values.image.repository $tag -}}
 {{- end -}}
+
+{{/*
+A moving tag cached on a node is never re-pulled under IfNotPresent, so the
+node keeps serving an old build. A commit SHA can never move.
+*/}}
+{{- define "svc.pullPolicy" -}}
+{{- if .Values.image.pullPolicy -}}
+{{- .Values.image.pullPolicy -}}
+{{- else if regexMatch "^[0-9a-f]{40}$" .Values.image.tag -}}
+IfNotPresent
+{{- else -}}
+Always
+{{- end -}}
+{{- end -}}
