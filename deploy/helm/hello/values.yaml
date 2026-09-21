@@ -1,0 +1,15 @@
+image:
+  repository: ghcr.io/savak1990/vk-ahorro/hello
+  # Required. The full commit SHA; never latest.
+  tag: ""
+
+# Required. The hostname arrives from the platform at install time and is
+# never committed.
+host: ""
+
+cognito:
+  issuer: ""
+  clientId: ""
+
+# A comma-separated string, not a list: Argo passes scalar overrides only.
+corsAllowedOrigins: ""
