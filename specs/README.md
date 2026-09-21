@@ -7,6 +7,7 @@ read the same way.
 | Folder | Holds | `id` prefix |
 |---|---|---|
 | `core/` | The first milestone: hello-world service, Flutter shell, Cognito, GitOps | `CORE-` |
+| `product/` | The application domain: the receipt-comparison flows and their analytics modules | `PROD-` |
 
 ## Folder name
 

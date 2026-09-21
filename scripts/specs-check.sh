@@ -21,6 +21,7 @@ letter_for() {
 prefix_for() {
   case "$1" in
     core) echo CORE ;;
+    product) echo PROD ;;
     *) echo "?" ;;
   esac
 }
@@ -28,7 +29,7 @@ prefix_for() {
 for entry in specs/*; do
   name=$(basename "$entry")
   if [[ -d "$entry" ]]; then
-    case "$name" in core) ;; *) err "unexpected folder $entry" ;; esac
+    case "$name" in core|product) ;; *) err "unexpected folder $entry" ;; esac
   elif [[ "$name" != "README.md" ]]; then
     err "unexpected file $entry"
   fi
