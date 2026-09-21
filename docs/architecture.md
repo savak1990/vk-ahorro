@@ -39,7 +39,7 @@ vk-ahorro/
   specs/core/                    milestone specs
   docs/architecture.md           this document
   docs/adr/                      decisions
-  .github/workflows/             ci.yml (pull requests), release.yml (main)
+  .github/workflows/             ci.yml (pull requests), release.yml (main); actions pinned by commit SHA
   Makefile                                 the only supported entry points
 ```
 
