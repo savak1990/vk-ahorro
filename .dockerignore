@@ -1,0 +1,10 @@
+.git
+.github
+bin
+deploy
+docs
+specs
+flutter-ui
+scripts
+Makefile
+README.md

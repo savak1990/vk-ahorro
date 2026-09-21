@@ -18,7 +18,7 @@ service runs locally; nothing is containerized or deployed yet.
 | 000 | Constitution | done |
 | 010 | Repository bootstrap, GitHub publication | done |
 | 020 | Go `hello` service with Cognito JWT verification | done |
-| 030 | Multi-arch images on GHCR, CI | planned |
+| 030 | Multi-arch images on GHCR, CI | in progress (`hello` only) |
 | 040 | Helm charts on GHCR | planned |
 | 050 | Terraform: state bucket, Cognito | planned |
 | 060 | GitOps chart and the platform pointer | planned |
@@ -40,7 +40,7 @@ repository plugs in through one pointer `Application` in the platform
 ```text
 cmd/hello         the hello service entry point
 internal/         service and shared Go code
-deploy/docker     Dockerfiles                    (planned)
+deploy/docker     Dockerfiles                    hello only
 deploy/helm       one chart per service         (planned)
 deploy/terraform  Terragrunt: state, Cognito    (planned)
 gitops/           app-of-apps chart for Argo    (planned)

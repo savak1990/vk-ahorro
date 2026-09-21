@@ -1,0 +1,49 @@
+# Pull-request gate. Later specs add their own steps here: helm lint (040),
+# terraform fmt -check (050), flutter analyze and flutter test (070, 090).
+name: ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ci-go-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - run: make go-build
+
+      - run: make go-test
+
+      # The version matches the one developers run locally.
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+
+  repo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ci-repo-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: make specs-check
+
+      # Fails closed when the secret is missing: an unset domain must never
+      # look like a clean result.
+      - run: make domain-check
+        env:
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
