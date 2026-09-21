@@ -19,7 +19,7 @@ service runs locally; nothing is containerized or deployed yet.
 | 010 | Repository bootstrap, GitHub publication | done |
 | 020 | Go `hello` service with Cognito JWT verification | done |
 | 030 | The `hello` image on GHCR, CI | done |
-| 040 | Helm chart for `hello` on GHCR | planned |
+| 040 | Helm chart for `hello` on GHCR | done |
 | 050 | Terraform: state bucket, Cognito | planned |
 | 060 | GitOps chart and the platform pointer | planned |
 | 070 | Flutter trimmed to the shell | planned |
