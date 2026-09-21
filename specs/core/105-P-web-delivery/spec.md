@@ -13,7 +13,7 @@ can close before the Flutter build exists.
 **Risk:** Medium — the Flutter build stage is slow and the runtime `config.json` must stay replaceable, or the image has to be rebuilt per environment.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** [040-helm-charts](../040-P-helm-charts/spec.md), [080-flutter-config-and-hello](../080-P-flutter-config-and-hello/spec.md), [090-local-toolchain](../090-P-local-toolchain/spec.md), [100-flutter-platforms](../100-P-flutter-platforms/spec.md)
+**Depends on:** [040-helm-charts](../040-D-helm-charts/spec.md), [080-flutter-config-and-hello](../080-P-flutter-config-and-hello/spec.md), [090-local-toolchain](../090-P-local-toolchain/spec.md), [100-flutter-platforms](../100-P-flutter-platforms/spec.md)
 **Lifecycle class(es) touched:** Disposable (every Kubernetes object the chart renders). GHCR packages are persistent by nature.
 
 ## Scope

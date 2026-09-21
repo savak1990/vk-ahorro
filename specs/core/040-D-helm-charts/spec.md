@@ -1,13 +1,14 @@
 ---
 id: "CORE-040"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-09-21"
 ---
 # 040 — Helm chart for hello
 
-**Status note:** Draft. Covers the `hello` chart and the chart tooling every
-later chart reuses. The `web` chart moved to 105, which cannot start before
-the Flutter web build exists.
+**Status note:** Done. The `hello` chart, the chart Make targets, the `helm`
+CI job and the chart push all ship. `charts/hello` is public on GHCR. The
+`web` chart moved to 105, which cannot start before the Flutter web build
+exists.
 
 **Complexity:** Small–Medium
 **Risk:** Low — a wrong `parentRef` or missing `SkipDryRunOnMissingResource` makes Argo fail the dry run before the Gateway CRDs exist.
@@ -29,7 +30,7 @@ these charts and the values Argo passes in (060).
 ## Requirements
 
 1. `deploy/helm/hello` MUST contain `Chart.yaml` (semver `version`, `appVersion` = image tag at package time), `values.yaml`, `templates/deployment.yaml`, `templates/service.yaml`, `templates/httproute.yaml`, `templates/configmap.yaml`, `templates/_helpers.tpl` and `templates/NOTES.txt`.
-2. Deployment: `replicas: 1`, `image: {{ .Values.image.repository }}:{{ .Values.image.tag }}`, `imagePullPolicy: IfNotPresent`, readiness and liveness probes on `/healthz`, requests `10m/32Mi` and a memory limit of `128Mi` with no cpu limit (the platform's own convention), `securityContext` non-root with a read-only root filesystem, `automountServiceAccountToken: false`.
+2. Deployment: `replicas: 1`, `image: {{ .Values.image.repository }}:{{ .Values.image.tag }}`, `imagePullPolicy` derived per 5a, readiness and liveness probes on `/healthz`, requests `10m/32Mi` and a memory limit of `128Mi` with no cpu limit (the platform's own convention), `securityContext` non-root with a read-only root filesystem, `automountServiceAccountToken: false`.
 3. Service: `ClusterIP`, port 80 → container 8080.
 4. HTTPRoute: `parentRefs: [{name: platform-gateway, namespace: envoy, sectionName: https}]`, `hostnames: [{{ .Values.host }}]`, one rule to the Service, annotations `argocd.argoproj.io/sync-wave: "2"` and `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true` (copy `vk-lab-platform/gitops/templates/platform/shared/envoy-gateway/httproutes.yaml`).
 5. `host` and `image.tag` MUST have no default; `helm template` MUST fail with a clear message when either is empty (constitution §4: the hostname only ever arrives as a value). `NOTES.txt` MUST NOT print the host.

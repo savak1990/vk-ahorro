@@ -49,3 +49,8 @@ terraform.tfvars.json
 
 # Editor-local MCP config
 .cursor/
+
+# Claude Code. Only the permission policy is tracked, so it reaches a fresh
+# clone and a cloud session; neither sees a machine-local settings file.
+.claude/*
+!.claude/settings.json
