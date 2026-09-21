@@ -1,11 +1,12 @@
 ---
 id: "CORE-010"
-status: "DONE"
+status: "IN_REVIEW"
 updated: "2026-09-21"
 ---
 # 010 — Repository bootstrap and GitHub publication
 
-**Status note:** Done on 2026-09-21. Evidence: `gh repo view savak1990/vk-ahorro
+**Status note:** In review since 2026-09-21. Every requirement except the star
+list (7) is met; that one needs four clicks in the browser, which no API can do. Evidence: `gh repo view savak1990/vk-ahorro
 --json visibility,defaultBranchRef` → `PUBLIC` / `main`; both stars return 204;
 project "VK Lab" (number 2) lists both repositories; `git log --follow
 flutter-ui/pubspec.yaml` reaches 14 old commits, so the 231 renames kept the

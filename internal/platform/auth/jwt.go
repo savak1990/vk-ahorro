@@ -68,7 +68,13 @@ func (v *Verifier) Verify(ctx context.Context, rawToken string) (*Claims, error)
 		if c.ClientID != v.clientID {
 			return nil, errors.New("auth: access token is for another app client")
 		}
-		return &Claims{Subject: token.Subject, Email: c.Username}, nil
+		// A pool with email as the username attribute puts a UUID in username,
+		// so an email claim, when the pool adds one, is the better name.
+		name := c.Email
+		if name == "" {
+			name = c.Username
+		}
+		return &Claims{Subject: token.Subject, Email: name}, nil
 	default:
 		return nil, fmt.Errorf("auth: unsupported token_use %q", c.TokenUse)
 	}

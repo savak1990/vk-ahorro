@@ -16,7 +16,7 @@ service runs locally; nothing is containerized or deployed yet.
 | Spec | Delivers | State |
 |---|---|---|
 | 000 | Constitution | open: the CI domain guard arrives with 030 |
-| 010 | Repository bootstrap, GitHub publication | done |
+| 010 | Repository bootstrap, GitHub publication | in review: the star list "VK Lab" is a manual step for the owner |
 | 020 | Go `hello` service with Cognito JWT verification | done |
 | 030 | Multi-arch images on GHCR, CI | planned |
 | 040 | Helm charts on GHCR | planned |

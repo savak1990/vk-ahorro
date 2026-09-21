@@ -41,6 +41,23 @@ func TestVerifyAcceptsAccessToken(t *testing.T) {
 	}
 }
 
+func TestVerifyPrefersTheEmailClaimOverUsername(t *testing.T) {
+	pool := newFakePool(t)
+	v := auth.NewVerifier(context.Background(), pool.url, clientID)
+
+	c := pool.accessClaims(clientID)
+	c["username"] = "5ec1f2a0-0000-4000-8000-000000000000"
+	c["email"] = "user@example.com"
+
+	got, err := v.Verify(context.Background(), pool.sign(t, c))
+	if err != nil {
+		t.Fatalf("Verify() error = %v", err)
+	}
+	if got.Email != "user@example.com" {
+		t.Fatalf("email = %q, want the email claim, not the username uuid", got.Email)
+	}
+}
+
 func TestVerifyRejects(t *testing.T) {
 	pool := newFakePool(t)
 	v := auth.NewVerifier(context.Background(), pool.url, clientID)

@@ -42,6 +42,11 @@ custom domain for managed login.
 
 ## Testing / acceptance criteria
 
+- A real access token from this pool greets the user by email, not by a UUID.
+  The pool uses email as the username attribute, so `username` holds a UUID;
+  spec 020 reads the `email` claim first and falls back to `username`. The unit
+  tests use a local fixture, so only this pool proves the claim shape.
+
 - `make tf-fmt tf-validate` clean; `make tf-state-up` twice in a row is a no-op the second time.
 - `make tf-apply` then `make tf-plan` shows no changes.
 - `aws cognito-idp describe-user-pool --user-pool-id $(make -s tf-outputs | jq -r .user_pool_id)` returns the pool with `DeletionProtection: ACTIVE`.
