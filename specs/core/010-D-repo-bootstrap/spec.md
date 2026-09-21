@@ -1,11 +1,17 @@
 ---
 id: "CORE-010"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-09-21"
 ---
 # 010 — Repository bootstrap and GitHub publication
 
-**Status note:** Draft.
+**Status note:** Done on 2026-09-21. Evidence: `gh repo view savak1990/vk-ahorro
+--json visibility,defaultBranchRef` → `PUBLIC` / `main`; both stars return 204;
+project "VK Lab" (number 2) lists both repositories; `git log --follow
+flutter-ui/pubspec.yaml` reaches 14 old commits, so the 231 renames kept the
+history. Two deviations: the ignore rules are verified with `git check-ignore`
+instead of a Flutter build, because Flutter arrives with spec 090; and the star
+list stays open until the owner creates it in the browser.
 
 **Complexity:** Small
 **Risk:** Low — a wrong first commit loses rename history for 231 files, which makes the old app hard to consult later.
@@ -47,4 +53,7 @@ Excludes: any code change inside `flutter-ui/` (070), CI workflows (030).
 - `gh api /user/starred/savak1990/vk-ahorro` and `.../vk-lab-platform` return 204.
 - `gh project list --owner savak1990` shows "VK Lab"; the project page lists both repositories.
 - `github.com/savak1990?tab=stars` shows the list "VK Lab" with two entries.
-- `git status` is clean after `cd flutter-ui && flutter build web` (ignore rules hold).
+- `git check-ignore -q` succeeds for `flutter-ui/build/x`, `flutter-ui/.dart_tool/x`,
+  `flutter-ui/ios/Pods/x`, `flutter-ui/config/lab.json`, `bin/hello`, `dist/a.tgz`,
+  `deploy/terraform/live/.terragrunt-cache/x`, and `.kube/c`. The same rules are
+  re-checked against a real `flutter build web` under spec 100.

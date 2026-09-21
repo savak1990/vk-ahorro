@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "datamate": {
-      "url": "http://localhost:7700/sse",
-      "type": "sse",
-      "updatedAt": "2025-08-12T08:04:04.535Z"
-    }
-  }
-}

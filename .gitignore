@@ -46,3 +46,6 @@ terraform.tfvars.json
 
 # Local kubeconfigs
 .kube/
+
+# Editor-local MCP config
+.cursor/

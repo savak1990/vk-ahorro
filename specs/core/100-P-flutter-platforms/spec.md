@@ -46,3 +46,6 @@ profiles (documented, not required), the cluster deployment (060).
 - `make ui-run-web` with `make go-run`: same in Chrome with the navigation rail; "+" shows "Hello, anonymous".
 - `make ui-build-web && make web-serve-local`: `curl -I localhost:8081/` → 200, `curl localhost:8081/config.json` returns the local file, a deep link `localhost:8081/anything` returns `index.html`.
 - `flutter analyze` and `flutter test` still green after the id changes.
+- `git status` is clean after `make ui-build-web`. This confirms the ignore rules
+  of spec 010, which were verified with `git check-ignore` alone because Flutter
+  was not installed then.
