@@ -1,17 +1,27 @@
 ---
 id: "CORE-030"
-status: "DRAFT"
+status: "IN_PROGRESS"
 updated: "2026-09-21"
 ---
 # 030 — Container images, registry, and CI
 
-**Status note:** Draft.
+**Status note:** The `hello` half is done. Requirements 1, 3, 4, 5 (for
+`hello`) and the root-domain guard of 6 ship in `deploy/docker/hello.Dockerfile`,
+`scripts/domain-guard.sh`, the `image-*` Make targets, `.github/workflows/ci.yml`
+and `.github/workflows/release.yml`. The guard reads a `ROOT_DOMAIN` repository
+secret: `vk-lab-platform` reads the same value from KMS through an OIDC role,
+which this repository cannot do before 050 creates one, and requirement 7 forbids
+AWS credentials in the release workflow. Deferred, with the spec that unblocks
+each: requirement 2 and the `web` parts of 3, 4, 5 and 8 (070, and 090 for the
+Flutter toolchain); the `helm lint` step of 6 (040); the `terraform fmt -check`
+step of 6 (050); the `flutter analyze` and `flutter test` steps of 6 (070, 090);
+the chart push of 7 (040); the `gitops/values.yaml` commit of 7 (060).
 
 **Complexity:** Medium
 **Risk:** Medium — a CI loop (the SHA commit retriggers the build) or a `latest` tag breaks Argo's diff.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** 020-go-hello-service, 070-flutter-shell-trim (for the web image)
+**Depends on:** [020-go-hello-service](../020-D-go-hello-service/spec.md), 070-flutter-shell-trim (for the web image)
 **Lifecycle class(es) touched:** None in AWS. GHCR packages are persistent by nature: they survive a platform `make down`.
 
 ## Scope
@@ -49,4 +59,10 @@ content for web (080).
 - A merged pull request to `main` produces exactly one `release` run, one image push per service, and one `[skip ci]` commit; that commit does not start a second run.
 - `docker pull` of each image works from a machine with no GitHub login.
 - CI fails when a committed file contains the root domain (constitution §4). The
-  check reads the domain from a secret, never from Git.
+  check reads the domain from the platform's SSM parameter
+  `/account/root_domain`, never from Git, over a GitHub OIDC role scoped to
+  this repository. It reads the whole
+  history, not only the working tree: a public repository publishes every
+  commit. It reports file names and commit ids only, never a matched line.
+- Every GitHub action in every workflow is pinned to a full commit SHA with the
+  version in a trailing comment. A tag can be moved; a commit cannot.

@@ -29,17 +29,17 @@ vk-ahorro/
   internal/hello/                          service code: server, handlers, tests
   internal/platform/auth/                  Cognito JWT verification, shared by every service
   internal/platform/httpx/                 JSON helpers, request id, CORS, logging
-  deploy/docker/                 (planned) hello.Dockerfile, web.Dockerfile (multi-arch)
+  deploy/docker/                 hello.Dockerfile; web.Dockerfile planned (multi-arch)
   deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
   deploy/terraform/live/         (planned) Terragrunt units: state, persistent/cognito
   deploy/terraform/modules/      (planned) terraform-state, cognito
   gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
   flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
-  scripts/                                 specs-check.sh; later e2e-smoke.sh, tf state bootstrap
+  scripts/                                 specs-check.sh, domain-guard.sh; later e2e-smoke.sh, tf state bootstrap
   specs/core/                    milestone specs
   docs/architecture.md           this document
   docs/adr/                      decisions
-  .github/workflows/             (planned) ci.yml (pull requests), release.yml (main)
+  .github/workflows/             ci.yml (pull requests), release.yml (main); actions pinned by commit SHA
   Makefile                                 the only supported entry points
 ```
 
