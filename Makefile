@@ -52,7 +52,7 @@ go-run:
 specs-check:
 	@./scripts/specs-check.sh
 
-## Check that no tracked file contains the root domain
+## Check no file and no new commit contains the root domain
 domain-check:
 	@./scripts/domain-guard.sh
 
