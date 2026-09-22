@@ -22,7 +22,9 @@ The authority is `specs/core/000-D-constitution/spec.md`. Read it before non-tri
 
 What Ahorro does: a shopper photographs a grocery receipt and the app shows where the same basket was cheaper, per item — plus a forward-looking "shop here next" recommendation from their history.
 
-The product authority is `specs/product/000-P-product-overview/spec.md`: the two user flows, the pluggable analytics modules (M1–M8) and their input/output contracts, and the data-sourcing constraints. Read it before feature work; this file does not restate it. `core/` specs govern the platform plumbing; `product/` specs govern the application domain built on top of it.
+The product vision lives in `docs/product/vision.md`: the two user flows, the pluggable analytics modules (M1–M8) and their input/output contracts, data sourcing, and open questions. Read it before feature work; this file does not restate it.
+
+Vision and specs are different layers. `docs/` holds project-level vision, use cases, and architecture. A `specs/product/NNN-P-*` spec is one short, plannable, testable feature derived from the vision, citing the section it implements. When turning vision into work, write feature specs into `specs/product/`; do not put vision-level prose into a spec. `core/` specs govern the platform plumbing; `product/` specs govern the application domain.
 
 ---
 
