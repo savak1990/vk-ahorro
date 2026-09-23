@@ -7,7 +7,7 @@ read the same way.
 | Folder | Holds | `id` prefix |
 |---|---|---|
 | `core/` | The first milestone: hello-world service, Flutter shell, Cognito, GitOps | `CORE-` |
-| `product/` | Developable feature specs for the application domain, derived from `docs/product/vision.md` | `PROD-` |
+| `product/` | Feature specs for the application domain, one per feature, grouped by milestone (`milestone1/`, `milestone2/`, …), derived from `docs/product/vision.md` | `PROD-` |
 
 ## Folder name
 

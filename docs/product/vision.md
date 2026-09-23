@@ -1,179 +1,194 @@
 # Ahorro — Product vision
 
-The product this repository builds, and how its value decomposes. Sections
-are numbered so specs and ADRs can cite them. This is the *why* and the
-*what*; `specs/product/` holds the *how*, one developable feature per spec.
-`docs/architecture.md` covers the platform and delivery architecture; this
-document covers the application domain that runs on top of it.
+Ahorro helps a shopper in Spain spend less on groceries. This document holds
+the product goal, the user flows, and the plan by milestone. It is the source
+for the feature specs in `specs/`. `docs/architecture.md` covers the platform.
+This document covers the product.
 
-# 1. Core idea
+## 1. What it does
 
-A shopper photographs a grocery receipt right after shopping. The app shows
-where the same basket cost less, per item — "−5% at Consum" broken down line
-by line, not a single black-box number — and, over time, gets ahead of the
-next trip by recommending where to shop. Valencia / Spain first.
+A shopper takes a photo of a grocery receipt. The app reads the receipt and
+saves the basket. Later, the app shows where the same basket costs less, item
+by item. Over time, the app also tells the shopper where to shop next.
 
-The trust rule runs through everything: a number the user cannot trace back
-to individual items is not shippable.
+Two rules guide every feature:
 
-# 2. High-level use cases
+1. Show the saving per item, never one black-box number. The shopper must
+   trust it.
+2. Start useful on day 1, even before price data exists.
 
-Two flows carry the product. Both are compositions of the analytics modules
-in section 3, and both end in a subscribe CTA — the free tier teases value,
-the paywall unlocks the full version.
+The first market is Valencia, Spain.
 
-## 2.1 Flow A — receipt → "how did you do?" (reactive)
+## 2. Milestones
 
-The hook: the user acts, the app reacts with a verdict.
+The product grows in milestones. Each milestone is a set of features that ship
+together. Specs live in a folder per milestone (see section 10).
 
-1. Photograph a receipt right after shopping.
-2. Parse it, normalize items, recompute the same (or a similar) basket at
-   competing chains.
-3. Feedback: "You paid €47.20. Same basket at Consum: €44.80 (−5%). At
-   Carrefour: €48.90 (+3.6%)," with a per-item breakdown so the number is
-   trustworthy.
-4. CTA: free tier = capped receipts/month or headline number only; subscribe
-   to unlock the full per-item breakdown, all chains, and history.
+### Milestone 1 — no prices yet
 
-Value: analytics on a purchase already made — low commitment, instant "aha",
-no behaviour change needed to try it.
+Goal: a useful app that is easy to promote, before price data exists.
 
-## 2.2 Flow B — history → shopping list → "buy it here" (proactive)
+- Photo of a receipt, then parsed lines, then the shopper corrects them, then
+  saved history.
+- When there is no price to compare, show "no price data yet", not an error.
+- On-demand list: the shopper presses "I am going shopping" and gets a list to
+  buy.
+- Free to use. A free app is easier to promote and brings early users.
 
-The retention engine: the app learns habits and gets ahead of the next trip.
+### Milestone 2 — prices
 
-1. Analyze accumulated history (from Flow A receipts).
-2. Build a predicted/recurring shopping list (the typical basket, or one the
-   user assembles in-app).
-3. Compare that list across chains and recommend where to shop next to
-   minimize spend, optionally split-basket ("most at Mercadona, these 3 at
-   DIA saves €4").
-4. CTA: free tier = a single suggestion or one list; subscribe for ongoing
-   recommendations, list building, and multi-store optimization.
+Goal: add the main draw — "you could pay less here".
 
-Value: forward-looking savings — turns one-off analytics into a recurring
-reason to open the app.
+- Compare the basket across chains. Show the saving per item.
+- Split-basket advice: buy most items here, these three there, save €X.
+- A paid Pro tier starts here (see section 5).
 
-## 2.3 Edge cases (both flows)
+### Later milestones
 
-- Store-brand items with no cross-store equivalent (Hacendado, etc.) → flag
-  "no comparison available", do not guess.
-- No exact match at a competitor → substitute a comparable product, clearly
-  labelled as a substitution.
-- Per-item confidence threshold gates whether a comparison is shown vs.
-  hidden (threshold value is open — section 8).
-- Low-quality receipt image → best-effort parse with uncertain lines flagged,
-  rather than a silent wrong reading.
+- Predict the list from shopping cadence. Send it on a schedule with a push.
+- Suggest a similar product when a chain lacks the exact item. This is far in
+  the future and needs a recommender.
+- Automation, such as placing an order in Mercadona.
 
-# 3. Analytics modules
+## 3. Flow A — check a receipt (reactive)
 
-The analytics is decomposed into independent modules with stable
-input→output contracts. *How* each works internally (LLM, heuristics,
-third-party API, own model) stays open and swappable — a module can start as
-a cheap stub and be upgraded without touching the flows or the other modules.
-Modules communicate only through the contracts below, never through each
-other's internals, and each is independently testable against fixture data.
+This is the hook. The shopper acts, the app answers.
 
-| Module | Responsibility | In → Out (contract) |
-|--------|----------------|---------------------|
-| **M1 · Receipt Ingestion** | Photo → structured receipt | image → { store, date, lines[name, qty, unit_price, total] } |
-| **M2 · Product Normalization** | Receipt text → canonical product | raw line → { canonical_id, confidence } or `no_match` |
-| **M3 · Price Index** | Current prices per store | canonical_id → { store → price, as_of } |
-| **M4 · Basket Comparison** | Recompute basket elsewhere | basket + M3 → { per_store total, per_item delta, substitutions } |
-| **M5 · Shopping Profile** | Aggregate history into habits | user's baskets → recurring items, cadence, typical spend |
-| **M6 · List & Recommender** | Predict list, pick store(s) | profile/list + M3/M4 → ranked stores, split-basket plan |
-| **M7 · Savings Ledger** | Track potential/realized savings | comparison results over time → trend, lifetime savings |
-| **M8 · Subscription / Paywall** | Gate value, drive the CTA | user + entitlement → what's unlocked vs. teased |
+1. Take a photo of the receipt after shopping.
+2. The app reads the store, the date, and the lines (name, quantity, unit
+   price, total).
+3. The app checks the parse and asks the shopper to fix problems before save.
+   Two basic checks: the total does not match the sum of the lines, and
+   unclear lines.
+4. Milestone 1: save the basket to history. Milestone 2: compare it across
+   chains and show the saving per item.
 
-Composition:
+Why it works: the shopper gets value from a purchase already made. No change
+of habit is needed to try it.
 
-- Flow A = M1 → M2 → M3 → M4 → (log to M7) → M8 gate
-- Flow B = M5 → M6 (uses M3 + M4) → M8 gate
+## 4. Flow B — shopping list and where to buy (proactive)
 
-Confidence is passed through, not hidden: M2's `no_match` and low-confidence
-lines surface as "no comparison available" in the flows.
+This keeps users coming back. The app helps before the next trip.
 
-# 4. Product normalization strategy
+1. The shopper presses "I am going shopping".
+2. The app builds a list from past baskets, or the shopper edits one.
+3. Milestone 1 (free): collect the list of items to buy. That already helps.
+4. Milestone 2 (paid): add prices, split the list by supermarket, and show the
+   total saving.
 
-Matching chain: receipt line → retailer catalog (same naming, easy) →
-canonical product (Open Food Facts, EAN-indexed) → cross-store comparison.
+Order of delivery: on-demand first. Scheduled and predictive lists come later.
 
-- **Open Food Facts** — free, EAN-indexed, crowdsourced catalog. Good as the
-  canonical cross-store dictionary. Weak on private-label items.
-- **GS1/EAN barcodes** — the real standard ID, but Spanish receipts rarely
-  print barcodes, so they help build the reference catalog, not parse
-  receipts directly.
-- **Retailer catalogs** — needed regardless, especially for store-brand
-  products with no cross-store barcode. Fall back to LLM semantic matching
-  (name + category + size) for those.
+## 5. Money
 
-# 5. Data sourcing (cost/effort order)
+The owner chose this model for the early milestones:
 
-Use the cheapest tier that covers a chain:
+- Keep a free entry point in milestone 1. A free app is easier to promote and
+  to grow.
+- Cap photos, because each photo costs compute. Free users get a low cap
+  (about 10 per month). Paid users get a higher cap (about 200). Set the exact
+  numbers later.
+- Keep analytics free in general. Gate only specific features.
+- Add the Pro tier with milestone 2: prices, split-basket savings, and later
+  automation.
+- Option for later: tighten free access once the paid value is strong.
 
-1. **B2B comparator feed** — Spain's existing comparator sells B2B (price
-   monitoring, "buy now" widgets, APIs). Likely the cheapest legitimate route,
-   especially for Mercadona, which has no easily public catalog.
-2. **Marketplace scrapers** — pay-per-result, ready-made, good for
-   prototyping matching logic before own scraper infra (rough figures:
-   Mercadona has a public product API ~$2/1k, Carrefour includes EAN
-   barcodes ~$1.20/1k, DIA/Alcampo/Eroski ~$2/1k).
-3. **Own scrapers** — most control and lowest marginal cost long-term, most
-   maintenance; use only where tiers 1–2 fall short on cost or coverage.
+Open point: one team member proposed no free tier and two paid tiers (normal
+and pro), a one-month trial, and a cap of 20 checks. The owner chose the
+free-entry model above for the early milestones. Revisit this after milestone
+2.
 
-MVP coverage: start with 3–4 chains that have accessible prices (e.g.
-Carrefour, Alcampo, Consum, DIA); treat a no-public-catalog chain
-(Mercadona) as a gap filled via tier 1.
+## 6. Receipt cases to handle
 
-# 6. Reference — existing competitors
+Some receipts are hard. Define the exact rules in a dedicated parsing module,
+not here.
 
-SoySuper, Super TRuper (barcode scan), OCU Market (consumer-org backed),
-OkLista, Carritus (older, reportedly covered Mercadona). A well-trodden
-category, not fringe — worth studying for coverage and matching behaviour;
-reference, not a dependency.
+- A long receipt may need more than one photo.
+- A receipt may come from a shop that is not a main chain.
+- A photo may be low quality or hard to read.
 
-# 7. Legal notes
+Rule for all of them: parse what is clear, flag the rest, and let the shopper
+fix it.
 
-Not legal advice; recorded so sourcing choices stay on the low-risk side.
+## 7. Product matching
 
-- Main risks: EU/Spain database *sui generis* rights (systematic full-catalog
-  scraping is higher risk than pulling individual facts), ToS violations
-  (civil/contract, not criminal), unauthorized-access law (only if bypassing
-  security/CAPTCHA, not public pages).
-- GDPR is not engaged unless personal data is scraped.
-- Lower-risk practices, treated as binding on any scraper: respect
-  `robots.txt`, rate-limit, do not republish full catalogs, do not bypass
-  auth/CAPTCHA.
-- Get a real legal consult if this grows past a personal project.
+Match a receipt line to a real product in this order:
 
-Provider API keys and B2B credentials are secrets — never committed
-(`specs/core/000-D-constitution` requirement 4).
+1. Retailer catalog. It uses the same names as the receipt, so this match is
+   easy.
+2. Open Food Facts. This is a free catalog indexed by barcode. Use it as the
+   shared product dictionary across chains.
+3. For a store brand with no cross-chain barcode, match by name, category, and
+   size with an LLM.
 
-# 8. Open questions
+Open Food Facts is weak on store brands. That is why the retailer catalog
+comes first.
 
-- **Delivery surface.** MVP surface is the Flutter shell in this repo
-  (`specs/core/070`, `080`). A prior sibling project prototyped a Telegram-bot
-  surface on that project's own infra, which does not exist here; a bot
-  surface is out of scope until a spec adds it deliberately.
-- **Storage engine.** Price/product storage was sketched against another
-  project's stack (ClickHouse / BigQuery). This repo runs on AWS with
-  Argo-owned Kubernetes and Terraform-owned AWS resources; the storage choice
-  here is undecided and belongs in a future infra spec.
-- **Confidence threshold.** The per-item confidence value below which a
-  comparison is hidden.
-- **"Similar set" definition.** What qualifies a substitution — same category
-  plus a size band, or something tighter.
-- **Free/paid line.** Where the paywall sits per flow.
-- **Flow B confirmation.** Whether the predicted list needs explicit user
-  confirmation or is auto-generated and editable.
-- **B2B terms.** Whether to pursue a B2B feed for no-public-catalog chains.
+## 8. Price data sources
 
-# 9. From vision to specs
+Use the cheapest source that covers a chain:
 
-A `product/` spec is one short, plannable, testable feature — not this
-document. The intended path from here: a product agent reads this vision plus
-`docs/architecture.md`, then writes `specs/product/NNN-P-*` specs, each citing
-the section above it implements (a module from section 3 or a flow step from
-section 2) and each independently planned, estimated, and tested. Suggested
-seams to start: M4 basket comparison and M8 paywall gate, both exercisable on
-fixtures before real OCR (M1) or real prices (M3) exist.
+1. A business feed from an existing comparator. This is best for Mercadona,
+   which has no easy public catalog.
+2. Ready-made scrapers, for early tests of the matching logic.
+3. Own scrapers, only where the first two cost too much or miss a chain.
+
+Start milestone 2 with three or four chains that have accessible prices, such
+as Carrefour, Alcampo, Consum, and DIA.
+
+## 9. Analytics modules
+
+The analytics splits into small modules. Each module has a fixed input and
+output. A module can start as a stub and improve later, without a change to
+the others. Test each module on fixture data.
+
+| Module | Job | In → Out |
+|---|---|---|
+| M1 Receipt Ingestion | Photo to structured receipt | image → { store, date, lines } |
+| M2 Product Normalization | Line to canonical product | raw line → { canonical_id, confidence } or no_match |
+| M3 Price Index | Prices per store | canonical_id → { store → price, as_of } |
+| M4 Basket Comparison | Recompute basket elsewhere | basket + M3 → per-store total, per-item delta |
+| M5 Shopping Profile | History to habits | baskets → recurring items, cadence, spend |
+| M6 List & Recommender | Predict list, pick stores | profile + M3/M4 → ranked stores, split plan |
+| M7 Savings Ledger | Track savings over time | comparisons → trend, lifetime savings |
+| M8 Entitlements | Caps and paid features | user → photo cap, unlocked features |
+
+Flow A uses M1, then M2, then M3, then M4. It logs to M7. M8 sets the caps.
+Flow B uses M5, then M6, with M3 and M4. M8 sets the caps.
+
+Pass confidence through the flow. A no_match line or a low-confidence line
+shows as "no comparison available".
+
+## 10. From vision to specs
+
+A spec is one small feature that a person can plan, build, and test. This
+document is not a spec.
+
+The path from here:
+
+1. A product agent reads this document and `docs/architecture.md`.
+2. It writes one spec per feature into a milestone folder, for example
+   `specs/product/milestone1/`.
+3. Each spec names the section it delivers.
+
+## 11. Open questions
+
+- Photo caps: the exact free and paid numbers.
+- The confidence threshold to show or hide a comparison.
+- The "similar product" rule: same category and size, or tighter.
+- The storage engine for prices and products. The prior sketch named
+  ClickHouse or BigQuery. This repo runs on AWS, so decide this later in an
+  infra spec.
+- The delivery surface. The Flutter app is milestone 1. A prior idea used a
+  Telegram bot on another project's setup, which does not exist here.
+
+## 12. Legal notes
+
+This is not legal advice. It is recorded to keep data sourcing at low risk.
+
+- Do not scrape full catalogs in bulk. Pull single facts, not whole databases.
+- Respect robots.txt and rate limits.
+- Do not bypass a login or a CAPTCHA.
+- GDPR applies only if the app scrapes personal data.
+- Get real legal advice before this grows past a personal project.
+
+API keys and business-feed credentials are secrets. Never commit them.
