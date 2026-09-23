@@ -80,22 +80,18 @@ Order of delivery: on-demand first. Scheduled and predictive lists come later.
 
 ## 5. Money
 
-The owner chose this model for the early milestones:
+The product keeps the notion of tiers. It starts with one tier and adds more
+later. A receipt check means one run of Flow A on one receipt.
 
-- Keep a free entry point in milestone 1. A free app is easier to promote and
+- Start with a single "free for all" tier. A free app is easier to promote and
   to grow.
-- Cap photos, because each photo costs compute. Free users get a low cap
-  (about 10 per month). Paid users get a higher cap (about 200). Set the exact
-  numbers later.
+- Cap the free tier at 20 receipt checks per user. Each check costs compute, so
+  the cap controls cost. Revise the number later.
 - Keep analytics free in general. Gate only specific features.
-- Add the Pro tier with milestone 2: prices, split-basket savings, and later
+- Add a paid Pro tier with milestone 2: prices, split-basket savings, and later
   automation.
-- Option for later: tighten free access once the paid value is strong.
-
-Open point: one team member proposed no free tier and two paid tiers (normal
-and pro), a one-month trial, and a cap of 20 checks. The owner chose the
-free-entry model above for the early milestones. Revisit this after milestone
-2.
+- Option for later: add more tiers, or tighten free access once the paid value
+  is strong.
 
 ## 6. Receipt cases to handle
 
