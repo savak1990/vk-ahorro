@@ -2,7 +2,6 @@
 
  /// Headline Emphasized Large
  ///
- /// Используется как главный заголовок страницы ("Hello, User", "Balances", "Account", "Transactions").
  class HeadlineEmphasizedLarge extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
@@ -38,7 +37,6 @@
 
  /// Title Emphasized Large
  ///
- /// Используется как заголовок секции ("Financial Overview", групповые заголовки на экране транзакций, "General").
  class TitleEmphasizedLarge extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
@@ -73,7 +71,6 @@
 
  /// Label Emphasized Medium
  ///
- /// Используется для вторичных подписей под заголовком (дата на Home, подзаголовок Balances и т.п.).
  class LabelEmphasizedMedium extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
@@ -108,7 +105,6 @@
 
 /// Title Emphasized Medium
 ///
-/// Используется как заголовок подсекции (например, "Expense", "Income" - менее важные чем "Financial Overview").
 class TitleEmphasizedMedium extends StatelessWidget {
   final String text;
   final EdgeInsetsGeometry? padding;

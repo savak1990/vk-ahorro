@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary colors - Минималистичная черно-бело-серая палитра
   static const Color primary = Color(0xFF000000);        // Pure Black
   static const Color primaryVariant = Color(0xFF1F2937); // Dark Gray
   static const Color accent = Color(0xFF6B7280);         // Medium Gray
@@ -58,7 +57,6 @@ class AppColors {
   static const Color gradientEnd = Color(0xFF6B7280);    // Gray
   static const Color gradientAccent = Color(0xFF1F2937); // Dark Gray
 
-  // Budget categories colors - Монохромная палитра
   static const Color food = Color(0xFF374151);           // Dark Gray for food
   static const Color transport = Color(0xFF6B7280);      // Medium Gray for transport
   static const Color entertainment = Color(0xFF9CA3AF);  // Light Gray for entertainment

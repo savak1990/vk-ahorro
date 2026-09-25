@@ -1,11 +1,11 @@
 {
-    "name": "ahorro_ui",
-    "short_name": "ahorro_ui",
+    "name": "Ahorro",
+    "short_name": "Ahorro",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Ahorro personal finance app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

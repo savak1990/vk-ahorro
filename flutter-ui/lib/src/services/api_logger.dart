@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
-import 'dart:io';
 
 /// Global logging levels for the entire application
 enum LogLevel {
@@ -16,74 +14,21 @@ enum LogLevel {
 class ApiLogger {
   static const String _tag = '[ApiLogger]';
 
-  // Cache the log level to avoid repeated .env lookups
+  
   static LogLevel? _cachedLogLevel;
 
   /// Get the current log level from environment variables
   static LogLevel get _logLevel {
     if (_cachedLogLevel != null) return _cachedLogLevel!;
 
-    String? levelStr;
-
-    // Check dart-define variable first (this works for --dart-define=LOG_LEVEL=verbose)
-    levelStr = const String.fromEnvironment('LOG_LEVEL');
-    if (kDebugMode && levelStr.isNotEmpty) {
-      print('[ApiLogger] Found dart-define LOG_LEVEL: $levelStr');
-    }
-
-    // Check runtime environment variable (this works for LOG_LEVEL=verbose flutter run on some platforms)
-    if (levelStr.isEmpty) {
-      try {
-        levelStr = Platform.environment['LOG_LEVEL'];
-        if (kDebugMode && levelStr != null && levelStr.isNotEmpty) {
-          print('[ApiLogger] Found runtime environment LOG_LEVEL: $levelStr');
-        }
-      } catch (e) {
-        // Platform.environment might not be available in some contexts (like web)
-        levelStr = null;
-        if (kDebugMode) {
-          print('[ApiLogger] Platform.environment not available: $e');
-        }
-      }
-    }
-
-    // If still no value, fall back to .env file
-    if (levelStr == null || levelStr.isEmpty) {
-      levelStr = dotenv.env['LOG_LEVEL'] ?? 'warn';
-      if (kDebugMode) {
-        print('[ApiLogger] Using .env file LOG_LEVEL: $levelStr');
-      }
-    }
-
-    if (kDebugMode) {
-      print('[ApiLogger] Final LOG_LEVEL value: $levelStr');
-    }
-
-    switch (levelStr.toLowerCase()) {
-      case 'error':
-        _cachedLogLevel = LogLevel.error;
-        break;
-      case 'warn':
-      case 'warning':
-        _cachedLogLevel = LogLevel.warn;
-        break;
-      case 'info':
-        _cachedLogLevel = LogLevel.info;
-        break;
-      case 'debug':
-        _cachedLogLevel = LogLevel.debug;
-        break;
-      case 'verbose':
-        _cachedLogLevel = LogLevel.verbose;
-        break;
-      default:
-        _cachedLogLevel = LogLevel.warn;
-    }
-
-    if (kDebugMode) {
-      print('[ApiLogger] Resolved to LogLevel: $_cachedLogLevel');
-    }
-
+    const levelStr = String.fromEnvironment('LOG_LEVEL', defaultValue: 'warn');
+    _cachedLogLevel = switch (levelStr.toLowerCase()) {
+      'error' => LogLevel.error,
+      'info' => LogLevel.info,
+      'debug' => LogLevel.debug,
+      'verbose' => LogLevel.verbose,
+      _ => LogLevel.warn,
+    };
     return _cachedLogLevel!;
   }
 
@@ -96,8 +41,8 @@ class ApiLogger {
   static void testLogging() {
     if (!kDebugMode) return;
 
-    print('[ApiLogger] Testing logging configuration...');
-    print('[ApiLogger] Current log level: $_logLevel');
+    debugPrint('[ApiLogger] Testing logging configuration...');
+    debugPrint('[ApiLogger] Current log level: $_logLevel');
 
     error('Test error message');
     warn('Test warning message');
@@ -105,7 +50,7 @@ class ApiLogger {
     debug('Test debug message');
     verbose('Test verbose message');
 
-    print('[ApiLogger] Logging test complete.');
+    debugPrint('[ApiLogger] Logging test complete.');
   }
 
   /// Check if we should log at the given level

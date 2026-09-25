@@ -28,7 +28,6 @@ class AmplifyProvider extends BaseProvider {
         final auth = AmplifyAuthCognito();
         await Amplify.addPlugin(auth);
       } catch (_) {
-        // Плагин мог быть добавлен ранее при hot-restart — игнорируем
       }
       if (!Amplify.isConfigured) {
         await Amplify.configure(amplifyconfig);

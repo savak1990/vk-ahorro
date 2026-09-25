@@ -55,7 +55,7 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,
       backgroundColor: backgroundColor ?? colorScheme.surface,
-      border: null, // Убираем границу для современного вида
+      border: null,
     );
   }
 
@@ -83,9 +83,9 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize {
     if (PlatformUtils.isIOS) {
-      return const Size.fromHeight(44.0); // iOS стандартная высота
+      return const Size.fromHeight(44.0);
     } else {
-      return const Size.fromHeight(kToolbarHeight); // Material Design высота
+      return const Size.fromHeight(kToolbarHeight);
     }
   }
 } 

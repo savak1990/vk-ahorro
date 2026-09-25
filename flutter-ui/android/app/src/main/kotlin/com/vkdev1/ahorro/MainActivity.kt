@@ -1,4 +1,4 @@
-package com.example.ahorro_ui
+package com.vkdev1.ahorro
 
 import io.flutter.embedding.android.FlutterActivity
 

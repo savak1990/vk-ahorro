@@ -12,10 +12,8 @@ class AdaptiveTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       
-      // Адаптивная цветовая схема из сгенерированного файла
       colorScheme: scheme,
 
-      // Типографика (одинаковая для всех платформ)
       textTheme: const TextTheme(
         displayLarge: AppTypography.displayLarge,
         displayMedium: AppTypography.displayMedium,
@@ -34,12 +32,11 @@ class AdaptiveTheme {
         labelSmall: AppTypography.labelSmall,
       ),
 
-      // Адаптивная App Bar
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: PlatformUtils.adaptiveElevation,
-        centerTitle: PlatformUtils.isIOS, // iOS центрирует заголовки
+        centerTitle: PlatformUtils.isIOS,
         titleTextStyle: AppTypography.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
@@ -48,7 +45,6 @@ class AdaptiveTheme {
           : SystemUiOverlayStyle.light,
       ),
 
-      // Адаптивные карточки
       cardTheme: CardThemeData(
         color: scheme.surface,
         elevation: PlatformUtils.adaptiveElevation,
@@ -59,7 +55,6 @@ class AdaptiveTheme {
         margin: PlatformUtils.adaptivePadding,
       ),
 
-      // Адаптивные кнопки
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
@@ -95,7 +90,6 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивные поля ввода
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surface,
@@ -124,7 +118,6 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивная нижняя навигация
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,
         selectedItemColor: scheme.primary,
@@ -133,7 +126,6 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
       ),
 
-      // Адаптивная плавающая кнопка
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -143,17 +135,14 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивные разделители
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant,
         thickness: 1,
         space: 1,
       ),
 
-      // Фон
       scaffoldBackgroundColor: scheme.surface,
 
-      // Адаптивная плотность
       visualDensity: PlatformUtils.isIOS 
         ? VisualDensity.standard 
         : VisualDensity.comfortable,
@@ -166,10 +155,8 @@ class AdaptiveTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       
-      // Адаптивная темная цветовая схема из сгенерированного файла
       colorScheme: scheme,
 
-      // Типографика (та же, что и в светлой теме)
       textTheme: const TextTheme(
         displayLarge: AppTypography.displayLarge,
         displayMedium: AppTypography.displayMedium,
@@ -188,7 +175,6 @@ class AdaptiveTheme {
         labelSmall: AppTypography.labelSmall,
       ),
 
-      // Адаптивная темная App Bar
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
@@ -202,7 +188,6 @@ class AdaptiveTheme {
           : SystemUiOverlayStyle.dark,
       ),
 
-      // Адаптивные темные карточки
       cardTheme: CardThemeData(
         color: scheme.surface,
         elevation: PlatformUtils.adaptiveElevation,
@@ -213,7 +198,6 @@ class AdaptiveTheme {
         margin: PlatformUtils.adaptivePadding,
       ),
 
-      // Адаптивные темные кнопки
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
@@ -229,7 +213,6 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивные темные поля ввода
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surface,
@@ -258,7 +241,6 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивная темная нижняя навигация
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,
         selectedItemColor: scheme.primary,
@@ -267,7 +249,6 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
       ),
 
-      // Адаптивная темная плавающая кнопка
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -277,22 +258,18 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Фон
       scaffoldBackgroundColor: scheme.surface,
 
-      // Адаптивная плотность
       visualDensity: PlatformUtils.isIOS 
         ? VisualDensity.standard 
         : VisualDensity.comfortable,
     );
   }
 
-  // Метод для получения текущей темы
   static ThemeData getCurrentTheme({bool isDark = false}) {
     return isDark ? darkTheme : lightTheme;
   }
 
-  // Метод для получения платформо-специфичных стилей
   static Map<String, dynamic> getPlatformSpecificStyles() {
     return {
       'elevation': PlatformUtils.adaptiveElevation,

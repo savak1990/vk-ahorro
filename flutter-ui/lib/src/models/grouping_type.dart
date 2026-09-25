@@ -1,5 +1,0 @@
-enum GroupingType {
-  date,
-  category,
-}
-

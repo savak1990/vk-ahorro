@@ -45,7 +45,6 @@ class PlatformLoadingIndicator extends StatelessWidget {
         ),
       );
     } else {
-      // Web - CircularProgressIndicator с CSS анимациями
       return SizedBox(
         width: size,
         height: size,
@@ -59,21 +58,21 @@ class PlatformLoadingIndicator extends StatelessWidget {
 
   double _getPlatformSpecificSize() {
     if (PlatformUtils.isIOS) {
-      return 20.0; // iOS размер
+      return 20.0;
     } else if (PlatformUtils.isAndroid) {
-      return 24.0; // Android размер
+      return 24.0;
     } else {
-      return 24.0; // Web размер
+      return 24.0;
     }
   }
 
   EdgeInsetsGeometry _getPlatformSpecificPadding() {
     if (PlatformUtils.isIOS) {
-      return const EdgeInsets.all(20.0); // iOS отступы
+      return const EdgeInsets.all(20.0);
     } else if (PlatformUtils.isAndroid) {
-      return const EdgeInsets.all(16.0); // Android отступы
+      return const EdgeInsets.all(16.0);
     } else {
-      return const EdgeInsets.all(16.0); // Web отступы
+      return const EdgeInsets.all(16.0);
     }
   }
 } 

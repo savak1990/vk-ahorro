@@ -1,23 +1,37 @@
-# Ahorro Application
+# flutter-ui
 
-Spending Application
+The Ahorro client: one Flutter app for Android, iOS and web.
 
-## Project Health
+At this point the app is the navigation shell only — three tabs (Home,
+Activity, Account), an adaptive "+" action, the theme, and Cognito sign-in
+through the Amplify Authenticator. The tab bodies are placeholders. Spec 080
+wires the "+" button to the hello service.
 
-- [Android Build (CodeBuild)](https://eu-west-1.codebuild.aws.amazon.com/project/eyJlbmNyeXB0ZWREYXRhIjoiMDVYV0dsc2V1UW5ORHQvRGJQdzRrQlNQSVNRalJVUEs1S3Z4UUFYYTBjNERiOGtjOXo2eEZOQkp2U3UxRUNuNlBzdWVIb0xsOWkvbHRkd3JuVTR3Ykg4UG1ONmk1REtKNzUzTnpBNkYwNys5ejJBTVJXSTN6dz09IiwiaXZQYXJhbWV0ZXJTcGVjIjoiTzRFWHNNV3ZZWEpsRzFNaCIsIm1hdGVyaWFsU2V0U2VyaWFsIjoxfQ%3D%3D)
-- [Android Build (Zip)](https://ahorro-artifacts.s3.eu-west-1.amazonaws.com/ahorro-ui/android/build-ahorro-android.zip)
+## Layout
 
-## Getting Started
+| Path | Holds |
+|---|---|
+| `lib/main.dart` | Entry point: Amplify configure, `Authenticator`, theme, routes |
+| `lib/src/screens/templates/app_shell.dart` | Navigation rail on web, bottom bar and FAB on mobile |
+| `lib/src/screens/main_screen.dart` | The three tabs and the "+" action |
+| `lib/src/widgets/adaptive/` | Platform-neutral button, dropdown, segmented control |
+| `lib/src/providers/` | `provider` + `ChangeNotifier` state |
+| `lib/src/services/` | Request logging and operation ids |
 
-This project is a starting point for a Flutter application.
+## Running it
 
-A few resources to get you started if this is your first Flutter project:
+Every entry point is a `make` target in the repository root, not a command
+run from this folder. `make help` lists them all.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```
+make ui-get          # fetch dependencies
+make ui-analyze      # lint
+make ui-test         # widget tests
+make ui-run-web      # Chrome on :3000
+make ui-run-android  # the ahorro emulator
+make ui-run-ios      # an iPhone simulator
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+`make ui-run-web` expects the API on `:8080`, which `make go-run` provides.
 
-### Cool stuff
+Spec 090 installs the toolchain these targets need.
