@@ -12,7 +12,7 @@ A Shopper in Spain can sign up, photograph a Mercadona or Consum receipt, and wi
 ## 2. In scope
 
 - Account: create account, sign in, reset password, sign out, delete account and all data.
-- Postal code: taken from the Store address on the Shopper's first Receipt; it decides the price areas used.
+- Postal code: asked for on the Shopper's first Receipt, proposed from the Store address when it has one, and always confirmed by the Shopper; it decides the price areas used.
 - Tier: Free only, given at sign-up, 20 receipts per calendar month.
 - Receipts: photograph a receipt, read it on the device, extract its lines with an LLM, map lines to products, correct lines, browse receipts, open one receipt.
 - Product library: a global grocery library from Open Food Facts (Spain), linked to the chains' own products.
