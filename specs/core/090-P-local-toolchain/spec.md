@@ -5,7 +5,7 @@ updated: "2026-09-21"
 ---
 # 090 — Local toolchain
 
-**Status note:** Draft. Current machine: docker + buildx, terraform 1.15.9, terragrunt 1.1.5, gh 2.100, yq, Xcode, aws-cli present. Missing: flutter, dart, Java, CocoaPods, Android SDK, yamllint, kubeconform; verify go, helm, kubectl.
+**Status note:** Draft. Current machine: docker + buildx, gh 2.100, yq, jq, Xcode, aws-cli present. Terraform and Terragrunt are not needed here: this repository holds no Terraform (ADR 0004). Missing: flutter, dart, Java, CocoaPods, Android SDK, yamllint, kubeconform; verify go, helm, kubectl.
 
 **Complexity:** Small
 **Risk:** Low — install steps only; the Android SDK licence step is interactive.
@@ -24,7 +24,7 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 
 ## Requirements
 
-1. Homebrew MUST install: `flutter` (cask), `openjdk@17`, `android-commandlinetools` (cask), `cocoapods`, `go`, `golangci-lint`, `helm`, `kubectl`, `kubeconform`, `yamllint`, `argocd`, `jq`. Terraform, Terragrunt, Docker, gh, yq are already present and stay as installed.
+1. Homebrew MUST install: `flutter` (cask), `openjdk@17`, `android-commandlinetools` (cask), `cocoapods`, `go`, `golangci-lint`, `helm`, `kubectl`, `kubeconform`, `yamllint`, `argocd`, `jq`. Docker, gh, yq are already present and stay as installed.
 2. Android SDK packages via `sdkmanager`: `platform-tools`, `platforms;android-35`, `build-tools;35.0.0`, `emulator`, `system-images;android-35;google_apis;arm64-v8a`; one AVD named `ahorro` created with `avdmanager`. `ANDROID_HOME` and `JAVA_HOME` MUST be exported from the shell profile. Licences accepted with `flutter doctor --android-licenses`.
 3. iOS: `sudo xcodebuild -license accept`, `xcodebuild -runFirstLaunch`, the current iOS simulator runtime installed (`xcodebuild -downloadPlatform iOS`).
 4. `make tools-check` MUST print the version of every tool above and exit non-zero when one is missing. `make tools-install` MUST run the Homebrew and `sdkmanager` steps and be safe to re-run.

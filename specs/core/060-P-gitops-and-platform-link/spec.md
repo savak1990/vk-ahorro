@@ -13,7 +13,7 @@ image tag.
 **Risk:** Medium — the only cross-repository change; a broken pointer wedges the platform's `root` Application until its retry budget runs out.
 **Estimated cost:** ~1.5 days
 **Recommended model:** Opus for the platform pull request, Sonnet for the chart.
-**Depends on:** 040-helm-charts, 050-terraform-cognito; platform ADR 0015.
+**Depends on:** 040-helm-charts, 055-cognito-and-token; platform ADR 0015, platform ADR 0042.
 **Lifecycle class(es) touched:** Disposable (every object Argo creates from this chart).
 
 ## Scope
@@ -29,16 +29,17 @@ files, and one ADR.
 
 ## Requirements
 
-1. `gitops/Chart.yaml` name `ahorro`. `gitops/values.yaml` MUST hold: `fqdn: ""`, `namespace: ahorro`, `repo: https://github.com/savak1990/vk-ahorro`, `charts.registry: ghcr.io/savak1990/vk-ahorro/charts`, `charts.hello.version`, `images.hello.tag`, `cognito.userPoolId`, `cognito.clientId`, `cognito.region`. Image tags are commit SHAs written by CI (030).
+1. `gitops/Chart.yaml` name `ahorro`. `gitops/values.yaml` MUST hold: `fqdn: ""`, `namespace: ahorro`, `repo: https://github.com/savak1990/vk-ahorro`, `charts.registry: ghcr.io/savak1990/vk-ahorro/charts`, `charts.hello.version`, `images.hello.tag`, and `cognito.clientId: ""` plus `cognito.issuer: ""` as empty defaults. Image tags are commit SHAs written by CI (030). The Cognito values MUST NOT be committed with content: there is one pool per platform project (constitution §4), so the platform fills them the way it already fills `fqdn`. `cognito.userPoolId` and `cognito.region` are not needed here — only `make ui-config` (080) wants them, and it reads SSM.
 2. `gitops/templates/validate.yaml` MUST `fail` when `fqdn` is empty (constitution §4). No template may contain a literal hostname.
 3. `gitops/templates/hello.yaml` renders one Argo `Application` in namespace `argocd`, `project: vk-ahorro`, source `repoURL: {{ .Values.charts.registry }}`, `chart: hello`, `targetRevision: {{ chart version }}`, destination namespace `ahorro`, `syncPolicy.automated {prune: true, selfHeal: true}`, `syncOptions [CreateNamespace=true, ServerSideApply=true]`, the `resources-finalizer.argocd.argoproj.io` finalizer, and helm `parameters`: `image.tag`, `host` (`api-ahorro.{{ .Values.fqdn }}` / `ahorro.{{ .Values.fqdn }}`), `cognito.issuer`, `cognito.clientId`, `corsAllowedOrigins` (`https://ahorro.{{ .Values.fqdn }}`). Every parameter MUST be a scalar: Argo's `helm.parameters` carries scalar overrides only.
-4. Platform side, exactly these files in `vk-lab-platform`:
+4. The Cognito values MUST reach the chart the way `fqdn` already does, in four places in `vk-lab-platform`: `scripts/argo-up.sh`'s SSM batch read gains `/<project>/persistent/ahorro-cognito/{client_id,issuer}` (six names today, eight after; `get-parameters` caps at ten); `--set` onto `gitops/bootstrap`; two `helm.parameters` entries in `gitops/bootstrap/templates/root-application.yaml`; and empty defaults in both `gitops/values.yaml` files. They MUST NOT be delivered by an `ExternalSecret`: they are public identifiers, and that path would store public data as secret data.
+5. Platform side, exactly these files in `vk-lab-platform`:
    - `gitops/templates/apps/vk-ahorro/appproject.yaml`: `AppProject vk-ahorro`, `sourceRepos: [https://github.com/savak1990/vk-ahorro, ghcr.io/savak1990/vk-ahorro/charts]`, `destinations: [{server: https://kubernetes.default.svc, namespace: ahorro}, {..., namespace: argocd}]`, `clusterResourceWhitelist: [{group: "", kind: Namespace}]`, sync-wave `4`.
    - `gitops/templates/apps/vk-ahorro/application.yaml`: `Application vk-ahorro`, `project: vk-ahorro`, source `repoURL: https://github.com/savak1990/vk-ahorro`, `path: gitops`, `targetRevision: main`, helm parameter `fqdn: {{ .Values.envoyGateway.fqdn }}`, destination namespace `argocd`, `automated {prune: true, selfHeal: false}`, `syncOptions [ServerSideApply=true]`, finalizer, sync-wave `5`, gated `{{- if ne .Values.target "local" }}`.
    - `tests/golden/gitops-aws/platform/` regenerated; `docs/adr/0038-first-business-app-pointer.md`.
 5. The pointer's `selfHeal: false` is deliberate: the operator syncs the app when they choose. `prune: true` stays so a removed service disappears.
-6. Make targets in this repository: `gitops-lint`, `gitops-template` (with `--set fqdn=example.invalid`), `gitops-check` (renders and runs kubeconform with the Argo CD schema).
-7. `.github/workflows/release.yml` MUST commit the new image tag into `gitops/values.yaml` with a `[skip ci]` message, and its permissions rise to `contents: write`. 030 created the workflow with `contents: read`; the commit is what needs the raise. `paths-ignore` already excludes `gitops/**`, so the commit MUST NOT start a second run.
+7. Make targets in this repository: `gitops-lint`, `gitops-template` (with `--set fqdn=example.invalid`), `gitops-check` (renders and runs kubeconform with the Argo CD schema).
+8. `.github/workflows/release.yml` MUST commit the new image tag into `gitops/values.yaml` with a `[skip ci]` message, and its permissions rise to `contents: write`. 030 created the workflow with `contents: read`; the commit is what needs the raise. `paths-ignore` already excludes `gitops/**`, so the commit MUST NOT start a second run.
 
 ## Implementation hints
 

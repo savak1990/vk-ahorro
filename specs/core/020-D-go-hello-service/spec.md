@@ -10,7 +10,7 @@ updated: "2026-09-21"
 echoed `X-Request-Id`, `/api/v1/hello` 200 `Hello, anonymous` with
 `AUTH_DISABLED=true`, and 401 without a token when auth is on. SIGTERM shut the
 process down in under a second. The check against a real Cognito token moves to
-spec 050, which creates the pool. This spec also added the repository's first
+the platform's spec AWS-035, which creates the pool (055, ADR 0004). This spec also added the repository's first
 `Makefile`, `.golangci.yml` (schema v2) and `scripts/specs-check.sh`.
 
 **Complexity:** Small
@@ -26,7 +26,7 @@ One Go module, one service `hello`, and the shared packages every later
 service reuses: JWT verification against Cognito, JSON helpers, request id,
 CORS.
 
-Excludes: the Dockerfile (030), the chart (040), the Cognito pool itself (050).
+Excludes: the Dockerfile (030), the chart (040), the Cognito pool itself (the platform's spec AWS-035).
 
 ## Requirements
 
@@ -52,4 +52,4 @@ Excludes: the Dockerfile (030), the chart (040), the Cognito pool itself (050).
 - `make go-test` passes; coverage includes: healthz 200, hello 401 (no token, bad signature, expired, wrong audience), hello 200 (id token, access token), `AUTH_DISABLED` path, request id echo.
 - `make go-lint` reports zero issues.
 - `make go-run` then `curl -i localhost:8080/healthz` → 200 with `X-Request-Id`; `curl -i localhost:8080/api/v1/hello` → 200 `Hello, anonymous`.
-- With `AUTH_DISABLED` unset and the lab pool values: `curl` without a token → 401; with `aws cognito-idp initiate-auth` id token → 200 with the user's email. The token half needs the pool, so it runs under spec 050.
+- With `AUTH_DISABLED` unset and the lab pool values: `curl` without a token → 401; with `aws cognito-idp initiate-auth` id token → 200 with the user's email. The token half needs the pool, so it runs under spec 055 with `make token`.

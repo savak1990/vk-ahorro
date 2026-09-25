@@ -30,13 +30,15 @@ Vision and specs are different layers. `docs/` holds project-level vision, use c
 
 ## Ownership and the platform boundary
 
-Identity and trust live in the platform. The application's own resources live here.
+Identity and trust live in the platform, and so do this application's AWS resources. This repository holds no Terraform.
 
 `ahorro-ci-role` is defined in `vk-lab-platform`, not here, because an application that can apply its own IAM role can widen that role to `Action: "*"`. Every new AWS permission this repository needs is a pull request against the other repository. See `docs/adr/0003-identity-lives-in-the-platform.md`.
 
+The Cognito user pool lives there too, as `terraform/live/persistent/ahorro-cognito/`. The platform's lifecycle button applies its own Terraform and would never have applied ours, and the thing that runs the apply owns the resource. See `docs/adr/0004-cognito-moves-to-the-platform.md`.
+
 The application enters the cluster through exactly one pointer `Application` in the platform, whose path is this repository's `gitops/` folder. That folder is this repository's own app-of-apps and renders one child `Application` per service. The platform never renders a chart from here.
 
-Terraform owns AWS resources. Argo CD owns every Kubernetes object. Neither crosses into the other.
+Terraform owns AWS resources. Argo CD owns every Kubernetes object. Neither crosses into the other. The Terraform is the platform's; adding a `deploy/terraform/` here would be wrong.
 
 ---
 
@@ -46,7 +48,7 @@ No secret, no root domain, and no `fqdn` value is ever committed — not in code
 
 Hostnames are always templated from a value the platform passes in. A chart's `host` has no default and fails the render when empty. Use `<root-domain>` or a documented placeholder such as `lab.example.com` in anything that must show a shape.
 
-Cognito user pool id and client id are public identifiers and MAY be committed.
+Cognito user pool id and client id are public identifiers and MAY be committed. They are not committed anyway: there is one pool per platform project, so a committed id is right for one project and wrong for every other. Read them with `make cognito-config`, which reads SSM.
 
 `make domain-check` enforces this over the working tree and over every commit after the baseline. It fails closed: no value, no history to walk, no green. The history before the baseline is the imported, pre-constitution past; see `docs/adr/0002-domain-guard-and-the-imported-history.md`. Moving the baseline forward hides commits from the check, so it belongs in a commit of its own with a reason.
 
@@ -112,6 +114,8 @@ Before opening a pull request:
 - `make helm-lint` and `make helm-template CHART=<chart>`
 - `make domain-check` (needs `ROOT_DOMAIN`; CI reads it from the platform's SSM parameter)
 
+`make token` and `make cognito-config` need the platform's persistent layer applied; they read `/$(PROJECT_NAME)/persistent/ahorro-cognito/` and create nothing.
+
 Never claim a check passes without running it in the same session. A previous run is not evidence.
 
 ---
@@ -145,7 +149,7 @@ Resource requests set cpu and memory; limits set memory only, never cpu. This ma
 Before changing anything that reaches the cluster or AWS:
 
 - determine which repository owns the resource;
-- determine its lifecycle class (state, persistent, disposable);
+- determine its lifecycle class (persistent, disposable — this repository has no state class);
 - consider destroy and recreate behavior;
 - consider CI behavior;
 - consider cost.
