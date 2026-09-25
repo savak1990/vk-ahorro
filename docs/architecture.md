@@ -33,7 +33,7 @@ vk-ahorro/
   deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
   gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
   flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
-  scripts/                                 specs-check.sh, domain-guard.sh, token.sh; later e2e-smoke.sh
+  scripts/                                 specs-check.sh, domain-guard.sh, cognito.sh; later e2e-smoke.sh
   specs/core/                    milestone specs
   docs/architecture.md           this document
   docs/adr/                      decisions

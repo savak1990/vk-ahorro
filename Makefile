@@ -46,7 +46,7 @@ AWS_REGION := eu-west-1
 # The platform project whose persistent layer owns the Cognito pool. The pool
 # is per project, so nothing about it can be committed here.
 PROJECT_NAME ?= vk-lab-platform
-COGNITO_SSM := /$(PROJECT_NAME)/persistent/ahorro-cognito
+COGNITO_SSM := /$(PROJECT_NAME)/persistent/ahorro-cognito # read by scripts/cognito.sh
 
 ## Print this help
 help:
@@ -84,11 +84,11 @@ domain-check:
 
 ## Print the Cognito pool's public identifiers as JSON
 cognito-config:
-	@aws ssm get-parameters-by-path --region $(AWS_REGION) --path $(COGNITO_SSM) --query 'Parameters[?Type==`String`].[Name,Value]' --output json | jq 'map({(.[0]|split("/")|last): .[1]}) | add | {user_pool_id, client_id, issuer}'
+	@./scripts/cognito.sh config
 
 ## Print a one-hour Cognito id token for the test user
 token:
-	@./scripts/token.sh
+	@./scripts/cognito.sh token
 
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:
