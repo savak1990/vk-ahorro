@@ -41,9 +41,7 @@
       "Bash(aws s3api delete-objects*)",
       "Bash(aws s3api put-bucket-versioning*)",
       "Bash(aws ssm delete-parameter*)",
-      "Bash(aws configure*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f*)"
+      "Bash(aws configure*)"
     ],
     "ask": [
       "Bash(make image-push*)",
