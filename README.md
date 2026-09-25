@@ -52,18 +52,40 @@ docs/             architecture, ADRs
 
 ## Make targets
 
-Targets without a repository folder yet are planned; `make help` lists the
-ones that exist.
+`make help` prints every target that exists. A planned target has no
+repository folder yet.
 
-| Group | Targets |
-|---|---|
-| Go | `go-build` `go-test` `go-lint` `go-run` |
-| Images | `image-build SVC=` `image-push SVC=` `images-push` |
-| Helm | `helm-lint` `helm-template` `helm-package` `helm-push` |
-| Terraform | `tf-state-up` `tf-plan` `tf-apply` `tf-outputs` `tf-destroy` |
-| GitOps | `gitops-lint` `gitops-template` `gitops-check` |
-| Flutter | `ui-config ENV=` `ui-run-web` `ui-run-android ENV=` `ui-run-ios ENV=` `ui-build-web` `web-serve-local` |
-| Tooling | `tools-install` `tools-check` `specs-check` `help` |
+| Group | Targets | State |
+|---|---|---|
+| Go | `go-build` `go-test` `go-lint` `go-run` | exists |
+| Flutter | `ui-run-web` `ui-run-android` `ui-run-ios` | exists |
+| Devices | `emulator-android` `emulator-ios` `emulator-stop` | exists |
+| Images | `image-build SVC=` `image-push SVC=` `images-push` | exists |
+| Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
+| Checks | `specs-check` `domain-check` `help` | exists |
+| Terraform | `tf-state-up` `tf-plan` `tf-apply` `tf-outputs` `tf-destroy` | planned |
+| GitOps | `gitops-lint` `gitops-template` `gitops-check` | planned |
+| Flutter config | `ui-config ENV=` `ui-build-web` `web-serve-local` | planned |
+
+### Run the Flutter client on a local device
+
+1. Run the client in Chrome: `make ui-run-web`
+2. Run the client on the Android emulator: `make ui-run-android`
+3. Run the client on the iOS simulator: `make ui-run-ios`
+4. Stop every emulator and simulator: `make emulator-stop`
+
+`ui-run-android` and `ui-run-ios` start the device first. To start a device
+without the Flutter client, use `make emulator-android` or `make emulator-ios`.
+
+Two variables name the device. Set a different value on the command line:
+
+| Variable | Default | Example |
+|---|---|---|
+| `AVD` | `pixel_phone` | `make ui-run-android AVD=pixel_tablet` |
+| `IOS_DEVICE` | `iPhone 18 Pro` | `make ui-run-ios IOS_DEVICE="iPhone 17"` |
+
+`flutter-ui/` declares `.env` as an asset. The file is not in Git, and the
+build fails without it. The `ui-config` target that generates it is planned.
 
 Hostnames are `ahorro.<fqdn>` and `api-ahorro.<fqdn>`; the domain itself
 is never written in this repository.
