@@ -36,40 +36,39 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildCupertinoNavigationBar(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return CupertinoNavigationBar(
-      middle: title != null ? Text(
-        title!,
-        style: TextStyle(
-          color: foregroundColor ?? colorScheme.onSurface,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-        ),
-      ) : null,
-      trailing: actions != null && actions!.isNotEmpty 
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: actions!,
-          )
-        : null,
+      middle: title != null
+          ? Text(
+              title!,
+              style: TextStyle(
+                color: foregroundColor ?? colorScheme.onSurface,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : null,
+      trailing: actions != null && actions!.isNotEmpty
+          ? Row(mainAxisSize: MainAxisSize.min, children: actions!)
+          : null,
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,
       backgroundColor: backgroundColor ?? colorScheme.surface,
-      border: null, // Убираем границу для современного вида
+      border: null,
     );
   }
 
   Widget _buildMaterialAppBar(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return AppBar(
-      title: title != null ? Text(
-        title!,
-        style: TextStyle(
-          color: foregroundColor ?? colorScheme.onSurface,
-        ),
-      ) : null,
+      title: title != null
+          ? Text(
+              title!,
+              style: TextStyle(color: foregroundColor ?? colorScheme.onSurface),
+            )
+          : null,
       actions: actions,
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,
@@ -83,9 +82,9 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize {
     if (PlatformUtils.isIOS) {
-      return const Size.fromHeight(44.0); // iOS стандартная высота
+      return const Size.fromHeight(44.0);
     } else {
-      return const Size.fromHeight(kToolbarHeight); // Material Design высота
+      return const Size.fromHeight(kToolbarHeight);
     }
   }
-} 
+}

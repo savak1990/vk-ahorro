@@ -1,5 +1,0 @@
-enum DateFilterType {
-  month,
-  period,
-}
-

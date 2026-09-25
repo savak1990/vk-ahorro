@@ -29,7 +29,8 @@ Excludes: load tests, security scans, release automation.
 2. `FQDN` and the test user's password MUST come from the environment, never from a file in Git.
 3. The manual half is a checklist in this spec: on Android emulator, iOS simulator, and Chrome — start the app with the lab config, sign in, tap "+", read "Hello, <email>", sign out.
 4. On success the operator MUST fill the results table below with the date, commit SHA, platform target (`aws`), and one line per check, then flip every `core/` spec to `DONE` (rename folders, update links, run `make specs-check`).
-5. The script MUST be runnable against an already-running platform (skips nothing, but is idempotent: re-running pushes the same SHA and re-applies a no-op plan).
+5. `SKIP_AUTH` MUST NOT appear anywhere in this spec's checks. The flag exists for local UI work and renders the shell with no sign-in, so a run that sets it exercises a different app than the one shipped: it cannot catch a wrong issuer, a stale JWKS, an expired token, or CORS failing on the authenticated call, which are the failures e2e exists to find. `kDebugMode` already keeps the flag out of release builds.
+6. The script MUST be runnable against an already-running platform (skips nothing, but is idempotent: re-running pushes the same SHA and re-applies a no-op plan).
 
 ## Implementation hints
 

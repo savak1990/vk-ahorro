@@ -27,9 +27,7 @@ class AmplifyProvider extends BaseProvider {
       try {
         final auth = AmplifyAuthCognito();
         await Amplify.addPlugin(auth);
-      } catch (_) {
-        // Плагин мог быть добавлен ранее при hot-restart — игнорируем
-      }
+      } catch (_) {}
       if (!Amplify.isConfigured) {
         await Amplify.configure(amplifyconfig);
       }
@@ -76,13 +74,11 @@ class AmplifyProvider extends BaseProvider {
   Future<Map<String, dynamic>> fetchUserInfo({
     bool forceRefresh = false,
   }) async {
-    // Return cached data if available and not forcing refresh
     if (_cachedUserInfo != null && !forceRefresh) {
       debugPrint('[AmplifyProvider]: Returning cached user info');
       return _cachedUserInfo!;
     }
 
-    // If already fetching, return the existing future
     if (_fetchCompleter != null && !_fetchCompleter!.isCompleted) {
       debugPrint(
         '[AmplifyProvider]: Already fetching user info, returning existing future',
@@ -90,14 +86,12 @@ class AmplifyProvider extends BaseProvider {
       return _fetchCompleter!.future;
     }
 
-    // Start new fetch
     _fetchCompleter = Completer<Map<String, dynamic>>();
     notifyListeners();
 
     try {
       debugPrint('[AmplifyProvider]: Starting fetchUserInfo');
 
-      // Add timeout to prevent hanging
       final session = await Amplify.Auth.fetchAuthSession().timeout(
         const Duration(seconds: 10),
       );
@@ -111,7 +105,7 @@ class AmplifyProvider extends BaseProvider {
       }
 
       debugPrint('[AmplifyProvider]: Fetching user attributes');
-      // Add timeout to prevent hanging on fetchUserAttributes
+
       final attributes = await Amplify.Auth.fetchUserAttributes().timeout(
         const Duration(seconds: 15),
       );
@@ -144,9 +138,8 @@ class AmplifyProvider extends BaseProvider {
         '[AmplifyProvider]: User info compiled - name: ${nameAttribute.value}, email: ${emailAttribute.value}',
       );
 
-      // Cache the result
       _cachedUserInfo = userInfo;
-      // Also update the currentUserName for consistency
+
       _currentUserName = nameAttribute.value;
 
       _fetchCompleter!.complete(userInfo);
@@ -177,7 +170,6 @@ class AmplifyProvider extends BaseProvider {
 
   Future<void> signOut() async {
     try {
-      // Add timeout to prevent hanging
       await Amplify.Auth.signOut().timeout(
         const Duration(seconds: 10),
         onTimeout: () {

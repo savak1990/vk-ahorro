@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'theme.dart' as generated_theme;
 import '../constants/app_typography.dart';
@@ -11,11 +10,9 @@ class AdaptiveTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      
-      // Адаптивная цветовая схема из сгенерированного файла
+
       colorScheme: scheme,
 
-      // Типографика (одинаковая для всех платформ)
       textTheme: const TextTheme(
         displayLarge: AppTypography.displayLarge,
         displayMedium: AppTypography.displayMedium,
@@ -34,32 +31,31 @@ class AdaptiveTheme {
         labelSmall: AppTypography.labelSmall,
       ),
 
-      // Адаптивная App Bar
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: PlatformUtils.adaptiveElevation,
-        centerTitle: PlatformUtils.isIOS, // iOS центрирует заголовки
+        centerTitle: PlatformUtils.isIOS,
         titleTextStyle: AppTypography.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
-        systemOverlayStyle: PlatformUtils.isIOS 
-          ? SystemUiOverlayStyle.dark 
-          : SystemUiOverlayStyle.light,
+        systemOverlayStyle: PlatformUtils.isIOS
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light,
       ),
 
-      // Адаптивные карточки
       cardTheme: CardThemeData(
         color: scheme.surface,
         elevation: PlatformUtils.adaptiveElevation,
         shadowColor: Colors.black26,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
         ),
         margin: PlatformUtils.adaptivePadding,
       ),
 
-      // Адаптивные кнопки
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
@@ -67,11 +63,11 @@ class AdaptiveTheme {
           elevation: PlatformUtils.adaptiveElevation,
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: scheme.onPrimary,
-          ),
+          textStyle: AppTypography.labelLarge.copyWith(color: scheme.onPrimary),
         ),
       ),
 
@@ -81,7 +77,9 @@ class AdaptiveTheme {
           side: BorderSide(color: scheme.primary),
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
           textStyle: AppTypography.labelLarge,
         ),
@@ -95,36 +93,42 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивные поля ввода
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.error),
         ),
         contentPadding: PlatformUtils.adaptivePadding,
         labelStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.7),
+          color: scheme.onSurface.withValues(alpha: 0.7),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.6),
+          color: scheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
 
-      // Адаптивная нижняя навигация
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,
         selectedItemColor: scheme.primary,
@@ -133,7 +137,6 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
       ),
 
-      // Адаптивная плавающая кнопка
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -143,20 +146,17 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Адаптивные разделители
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant,
         thickness: 1,
         space: 1,
       ),
 
-      // Фон
       scaffoldBackgroundColor: scheme.surface,
 
-      // Адаптивная плотность
-      visualDensity: PlatformUtils.isIOS 
-        ? VisualDensity.standard 
-        : VisualDensity.comfortable,
+      visualDensity: PlatformUtils.isIOS
+          ? VisualDensity.standard
+          : VisualDensity.comfortable,
     );
   }
 
@@ -165,11 +165,9 @@ class AdaptiveTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
-      // Адаптивная темная цветовая схема из сгенерированного файла
+
       colorScheme: scheme,
 
-      // Типографика (та же, что и в светлой теме)
       textTheme: const TextTheme(
         displayLarge: AppTypography.displayLarge,
         displayMedium: AppTypography.displayMedium,
@@ -188,7 +186,6 @@ class AdaptiveTheme {
         labelSmall: AppTypography.labelSmall,
       ),
 
-      // Адаптивная темная App Bar
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
@@ -197,23 +194,23 @@ class AdaptiveTheme {
         titleTextStyle: AppTypography.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
-        systemOverlayStyle: PlatformUtils.isIOS 
-          ? SystemUiOverlayStyle.light 
-          : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: PlatformUtils.isIOS
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
 
-      // Адаптивные темные карточки
       cardTheme: CardThemeData(
         color: scheme.surface,
         elevation: PlatformUtils.adaptiveElevation,
         shadowColor: Colors.black26,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
         ),
         margin: PlatformUtils.adaptivePadding,
       ),
 
-      // Адаптивные темные кнопки
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: scheme.primary,
@@ -221,44 +218,50 @@ class AdaptiveTheme {
           elevation: PlatformUtils.adaptiveElevation,
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: scheme.onPrimary,
-          ),
+          textStyle: AppTypography.labelLarge.copyWith(color: scheme.onPrimary),
         ),
       ),
 
-      // Адаптивные темные поля ввода
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.error),
         ),
         contentPadding: PlatformUtils.adaptivePadding,
         labelStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.7),
+          color: scheme.onSurface.withValues(alpha: 0.7),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.6),
+          color: scheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
 
-      // Адаптивная темная нижняя навигация
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: scheme.surface,
         selectedItemColor: scheme.primary,
@@ -267,7 +270,6 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
       ),
 
-      // Адаптивная темная плавающая кнопка
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
@@ -277,22 +279,18 @@ class AdaptiveTheme {
         ),
       ),
 
-      // Фон
       scaffoldBackgroundColor: scheme.surface,
 
-      // Адаптивная плотность
-      visualDensity: PlatformUtils.isIOS 
-        ? VisualDensity.standard 
-        : VisualDensity.comfortable,
+      visualDensity: PlatformUtils.isIOS
+          ? VisualDensity.standard
+          : VisualDensity.comfortable,
     );
   }
 
-  // Метод для получения текущей темы
   static ThemeData getCurrentTheme({bool isDark = false}) {
     return isDark ? darkTheme : lightTheme;
   }
 
-  // Метод для получения платформо-специфичных стилей
   static Map<String, dynamic> getPlatformSpecificStyles() {
     return {
       'elevation': PlatformUtils.adaptiveElevation,
@@ -303,4 +301,4 @@ class AdaptiveTheme {
       'backgroundColor': generated_theme.MaterialTheme.lightScheme().surface,
     };
   }
-} 
+}

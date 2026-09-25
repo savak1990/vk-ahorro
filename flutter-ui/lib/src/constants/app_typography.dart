@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class AppTypography {
   static const String fontFamily = 'Roboto';
 
-  // Display
   static const TextStyle displayLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 57,
@@ -23,7 +22,6 @@ class AppTypography {
     height: 1.22,
   );
 
-  // Headline
   static const TextStyle headlineLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 32,
@@ -43,7 +41,6 @@ class AppTypography {
     height: 1.33,
   );
 
-  // Title
   static const TextStyle titleLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 22,
@@ -63,7 +60,6 @@ class AppTypography {
     height: 1.43,
   );
 
-  // Body
   static const TextStyle bodyLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 16,
@@ -83,7 +79,6 @@ class AppTypography {
     height: 1.33,
   );
 
-  // Label
   static const TextStyle labelLarge = TextStyle(
     fontFamily: fontFamily,
     fontSize: 14,
@@ -103,14 +98,11 @@ class AppTypography {
     height: 1.45,
   );
 
-  // Мутный стиль для значений (серый)
   static const TextStyle bodyMuted = TextStyle(
     fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.normal,
     height: 1.43,
-    color: Color(0xFF9E9E9E), // Можно заменить на theme.colorScheme.onSurfaceVariant в виджете
+    color: Color(0xFF9E9E9E),
   );
-
-  // Добавь другие стили по необходимости
-} 
+}

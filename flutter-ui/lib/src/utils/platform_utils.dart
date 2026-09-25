@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class PlatformUtils {
-  // Platform detection
   static bool get isWeb => kIsWeb;
   static bool get isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -11,28 +10,25 @@ class PlatformUtils {
   static bool get isMobile => isAndroid || isIOS;
   static bool get isDesktop => isWeb;
 
-  // Additional utilities for adaptive navigation
   static bool get shouldUseSideNavigation => isWeb;
   static bool get shouldUseBottomNavigation => isMobile;
 
-  // Screen size detection for web
   static bool get isWideScreen {
     if (!isWeb) return false;
-    // For web, check screen width via MediaQuery
-    return true; // Will be determined in the widget
+
+    return true;
   }
 
-  // Methods for platform-specific styles
   static double get adaptiveElevation {
-    if (isIOS) return 0.0; // iOS does not use shadows
-    if (isAndroid) return 6.0; // Android uses Material Design shadows
-    return 2.0; // Web uses medium shadows
+    if (isIOS) return 0.0;
+    if (isAndroid) return 6.0;
+    return 2.0;
   }
 
   static double get adaptiveBorderRadius {
-    if (isIOS) return 8.0; // iOS uses softer corners
-    if (isAndroid) return 4.0; // Android uses Material Design corners
-    return 6.0; // Web uses medium corners
+    if (isIOS) return 8.0;
+    if (isAndroid) return 4.0;
+    return 6.0;
   }
 
   static EdgeInsets get adaptivePadding {
@@ -41,9 +37,7 @@ class PlatformUtils {
     return const EdgeInsets.all(14.0);
   }
 
-  // Methods for determining system settings
   static bool get isDarkModeSupported {
-    // iOS and Android support dark theme
     return isMobile;
   }
 
@@ -54,7 +48,6 @@ class PlatformUtils {
     return 'Unknown';
   }
 
-  // Methods for adaptive styles
   static Map<String, dynamic> get adaptiveStyles {
     return {
       'elevation': adaptiveElevation,

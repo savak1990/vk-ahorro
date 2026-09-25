@@ -1,6 +1,8 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios ui-run-android ui-run-ios ui-run-web emulator-stop
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
 
 .DEFAULT_GOAL := help
+
+UI_DIR := $(CURDIR)/flutter-ui
 
 # Where `go build` puts binaries; ignored by Git.
 BIN_DIR := $(CURDIR)/bin
@@ -42,7 +44,7 @@ IOS_DEVICE ?= iPhone 18 Pro
 help:
 	@awk 'BEGIN { FS = ":" } \
 	     /^## / { doc = substr($$0, 4); next } \
-	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-17s %s\n", $$1, doc; doc = "" } } \
+	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-18s %s\n", $$1, doc; doc = "" } } \
 	     { doc = "" }' $(MAKEFILE_LIST)
 
 ## Build every Go binary into bin/
@@ -99,9 +101,9 @@ require-chart:
 	@test -n "$(CHART)" || { echo "set CHART=<chart>, for example: make helm-template CHART=hello" >&2; exit 1; }
 	@test -f "$(CHART_DIR)/Chart.yaml" || { echo "no $(CHART_DIR)/Chart.yaml" >&2; exit 1; }
 
-## Lint every chart
 # lint renders the templates, so the required values must be present or every
 # chart fails on its own guard rather than on a real defect.
+## Lint every chart
 helm-lint:
 	@for c in deploy/helm/*/; do \
 	  helm lint "$$c" --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG); \
@@ -121,13 +123,41 @@ helm-package: require-chart
 helm-push: helm-package
 	helm push $(DIST_DIR)/$(CHART)-$(CHART_VERSION).tgz $(CHARTS_REGISTRY)
 
+## Fetch the Flutter package dependencies
+ui-get:
+	cd $(UI_DIR) && flutter pub get
+
+## Apply the automatic lint fixes in place
+ui-fix:
+	cd $(UI_DIR) && dart fix --apply
+
+## Format the Flutter code in place
+ui-format:
+	cd $(UI_DIR) && dart format lib test
+
+## Analyze the Flutter code
+ui-analyze:
+	cd $(UI_DIR) && flutter analyze
+
+## Run the Flutter widget tests
+ui-test:
+	cd $(UI_DIR) && flutter test
+
+## Build the web bundle into flutter-ui/build/web
+ui-build-web:
+	cd $(UI_DIR) && flutter build web
+
+## Build a debug APK
+ui-build-android:
+	cd $(UI_DIR) && flutter build apk --debug
+
 ## Boot the Android emulator $AVD and print its adb serial
 emulator-android:
 	@$(CURDIR)/scripts/android-emulator.sh $(AVD)
 
-## Boot the iOS simulator $IOS_DEVICE and show its window
 # Xcode 27 replaced Simulator.app with DeviceHub.app, which is the only way
 # to see the booted device; simctl alone boots it headless.
+## Boot the iOS simulator $IOS_DEVICE and show its window
 emulator-ios:
 	@xcrun simctl boot "$(IOS_DEVICE)" 2>/dev/null || true
 	@xcrun simctl bootstatus "$(IOS_DEVICE)" >/dev/null
@@ -143,9 +173,10 @@ ui-run-android:
 ui-run-ios: emulator-ios
 	cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)"
 
-## Run the Flutter app in Chrome
+# Port 3000 is the origin `make go-run` allows through CORS.
+## Run the Flutter app in Chrome on :3000
 ui-run-web:
-	cd $(UI_DIR) && flutter run -d chrome
+	cd $(UI_DIR) && flutter run -d chrome --web-port 3000
 
 ## Shut down every running Android emulator and iOS simulator
 emulator-stop:
