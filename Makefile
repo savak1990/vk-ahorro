@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios ui-run-android ui-run-ios ui-run-web emulator-stop
 
 .DEFAULT_GOAL := help
 
@@ -32,11 +32,17 @@ DIST_DIR := $(CURDIR)/dist
 # A documented placeholder. The real hostname exists only at install time.
 TEMPLATE_HOST := api-ahorro.lab.example.com
 
+# Flutter UI. AVD and IOS_DEVICE name the simulators a developer boots locally;
+# override either on the command line to use a different one.
+UI_DIR := $(CURDIR)/flutter-ui
+AVD ?= pixel_phone
+IOS_DEVICE ?= iPhone 18 Pro
+
 ## Print this help
 help:
 	@awk 'BEGIN { FS = ":" } \
 	     /^## / { doc = substr($$0, 4); next } \
-	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-14s %s\n", $$1, doc; doc = "" } } \
+	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-17s %s\n", $$1, doc; doc = "" } } \
 	     { doc = "" }' $(MAKEFILE_LIST)
 
 ## Build every Go binary into bin/
@@ -114,3 +120,34 @@ helm-package: require-chart
 ## Push one packaged chart to GHCR. Usage: make helm-push CHART=hello
 helm-push: helm-package
 	helm push $(DIST_DIR)/$(CHART)-$(CHART_VERSION).tgz $(CHARTS_REGISTRY)
+
+## Boot the Android emulator $AVD and print its adb serial
+emulator-android:
+	@$(CURDIR)/scripts/android-emulator.sh $(AVD)
+
+## Boot the iOS simulator $IOS_DEVICE and show its window
+# Xcode 27 replaced Simulator.app with DeviceHub.app, which is the only way
+# to see the booted device; simctl alone boots it headless.
+emulator-ios:
+	@xcrun simctl boot "$(IOS_DEVICE)" 2>/dev/null || true
+	@xcrun simctl bootstatus "$(IOS_DEVICE)" >/dev/null
+	@open -a "$(shell xcode-select -p)/../Applications/DeviceHub.app"
+	@echo "$(IOS_DEVICE) ready"
+
+## Run the Flutter app on the Android emulator $AVD
+ui-run-android:
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(AVD)) && \
+	  cd $(UI_DIR) && flutter run -d $$serial
+
+## Run the Flutter app on the iOS simulator $IOS_DEVICE
+ui-run-ios: emulator-ios
+	cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)"
+
+## Run the Flutter app in Chrome
+ui-run-web:
+	cd $(UI_DIR) && flutter run -d chrome
+
+## Shut down every running Android emulator and iOS simulator
+emulator-stop:
+	@for s in $$(adb devices | awk '/^emulator-/ {print $$1}'); do adb -s $$s emu kill; done
+	@xcrun simctl shutdown all
