@@ -32,13 +32,14 @@ runtime config (080); the end-to-end smoke test (110).
 4. `make cognito-config` MUST print JSON on stdout and nothing else, so it can be piped into `jq`. It reports the public identifiers only: `user_pool_id`, `client_id` and `issuer` (constitution §4).
 5. `make token` MUST print one id token on stdout and nothing else. It reads the client id, the test user's name and the test user's password from SSM and calls `aws cognito-idp admin-initiate-auth --auth-flow ADMIN_USER_PASSWORD_AUTH`.
 6. `make token` MUST emit the **id token**, not the access token. A Cognito access token carries no `email` claim, and the pool uses email as the username attribute, so `username` holds a UUID: an access token would greet the user by UUID. `internal/platform/auth/jwt.go` accepts an id token because `aud` contains the configured client id.
-7. Neither target MUST write a credential to a file, and neither MUST echo one through Make's command echo. Both recipes are `@`-prefixed.
+7. No credential MUST reach a tracked file, a process listing, or Make's command echo. Both recipes are `@`-prefixed. The password MUST travel to `aws` in a `mktemp` file removed by a `trap`, not on the command line: an argument is visible to any local `ps`, and a file created by `mktemp` is `-rw-------` and gone when the script exits.
 8. No secret MUST be committed here. The test user's password lives in the platform as KMS ciphertext and reaches this repository only as a `SecureString` SSM parameter read at call time (constitution §4).
 9. Each target carries a `##` doc comment immediately above it and joins `.PHONY` (constitution §8). A recipe longer than one line goes into `scripts/`.
 
 ## Implementation hints
 
-- `aws ssm get-parameters-by-path --path <prefix>` returns every value in one call; `--with-decryption` is needed only for the password.
+- `aws ssm get-parameters-by-path --path <prefix>` returns every value in one call; `--with-decryption` is needed only for the password, so `cognito-config` MUST NOT ask for it and stays usable without `kms:Decrypt`.
+- Build the auth payload with `jq -n --arg`, never `printf` into a JSON template: a password containing a quote or a backslash would corrupt it.
 - The issuer already contains the region and the pool id, so the service needs neither separately: `internal/hello/config.go` reads `COGNITO_ISSUER` and `COGNITO_CLIENT_ID` and nothing else.
 - `make go-run` already exports `AUTH_DISABLED` with a default of `true`, so `AUTH_DISABLED=false make go-run` is enough to exercise the protected route locally.
 

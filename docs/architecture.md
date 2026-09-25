@@ -210,7 +210,7 @@ in `gitops/values.yaml` exist on GHCR.
 2. Images tagged by full commit SHA; `latest` never pushed.
 3. One AWS region, `eu-west-1`, as a constant.
 4. Terraform never manages a Kubernetes object; Argo never manages an AWS resource. This repository holds no Terraform at all (ADR 0004).
-5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, `terraform/live/account/ahorro-ci-role/`, `terraform/live/persistent/ahorro-cognito/`, their golden files, and ADRs.
+5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, `terraform/live/account/ahorro-ci-role/`, `terraform/live/persistent/ahorro-cognito/`, their golden files, and ADRs. This line listed only the first of those until ADR 0004; `ahorro-ci-role` had been in the platform since ADR 0003 and was never recorded here.
 6. `make` targets are the only supported entry points; every target has a doc comment.
 7. Every service verifies tokens itself with the shared `internal/platform/auth` package; no gateway-level auth exists on the platform today.
 

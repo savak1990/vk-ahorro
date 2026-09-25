@@ -37,7 +37,7 @@ files, and one ADR.
    - `gitops/templates/apps/vk-ahorro/appproject.yaml`: `AppProject vk-ahorro`, `sourceRepos: [https://github.com/savak1990/vk-ahorro, ghcr.io/savak1990/vk-ahorro/charts]`, `destinations: [{server: https://kubernetes.default.svc, namespace: ahorro}, {..., namespace: argocd}]`, `clusterResourceWhitelist: [{group: "", kind: Namespace}]`, sync-wave `4`.
    - `gitops/templates/apps/vk-ahorro/application.yaml`: `Application vk-ahorro`, `project: vk-ahorro`, source `repoURL: https://github.com/savak1990/vk-ahorro`, `path: gitops`, `targetRevision: main`, helm parameter `fqdn: {{ .Values.envoyGateway.fqdn }}`, destination namespace `argocd`, `automated {prune: true, selfHeal: false}`, `syncOptions [ServerSideApply=true]`, finalizer, sync-wave `5`, gated `{{- if ne .Values.target "local" }}`.
    - `tests/golden/gitops-aws/platform/` regenerated; `docs/adr/0038-first-business-app-pointer.md`.
-5. The pointer's `selfHeal: false` is deliberate: the operator syncs the app when they choose. `prune: true` stays so a removed service disappears.
+6. The pointer's `selfHeal: false` is deliberate: the operator syncs the app when they choose. `prune: true` stays so a removed service disappears.
 7. Make targets in this repository: `gitops-lint`, `gitops-template` (with `--set fqdn=example.invalid`), `gitops-check` (renders and runs kubeconform with the Argo CD schema).
 8. `.github/workflows/release.yml` MUST commit the new image tag into `gitops/values.yaml` with a `[skip ci]` message, and its permissions rise to `contents: write`. 030 created the workflow with `contents: read`; the commit is what needs the raise. `paths-ignore` already excludes `gitops/**`, so the commit MUST NOT start a second run.
 

@@ -9,7 +9,7 @@
 # UUID and the service would greet the user by it.
 set -euo pipefail
 
-# One region, a constant (constitution 7).
+# One region, a constant, never read from the environment.
 REGION=eu-west-1
 PROJECT_NAME="${PROJECT_NAME:-vk-hetzner-lab}"
 PREFIX="/$PROJECT_NAME/persistent/ahorro-cognito"
@@ -53,7 +53,7 @@ case "${1:-}" in
     # it never appears in a process listing.
     auth="$(mktemp)"
     trap 'rm -f "$auth"' EXIT
-    printf '{"USERNAME":"%s","PASSWORD":"%s"}' "$email" "$password" > "$auth"
+    jq -n --arg u "$email" --arg p "$password" '{USERNAME:$u,PASSWORD:$p}' > "$auth"
 
     aws cognito-idp admin-initiate-auth --region "$REGION" \
       --user-pool-id "$pool_id" --client-id "$client_id" \

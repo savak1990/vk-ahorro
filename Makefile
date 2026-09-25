@@ -40,14 +40,10 @@ UI_DIR := $(CURDIR)/flutter-ui
 AVD ?= pixel_phone
 IOS_DEVICE ?= iPhone 18 Pro
 
-# One region, a constant, never read from the environment.
-AWS_REGION := eu-west-1
-
 # The platform project whose persistent layer owns the Cognito pool. The pool
-# is per project, so nothing about it can be committed here. The default is the
-# usual target; override it for another, e.g. PROJECT_NAME=vk-lab-platform.
-PROJECT_NAME ?= vk-hetzner-lab
-COGNITO_SSM := /$(PROJECT_NAME)/persistent/ahorro-cognito # read by scripts/cognito.sh
+# is per project, so nothing about it can be committed here. Exported because
+# the scripts read it from the environment.
+export PROJECT_NAME ?= vk-hetzner-lab
 
 ## Print this help
 help:

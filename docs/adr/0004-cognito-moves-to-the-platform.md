@@ -62,7 +62,8 @@ never written.
 
 Every consumer reads SSM under
 `/<project>/persistent/ahorro-cognito/` instead of Terraform outputs.
-`PROJECT_NAME` becomes a Make variable here, defaulting to `vk-lab-platform`.
+`PROJECT_NAME` becomes a Make variable here, defaulting to `vk-hetzner-lab`,
+the usual target.
 
 The identifiers stay public (constitution §4), but they are now **per platform
 project**, so they are no longer committed to `gitops/values.yaml`. They take
@@ -76,8 +77,10 @@ External Secrets, which would store public data as secret data.
   `make tf-outputs`. It reads SSM instead. Everything downstream of
   `gitops/values.yaml` was already decoupled from Terraform, and the running
   service needs no AWS access at all.
-- Spec 050 is superseded by 055 and by the platform's AWS-035. Specs 000, 010,
-  060, 080, 090 and 110 are amended.
+- Spec 050 is superseded by 055 and by the platform's AWS-035. Specs 000, 020,
+  030, 060, 080, 090 and 110 are amended. Spec 010 and `.gitignore` are left
+  alone: `git check-ignore` does not need a path to exist, so its acceptance
+  line still passes and the dead Terraform patterns cost nothing.
 - A new AWS permission for this application is still a pull request against the
   platform, exactly as ADR 0003 said. What changes is that two of the three
   grants ADR 0003 anticipated — S3 for the state bucket and `cognito-idp` for
