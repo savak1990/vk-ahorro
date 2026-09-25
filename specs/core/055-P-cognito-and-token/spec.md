@@ -28,7 +28,7 @@ runtime config (080); the end-to-end smoke test (110).
 
 1. This repository MUST hold no Terraform and no Terragrunt. It creates no AWS resource, owns no state bucket, and has no State lifecycle class (constitution §1, §3, ADR 0004).
 2. Every Cognito value MUST be read from SSM under `/$(PROJECT_NAME)/persistent/ahorro-cognito/`, never from a committed literal. The pool is per platform project, so a committed id is correct for exactly one project and wrong for every other.
-3. `PROJECT_NAME` MUST be a Make variable defaulting to `vk-lab-platform`, and it is the only platform concept this repository names.
+3. `PROJECT_NAME` MUST be a Make variable defaulting to `vk-hetzner-lab`, the usual target, and overridable for any other platform project. It is the only platform concept this repository names.
 4. `make cognito-config` MUST print JSON on stdout and nothing else, so it can be piped into `jq`. It reports the public identifiers only: `user_pool_id`, `client_id` and `issuer` (constitution §4).
 5. `make token` MUST print one id token on stdout and nothing else. It reads the client id, the test user's name and the test user's password from SSM and calls `aws cognito-idp admin-initiate-auth --auth-flow ADMIN_USER_PASSWORD_AUTH`.
 6. `make token` MUST emit the **id token**, not the access token. A Cognito access token carries no `email` claim, and the pool uses email as the username attribute, so `username` holds a UUID: an access token would greet the user by UUID. `internal/platform/auth/jwt.go` accepts an id token because `aud` contains the configured client id.

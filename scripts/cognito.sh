@@ -11,7 +11,7 @@ set -euo pipefail
 
 # One region, a constant (constitution 7).
 REGION=eu-west-1
-PROJECT_NAME="${PROJECT_NAME:-vk-lab-platform}"
+PROJECT_NAME="${PROJECT_NAME:-vk-hetzner-lab}"
 PREFIX="/$PROJECT_NAME/persistent/ahorro-cognito"
 
 param() {
