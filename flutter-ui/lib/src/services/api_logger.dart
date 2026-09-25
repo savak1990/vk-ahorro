@@ -1,23 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
-/// Global logging levels for the entire application
 enum LogLevel {
-  error, // Only errors
-  warn, // Errors + warnings
-  info, // Errors + warnings + info (one-liner for API calls)
-  debug, // Errors + warnings + info + debug details
-  verbose, // Everything including full request/response bodies and headers
+  error,
+  warn,
+  info,
+  debug,
+  verbose,
 }
 
-/// A comprehensive logging utility for API requests and responses
 class ApiLogger {
   static const String _tag = '[ApiLogger]';
 
-  
   static LogLevel? _cachedLogLevel;
 
-  /// Get the current log level from environment variables
   static LogLevel get _logLevel {
     if (_cachedLogLevel != null) return _cachedLogLevel!;
 
@@ -32,12 +28,10 @@ class ApiLogger {
     return _cachedLogLevel!;
   }
 
-  /// Clear cached values (useful for testing or runtime config changes)
   static void clearCache() {
     _cachedLogLevel = null;
   }
 
-  /// Test method to verify logging configuration
   static void testLogging() {
     if (!kDebugMode) return;
 
@@ -53,12 +47,10 @@ class ApiLogger {
     debugPrint('[ApiLogger] Logging test complete.');
   }
 
-  /// Check if we should log at the given level
   static bool _shouldLog(LogLevel level) {
     return kDebugMode && _logLevel.index >= level.index;
   }
 
-  /// Log an API request (only for debug and verbose levels)
   static void logRequest({
     required String method,
     required String url,
@@ -74,7 +66,6 @@ class ApiLogger {
     debugPrint('$_tag $operationTag REQUEST [$method] - $timestamp');
     debugPrint('$_tag URL: $url');
 
-    // Only show headers for verbose level
     if (_shouldLog(LogLevel.verbose) && headers != null && headers.isNotEmpty) {
       debugPrint('$_tag HEADERS:');
       headers.forEach((key, value) {
@@ -83,7 +74,6 @@ class ApiLogger {
       });
     }
 
-    // Only show body for verbose level
     if (_shouldLog(LogLevel.verbose) && body != null) {
       debugPrint('$_tag BODY:');
       final bodyString = _formatJson(body);
@@ -93,7 +83,6 @@ class ApiLogger {
     debugPrint('$_tag --- END REQUEST ---\n');
   }
 
-  /// Log an API response with level-appropriate detail
   static void logResponse({
     required String method,
     required String url,
@@ -103,7 +92,7 @@ class ApiLogger {
     String? operation,
     Duration? duration,
   }) {
-    // Info level: one-liner with URL, status, and timing
+
     if (_shouldLog(LogLevel.info)) {
       final operationTag = operation != null ? '[$operation]' : '';
       final durationText =
@@ -112,7 +101,6 @@ class ApiLogger {
           '$_tag $operationTag $method $url -> $statusCode$durationText');
     }
 
-    // Debug and verbose levels: detailed logging
     if (!_shouldLog(LogLevel.debug)) return;
 
     final timestamp = DateTime.now().toIso8601String();
@@ -125,7 +113,6 @@ class ApiLogger {
     debugPrint('$_tag URL: $url');
     debugPrint('$_tag STATUS: $statusCode');
 
-    // Only show headers for verbose level
     if (_shouldLog(LogLevel.verbose) && headers != null && headers.isNotEmpty) {
       debugPrint('$_tag RESPONSE HEADERS:');
       headers.forEach((key, value) {
@@ -133,7 +120,6 @@ class ApiLogger {
       });
     }
 
-    // Only show body for verbose level
     if (_shouldLog(LogLevel.verbose) && body != null) {
       debugPrint('$_tag RESPONSE BODY:');
       final bodyString = _formatJson(body);
@@ -145,7 +131,6 @@ class ApiLogger {
     }
   }
 
-  /// Log an API error (visible at error level and above)
   static void logError({
     required String method,
     required String url,
@@ -162,7 +147,6 @@ class ApiLogger {
     debugPrint('$_tag URL: $url');
     debugPrint('$_tag ERROR: $error');
 
-    // Only show stack trace for debug level and above
     if (_shouldLog(LogLevel.debug) && stackTrace != null) {
       debugPrint('$_tag STACK TRACE:');
       debugPrint('$stackTrace');
@@ -171,16 +155,15 @@ class ApiLogger {
     debugPrint('$_tag --- END ERROR ---\n');
   }
 
-  /// Format JSON for better readability
   static String _formatJson(dynamic data) {
     try {
       if (data is String) {
-        // Try to parse as JSON first
+
         try {
           final parsed = json.decode(data);
           return const JsonEncoder.withIndent('  ').convert(parsed);
         } catch (_) {
-          // If not JSON, return as is
+
           return data;
         }
       } else {
@@ -191,7 +174,6 @@ class ApiLogger {
     }
   }
 
-  /// Mask sensitive data in headers
   static String _maskSensitiveData(String key, String value) {
     final lowerKey = key.toLowerCase();
     if (lowerKey.contains('authorization') ||
@@ -207,7 +189,6 @@ class ApiLogger {
     return value;
   }
 
-  /// Log operation start (visible at debug level and above)
   static void logOperationStart(String operation,
       [Map<String, dynamic>? params]) {
     if (!_shouldLog(LogLevel.debug)) return;
@@ -215,7 +196,6 @@ class ApiLogger {
     final timestamp = DateTime.now().toIso8601String();
     debugPrint('$_tag [$operation] OPERATION START - $timestamp');
 
-    // Only show parameters for verbose level
     if (_shouldLog(LogLevel.verbose) && params != null && params.isNotEmpty) {
       debugPrint('$_tag [$operation] PARAMETERS:');
       params.forEach((key, value) {
@@ -224,7 +204,6 @@ class ApiLogger {
     }
   }
 
-  /// Log operation end (visible at debug level and above)
   static void logOperationEnd(String operation, [Duration? duration]) {
     if (!_shouldLog(LogLevel.debug)) return;
 
@@ -234,9 +213,6 @@ class ApiLogger {
     debugPrint('$_tag [$operation] OPERATION END - $timestamp$durationText\n');
   }
 
-  /// Generic logging methods for use throughout the application
-
-  /// Log error messages (visible at error level and above)
   static void error(String message, [dynamic error, StackTrace? stackTrace]) {
     if (!_shouldLog(LogLevel.error)) return;
     debugPrint('$_tag ERROR: $message');
@@ -246,25 +222,21 @@ class ApiLogger {
     }
   }
 
-  /// Log warning messages (visible at warn level and above)
   static void warn(String message) {
     if (!_shouldLog(LogLevel.warn)) return;
     debugPrint('$_tag WARN: $message');
   }
 
-  /// Log info messages (visible at info level and above)
   static void info(String message) {
     if (!_shouldLog(LogLevel.info)) return;
     debugPrint('$_tag INFO: $message');
   }
 
-  /// Log debug messages (visible at debug level and above)
   static void debug(String message) {
     if (!_shouldLog(LogLevel.debug)) return;
     debugPrint('$_tag DEBUG: $message');
   }
 
-  /// Log verbose messages (visible only at verbose level)
   static void verbose(String message) {
     if (!_shouldLog(LogLevel.verbose)) return;
     debugPrint('$_tag VERBOSE: $message');

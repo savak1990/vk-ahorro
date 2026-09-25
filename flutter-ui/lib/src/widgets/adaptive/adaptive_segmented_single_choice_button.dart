@@ -34,7 +34,7 @@ class AdaptiveSegmentedSingleChoiceButton<T extends Object>
         multiSelectionEnabled: false,
         emptySelectionAllowed: false,
         style: SegmentedButton.styleFrom(
-          minimumSize: const Size(0, 24), // Reduce height from default ~48
+          minimumSize: const Size(0, 24),
           maximumSize: const Size(double.infinity, 24),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
           textStyle: const TextStyle(fontSize: 14),

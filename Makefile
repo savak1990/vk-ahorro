@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
 
 .DEFAULT_GOAL := help
 
@@ -126,6 +126,10 @@ helm-push: helm-package
 ## Fetch the Flutter package dependencies
 ui-get:
 	cd $(UI_DIR) && flutter pub get
+
+## Format the Flutter code in place
+ui-format:
+	cd $(UI_DIR) && dart format lib test
 
 ## Analyze the Flutter code
 ui-analyze:

@@ -36,7 +36,7 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildCupertinoNavigationBar(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return CupertinoNavigationBar(
       middle: title != null ? Text(
         title!,
@@ -46,7 +46,7 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
           fontWeight: FontWeight.w600,
         ),
       ) : null,
-      trailing: actions != null && actions!.isNotEmpty 
+      trailing: actions != null && actions!.isNotEmpty
         ? Row(
             mainAxisSize: MainAxisSize.min,
             children: actions!,
@@ -62,7 +62,7 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget _buildMaterialAppBar(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+
     return AppBar(
       title: title != null ? Text(
         title!,
@@ -88,4 +88,4 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
       return const Size.fromHeight(kToolbarHeight);
     }
   }
-} 
+}

@@ -32,7 +32,6 @@ class AppShellTab {
   final List<ActionData>? appBarActions;
 }
 
-/// Renders a navigation rail on web and a bottom navigation bar on mobile.
 class AppShell extends StatelessWidget {
   const AppShell({
     super.key,

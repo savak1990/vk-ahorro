@@ -1,8 +1,6 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
- /// Headline Emphasized Large
- ///
- class HeadlineEmphasizedLarge extends StatelessWidget {
+class HeadlineEmphasizedLarge extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
    final TextAlign? textAlign;
@@ -35,9 +33,7 @@
    }
  }
 
- /// Title Emphasized Large
- ///
- class TitleEmphasizedLarge extends StatelessWidget {
+class TitleEmphasizedLarge extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
    final TextAlign? textAlign;
@@ -69,9 +65,7 @@
    }
  }
 
- /// Label Emphasized Medium
- ///
- class LabelEmphasizedMedium extends StatelessWidget {
+class LabelEmphasizedMedium extends StatelessWidget {
    final String text;
    final EdgeInsetsGeometry? padding;
    final TextAlign? textAlign;
@@ -103,8 +97,6 @@
    }
  }
 
-/// Title Emphasized Medium
-///
 class TitleEmphasizedMedium extends StatelessWidget {
   final String text;
   final EdgeInsetsGeometry? padding;
@@ -136,4 +128,3 @@ class TitleEmphasizedMedium extends StatelessWidget {
     return child;
   }
 }
-

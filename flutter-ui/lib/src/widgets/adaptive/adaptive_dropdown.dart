@@ -56,7 +56,7 @@ class AdaptiveDropdown<T> extends StatelessWidget {
           return CupertinoActionSheetAction(
             onPressed: () {
               onChanged(item);
-              Navigator.of(context).pop(); // Dismiss the modal
+              Navigator.of(context).pop();
             },
             child: Text(itemLabelBuilder(item)),
           );

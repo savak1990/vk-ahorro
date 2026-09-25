@@ -37,10 +37,20 @@ Excludes: the Dart code the shell needs (070), application and bundle ids
    the same rule; this spec records the chosen rules.
 4. `flutter-ui/.metadata` `migration.platforms` MUST list only the three
    platforms this repository targets, after 100 req 5 deletes the other folders.
-5. No source comment may be in a language other than English. The imported
-   code carried Russian section labels through `lib/`.
+5. Every source file MUST be ASCII. The imported code carried Russian section
+   labels through `lib/`. An ASCII rule is checkable in one grep and does not
+   depend on naming which languages are unwelcome.
 6. `web/index.html` and `web/manifest.json` MUST NOT carry the placeholder
    description "A new Flutter project.". 100 req 1 covers the titles only.
+7. The Dart sources MUST carry no comments at all at this point. The shell is
+   short enough to read directly, and the imported comments restated what the
+   next line already said. A comment is earned later, when something is not
+   obvious from the code; the constitution caps it at three lines.
+8. The generated platform files MUST drop the `flutter create` template
+   comments and its two `TODO` markers. Two comments stay because they carry
+   information the file does not: the `flutterEmbedding` meta-data warning in
+   `AndroidManifest.xml` and the base-href note in `web/index.html`, which 080
+   depends on.
 
 ## Open decision
 
@@ -60,12 +70,15 @@ overlap between `lib/src/widgets/typography.dart` and
 - The lint set is a judgement call, not a copy of `flutter_lints` with
   everything on. A rule that produces noise the team then ignores is worse
   than no rule.
-- `grep -rn "[А-Яа-яЁё]" flutter-ui/lib` finds the remaining Russian comments.
+- `grep -rnP "[^\x00-\x7F]" flutter-ui/lib` finds any non-ASCII character,
+  which is a stronger check than searching for one alphabet.
 
 ## Testing / acceptance criteria
 
 - `grep -rn "A new Flutter project" flutter-ui` returns nothing.
-- `grep -rn "[А-Яа-яЁё]" flutter-ui/lib` returns nothing.
+- `grep -rnP "[^\x00-\x7F]" flutter-ui/lib flutter-ui/test` returns nothing.
+- `grep -rn "//\|/\*" flutter-ui/lib flutter-ui/test --include='*.dart'`
+  returns nothing.
 - `grep -c "platform:" flutter-ui/.metadata` returns 4 (root, android, ios, web).
 - `analysis_options.yaml` lists rules under `linter: rules:`.
 - `make ui-analyze` stays clean after the rules are enabled.

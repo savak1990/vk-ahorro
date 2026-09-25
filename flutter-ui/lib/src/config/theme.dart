@@ -5,8 +5,6 @@ class MaterialTheme {
 
   const MaterialTheme(this.textTheme);
 
-  // Success colors extension
-  // Provides semantic success colors across all theme variants
   static const SuccessColors _lightSuccess = SuccessColors(
     success: Color(0xFF059669),
     onSuccess: Color(0xFFFFFFFF),
@@ -365,7 +363,6 @@ class MaterialTheme {
        success,
      ],
   );
-
 
   List<ExtendedColor> get extendedColors => [
   ];

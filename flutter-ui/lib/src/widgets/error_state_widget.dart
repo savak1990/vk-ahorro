@@ -124,4 +124,4 @@ class ErrorStateWidget extends StatelessWidget {
       return const EdgeInsets.all(16.0);
     }
   }
-} 
+}

@@ -1,6 +1,3 @@
-// This file contains the Amplify configuration for the Ahorro app.
-// Format: Dart multi-line string for easy use with Amplify.configure()
-
 const amplifyconfig = ''' {
   "UserAgent": "aws-amplify-cli/2.0",
   "Version": "1.0",
@@ -24,7 +21,7 @@ const amplifyconfig = ''' {
               "email"
             ],
             "signupAttributes": [
-              "email", 
+              "email",
               "name"
             ],
             "passwordProtectionSettings": {

@@ -36,7 +36,7 @@ class _AhorroAppState extends State<AhorroApp> {
   @override
   void initState() {
     super.initState();
-    // Amplify.configure must not run during the first build.
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _startAmplify());
   }
 

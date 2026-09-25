@@ -11,7 +11,7 @@ class AdaptiveTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      
+
       colorScheme: scheme,
 
       textTheme: const TextTheme(
@@ -40,8 +40,8 @@ class AdaptiveTheme {
         titleTextStyle: AppTypography.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
-        systemOverlayStyle: PlatformUtils.isIOS 
-          ? SystemUiOverlayStyle.dark 
+        systemOverlayStyle: PlatformUtils.isIOS
+          ? SystemUiOverlayStyle.dark
           : SystemUiOverlayStyle.light,
       ),
 
@@ -143,8 +143,8 @@ class AdaptiveTheme {
 
       scaffoldBackgroundColor: scheme.surface,
 
-      visualDensity: PlatformUtils.isIOS 
-        ? VisualDensity.standard 
+      visualDensity: PlatformUtils.isIOS
+        ? VisualDensity.standard
         : VisualDensity.comfortable,
     );
   }
@@ -154,7 +154,7 @@ class AdaptiveTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
+
       colorScheme: scheme,
 
       textTheme: const TextTheme(
@@ -183,8 +183,8 @@ class AdaptiveTheme {
         titleTextStyle: AppTypography.titleLarge.copyWith(
           color: scheme.onSurface,
         ),
-        systemOverlayStyle: PlatformUtils.isIOS 
-          ? SystemUiOverlayStyle.light 
+        systemOverlayStyle: PlatformUtils.isIOS
+          ? SystemUiOverlayStyle.light
           : SystemUiOverlayStyle.dark,
       ),
 
@@ -260,8 +260,8 @@ class AdaptiveTheme {
 
       scaffoldBackgroundColor: scheme.surface,
 
-      visualDensity: PlatformUtils.isIOS 
-        ? VisualDensity.standard 
+      visualDensity: PlatformUtils.isIOS
+        ? VisualDensity.standard
         : VisualDensity.comfortable,
     );
   }
@@ -280,4 +280,4 @@ class AdaptiveTheme {
       'backgroundColor': generated_theme.MaterialTheme.lightScheme().surface,
     };
   }
-} 
+}
