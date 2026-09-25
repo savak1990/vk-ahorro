@@ -33,8 +33,8 @@ Excludes: runtime configuration and the hello call (080), platform folders
 6. `AccountTab` placeholder MUST keep a sign-out button that calls `AmplifyProvider.signOut()`.
 7. One widget test MUST pump `AppShell` with three tabs and a `floatingButtonAction`, tap the FAB, and assert the callback ran.
 8. `.github/workflows/ci.yml` MUST gain a `ui` job running `flutter analyze` and `flutter test` on pull requests. 030 created the workflow; these steps belong here because this spec is what makes the Flutter code lint-clean. 090 installs the tool locally, not in CI. A new job is advisory until it is added to `main`'s required-checks list by hand.
-9. The root `Makefile` MUST gain `ui-get`, `ui-analyze` and `ui-test`, each a one-line recipe, so CI and a developer run the same command. 100 adds the run and build targets.
-10. `analysis_options.yaml` MUST enable an explicit lint set on top of `flutter_lints`. The default file switches nothing on, so "`flutter analyze` is clean" would otherwise assert almost nothing.
+9. The root `Makefile` MUST gain `ui-get`, `ui-fix`, `ui-format`, `ui-analyze` and `ui-test`, each a one-line recipe, so CI and a developer run the same command. 100 adds the run and build targets. The first clean-up pass is `ui-get`, then `ui-fix`, then `ui-format`, then `ui-analyze`: `dart fix --apply` resolves most of the rules req 10 enables, so the fix round is mechanical rather than hand-edited.
+10. `analysis_options.yaml` MUST enable an explicit lint set on top of `flutter_lints`. The default file switches nothing on, so "`flutter analyze` is clean" would otherwise assert almost nothing. `lib/src/config/theme.dart` MUST be excluded: it is Material Theme Builder output, and regenerating it would undo any fix made there.
 
 ## Implementation hints
 

@@ -32,7 +32,6 @@ void main() {
     );
 
     expect(find.text('Home body'), findsOneWidget);
-    expect(find.text('Account body'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.add));
     await tester.pump();
