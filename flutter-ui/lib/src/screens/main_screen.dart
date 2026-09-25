@@ -43,8 +43,7 @@ class _MainScreenState extends State<MainScreen> {
           icon: const Icon(Icons.home_outlined),
           selectedIcon: const Icon(Icons.home),
           appBarActions: appBarActions,
-          builder: (_) =>
-              const TabPlaceholder(icon: Icons.home, label: 'Home'),
+          builder: (_) => const TabPlaceholder(icon: Icons.home, label: 'Home'),
         ),
         AppShellTab(
           label: 'Activity',
@@ -103,8 +102,7 @@ class AccountTab extends StatelessWidget {
       icon: Icons.account_circle,
       label: 'Account',
       child: ElevatedButton(
-        onPressed: () =>
-            unawaited(context.read<AmplifyProvider>().signOut()),
+        onPressed: () => unawaited(context.read<AmplifyProvider>().signOut()),
         child: const Text('Sign out'),
       ),
     );

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class PlatformUtils {
-
   static bool get isWeb => kIsWeb;
   static bool get isAndroid =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -39,7 +38,6 @@ class PlatformUtils {
   }
 
   static bool get isDarkModeSupported {
-
     return isMobile;
   }
 

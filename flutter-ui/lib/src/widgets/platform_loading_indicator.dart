@@ -29,29 +29,18 @@ class PlatformLoadingIndicator extends StatelessWidget {
 
   Widget _buildPlatformSpecificIndicator(Color color, double size) {
     if (PlatformUtils.isIOS) {
-
-      return CupertinoActivityIndicator(
-        color: color,
-        radius: size / 2,
-      );
+      return CupertinoActivityIndicator(color: color, radius: size / 2);
     } else if (PlatformUtils.isAndroid) {
-
       return SizedBox(
         width: size,
         height: size,
-        child: CircularProgressIndicator(
-          color: color,
-          strokeWidth: 3.0,
-        ),
+        child: CircularProgressIndicator(color: color, strokeWidth: 3.0),
       );
     } else {
       return SizedBox(
         width: size,
         height: size,
-        child: CircularProgressIndicator(
-          color: color,
-          strokeWidth: 3.0,
-        ),
+        child: CircularProgressIndicator(color: color, strokeWidth: 3.0),
       );
     }
   }

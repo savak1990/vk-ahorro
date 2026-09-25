@@ -4,6 +4,10 @@ analyzer:
   exclude:
     # Material Theme Builder output. Regenerating it would undo any fix here.
     - lib/src/config/theme.dart
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
 
 linter:
   rules:

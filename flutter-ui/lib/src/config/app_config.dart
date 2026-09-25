@@ -1,5 +1,4 @@
 class AppConfig {
-
   static const String baseUrl = String.fromEnvironment('API_BASE_URL');
 
   static const String transactionsEndpoint = '/transactions';
@@ -10,7 +9,8 @@ class AppConfig {
 
   static String get apiUrl => baseUrl;
   static String get transactionsUrl => '$baseUrl$transactionsEndpoint';
-  static String get transactionsStatsUrl => '$baseUrl$transactionsStatsEndpoint';
+  static String get transactionsStatsUrl =>
+      '$baseUrl$transactionsStatsEndpoint';
   static String get categoriesUrl => '$baseUrl$categoriesEndpoint';
   static String get balancesUrl => '$baseUrl$balancesEndpoint';
   static String get merchantsUrl => '$baseUrl$merchantsEndpoint';

@@ -38,20 +38,19 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colorScheme = theme.colorScheme;
 
     return CupertinoNavigationBar(
-      middle: title != null ? Text(
-        title!,
-        style: TextStyle(
-          color: foregroundColor ?? colorScheme.onSurface,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
-        ),
-      ) : null,
+      middle: title != null
+          ? Text(
+              title!,
+              style: TextStyle(
+                color: foregroundColor ?? colorScheme.onSurface,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          : null,
       trailing: actions != null && actions!.isNotEmpty
-        ? Row(
-            mainAxisSize: MainAxisSize.min,
-            children: actions!,
-          )
-        : null,
+          ? Row(mainAxisSize: MainAxisSize.min, children: actions!)
+          : null,
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,
       backgroundColor: backgroundColor ?? colorScheme.surface,
@@ -64,12 +63,12 @@ class PlatformAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colorScheme = theme.colorScheme;
 
     return AppBar(
-      title: title != null ? Text(
-        title!,
-        style: TextStyle(
-          color: foregroundColor ?? colorScheme.onSurface,
-        ),
-      ) : null,
+      title: title != null
+          ? Text(
+              title!,
+              style: TextStyle(color: foregroundColor ?? colorScheme.onSurface),
+            )
+          : null,
       actions: actions,
       leading: leading,
       automaticallyImplyLeading: automaticallyImplyLeading,

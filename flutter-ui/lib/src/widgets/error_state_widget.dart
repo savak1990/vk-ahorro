@@ -69,31 +69,33 @@ class ErrorStateWidget extends StatelessWidget {
     }
   }
 
-  TextStyle _getPlatformSpecificTextStyle(TextTheme textTheme, ColorScheme colorScheme) {
+  TextStyle _getPlatformSpecificTextStyle(
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+  ) {
     if (PlatformUtils.isIOS) {
       return textTheme.bodyLarge?.copyWith(
-        color: colorScheme.error,
-        fontSize: 16,
-      ) ?? const TextStyle();
+            color: colorScheme.error,
+            fontSize: 16,
+          ) ??
+          const TextStyle();
     } else if (PlatformUtils.isAndroid) {
-      return textTheme.bodyLarge?.copyWith(
-        color: colorScheme.error,
-      ) ?? const TextStyle();
+      return textTheme.bodyLarge?.copyWith(color: colorScheme.error) ??
+          const TextStyle();
     } else {
-      return textTheme.bodyLarge?.copyWith(
-        color: colorScheme.error,
-      ) ?? const TextStyle();
+      return textTheme.bodyLarge?.copyWith(color: colorScheme.error) ??
+          const TextStyle();
     }
   }
 
-  Widget _buildPlatformSpecificButton(BuildContext context, ColorScheme colorScheme) {
+  Widget _buildPlatformSpecificButton(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
     final buttonText = retryText ?? 'Retry';
 
     if (PlatformUtils.isIOS) {
-      return CupertinoButton(
-        onPressed: onRetry,
-        child: Text(buttonText),
-      );
+      return CupertinoButton(onPressed: onRetry, child: Text(buttonText));
     } else if (PlatformUtils.isAndroid) {
       return ElevatedButton(
         onPressed: onRetry,

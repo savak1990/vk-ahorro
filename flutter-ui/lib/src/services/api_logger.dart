@@ -1,13 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
-enum LogLevel {
-  error,
-  warn,
-  info,
-  debug,
-  verbose,
-}
+enum LogLevel { error, warn, info, debug, verbose }
 
 class ApiLogger {
   static const String _tag = '[ApiLogger]';
@@ -92,24 +86,27 @@ class ApiLogger {
     String? operation,
     Duration? duration,
   }) {
-
     if (_shouldLog(LogLevel.info)) {
       final operationTag = operation != null ? '[$operation]' : '';
-      final durationText =
-          duration != null ? ' ${duration.inMilliseconds}ms' : '';
+      final durationText = duration != null
+          ? ' ${duration.inMilliseconds}ms'
+          : '';
       debugPrint(
-          '$_tag $operationTag $method $url -> $statusCode$durationText');
+        '$_tag $operationTag $method $url -> $statusCode$durationText',
+      );
     }
 
     if (!_shouldLog(LogLevel.debug)) return;
 
     final timestamp = DateTime.now().toIso8601String();
     final operationTag = operation != null ? '[$operation]' : '';
-    final durationText =
-        duration != null ? ' (${duration.inMilliseconds}ms)' : '';
+    final durationText = duration != null
+        ? ' (${duration.inMilliseconds}ms)'
+        : '';
 
     debugPrint(
-        '$_tag $operationTag RESPONSE [$method] - $timestamp$durationText');
+      '$_tag $operationTag RESPONSE [$method] - $timestamp$durationText',
+    );
     debugPrint('$_tag URL: $url');
     debugPrint('$_tag STATUS: $statusCode');
 
@@ -158,12 +155,10 @@ class ApiLogger {
   static String _formatJson(dynamic data) {
     try {
       if (data is String) {
-
         try {
           final parsed = json.decode(data);
           return const JsonEncoder.withIndent('  ').convert(parsed);
         } catch (_) {
-
           return data;
         }
       } else {
@@ -189,8 +184,10 @@ class ApiLogger {
     return value;
   }
 
-  static void logOperationStart(String operation,
-      [Map<String, dynamic>? params]) {
+  static void logOperationStart(
+    String operation, [
+    Map<String, dynamic>? params,
+  ]) {
     if (!_shouldLog(LogLevel.debug)) return;
 
     final timestamp = DateTime.now().toIso8601String();
@@ -208,8 +205,9 @@ class ApiLogger {
     if (!_shouldLog(LogLevel.debug)) return;
 
     final timestamp = DateTime.now().toIso8601String();
-    final durationText =
-        duration != null ? ' (${duration.inMilliseconds}ms)' : '';
+    final durationText = duration != null
+        ? ' (${duration.inMilliseconds}ms)'
+        : '';
     debugPrint('$_tag [$operation] OPERATION END - $timestamp$durationText\n');
   }
 

@@ -105,5 +105,4 @@ class AppTypography {
     height: 1.43,
     color: Color(0xFF9E9E9E),
   );
-
 }

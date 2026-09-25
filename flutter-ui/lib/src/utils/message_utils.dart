@@ -3,14 +3,12 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'platform_utils.dart';
 
 class MessageUtils {
-
   static Future<bool> showMessage(
     BuildContext context,
     String message, {
     bool isSuccess = true,
     String? title,
   }) async {
-
     if (!context.mounted) {
       debugPrint(
         '[MessageUtils] Context not mounted, skipping message: $message',
@@ -20,7 +18,6 @@ class MessageUtils {
 
     try {
       if (PlatformUtils.isIOS) {
-
         await showPlatformDialog(
           context: context,
           builder: (dialogContext) => PlatformAlertDialog(
@@ -40,7 +37,6 @@ class MessageUtils {
         );
         return true;
       } else {
-
         try {
           final messenger = ScaffoldMessenger.maybeOf(context);
           if (messenger != null && context.mounted) {
@@ -55,7 +51,6 @@ class MessageUtils {
             );
             return true;
           } else {
-
             if (context.mounted) {
               await showPlatformDialog(
                 context: context,

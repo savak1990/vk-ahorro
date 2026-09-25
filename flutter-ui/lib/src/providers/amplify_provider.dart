@@ -27,8 +27,7 @@ class AmplifyProvider extends BaseProvider {
       try {
         final auth = AmplifyAuthCognito();
         await Amplify.addPlugin(auth);
-      } catch (_) {
-      }
+      } catch (_) {}
       if (!Amplify.isConfigured) {
         await Amplify.configure(amplifyconfig);
       }
@@ -75,7 +74,6 @@ class AmplifyProvider extends BaseProvider {
   Future<Map<String, dynamic>> fetchUserInfo({
     bool forceRefresh = false,
   }) async {
-
     if (_cachedUserInfo != null && !forceRefresh) {
       debugPrint('[AmplifyProvider]: Returning cached user info');
       return _cachedUserInfo!;
@@ -172,7 +170,6 @@ class AmplifyProvider extends BaseProvider {
 
   Future<void> signOut() async {
     try {
-
       await Amplify.Auth.signOut().timeout(
         const Duration(seconds: 10),
         onTimeout: () {

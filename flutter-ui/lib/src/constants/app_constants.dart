@@ -1,7 +1,6 @@
 class AppConstants {
   static const double screenPadding = 16.0;
-  static const double horizontalPadding =
-      16.0;
+  static const double horizontalPadding = 16.0;
   static const double cardPadding = 16.0;
   static const double listItemPadding = 8.0;
 

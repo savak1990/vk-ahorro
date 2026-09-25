@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'theme.dart' as generated_theme;
 import '../constants/app_typography.dart';
@@ -41,8 +40,8 @@ class AdaptiveTheme {
           color: scheme.onSurface,
         ),
         systemOverlayStyle: PlatformUtils.isIOS
-          ? SystemUiOverlayStyle.dark
-          : SystemUiOverlayStyle.light,
+            ? SystemUiOverlayStyle.dark
+            : SystemUiOverlayStyle.light,
       ),
 
       cardTheme: CardThemeData(
@@ -50,7 +49,9 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
         shadowColor: Colors.black26,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
         ),
         margin: PlatformUtils.adaptivePadding,
       ),
@@ -62,11 +63,11 @@ class AdaptiveTheme {
           elevation: PlatformUtils.adaptiveElevation,
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: scheme.onPrimary,
-          ),
+          textStyle: AppTypography.labelLarge.copyWith(color: scheme.onPrimary),
         ),
       ),
 
@@ -76,7 +77,9 @@ class AdaptiveTheme {
           side: BorderSide(color: scheme.primary),
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
           textStyle: AppTypography.labelLarge,
         ),
@@ -94,27 +97,35 @@ class AdaptiveTheme {
         filled: true,
         fillColor: scheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.error),
         ),
         contentPadding: PlatformUtils.adaptivePadding,
         labelStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.7),
+          color: scheme.onSurface.withValues(alpha: 0.7),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.6),
+          color: scheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
 
@@ -144,8 +155,8 @@ class AdaptiveTheme {
       scaffoldBackgroundColor: scheme.surface,
 
       visualDensity: PlatformUtils.isIOS
-        ? VisualDensity.standard
-        : VisualDensity.comfortable,
+          ? VisualDensity.standard
+          : VisualDensity.comfortable,
     );
   }
 
@@ -184,8 +195,8 @@ class AdaptiveTheme {
           color: scheme.onSurface,
         ),
         systemOverlayStyle: PlatformUtils.isIOS
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
       ),
 
       cardTheme: CardThemeData(
@@ -193,7 +204,9 @@ class AdaptiveTheme {
         elevation: PlatformUtils.adaptiveElevation,
         shadowColor: Colors.black26,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
         ),
         margin: PlatformUtils.adaptivePadding,
       ),
@@ -205,11 +218,11 @@ class AdaptiveTheme {
           elevation: PlatformUtils.adaptiveElevation,
           padding: PlatformUtils.adaptivePadding,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+            borderRadius: BorderRadius.circular(
+              PlatformUtils.adaptiveBorderRadius,
+            ),
           ),
-          textStyle: AppTypography.labelLarge.copyWith(
-            color: scheme.onPrimary,
-          ),
+          textStyle: AppTypography.labelLarge.copyWith(color: scheme.onPrimary),
         ),
       ),
 
@@ -217,27 +230,35 @@ class AdaptiveTheme {
         filled: true,
         fillColor: scheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(PlatformUtils.adaptiveBorderRadius),
+          borderRadius: BorderRadius.circular(
+            PlatformUtils.adaptiveBorderRadius,
+          ),
           borderSide: BorderSide(color: scheme.error),
         ),
         contentPadding: PlatformUtils.adaptivePadding,
         labelStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.7),
+          color: scheme.onSurface.withValues(alpha: 0.7),
         ),
         hintStyle: AppTypography.bodyMedium.copyWith(
-          color: scheme.onSurface.withOpacity(0.6),
+          color: scheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
 
@@ -261,8 +282,8 @@ class AdaptiveTheme {
       scaffoldBackgroundColor: scheme.surface,
 
       visualDensity: PlatformUtils.isIOS
-        ? VisualDensity.standard
-        : VisualDensity.comfortable,
+          ? VisualDensity.standard
+          : VisualDensity.comfortable,
     );
   }
 
