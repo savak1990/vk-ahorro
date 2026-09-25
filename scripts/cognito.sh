@@ -14,11 +14,15 @@ REGION=eu-west-1
 PROJECT_NAME="${PROJECT_NAME:-vk-hetzner-lab}"
 PREFIX="/$PROJECT_NAME/persistent/ahorro-cognito"
 
+# Only the token path reads the SecureString, so only it asks for decryption:
+# the three public identifiers must stay readable without kms:Decrypt.
+DECRYPT=()
+
 param() {
   local value
   # A missing parameter must fail here, not surface later as a null in a config
   # file the Flutter build reads.
-  if ! value="$(aws ssm get-parameter --region "$REGION" --with-decryption \
+  if ! value="$(aws ssm get-parameter --region "$REGION" ${DECRYPT[@]+"${DECRYPT[@]}"} \
     --name "$PREFIX/$1" --query Parameter.Value --output text 2>/dev/null)"; then
     echo "COGNITO: no SSM parameter $PREFIX/$1." >&2
     echo "COGNITO: PROJECT_NAME=$PROJECT_NAME. Has that project's persistent layer been applied?" >&2
@@ -39,6 +43,7 @@ case "${1:-}" in
       "$pool_id" "$client_id" "$issuer"
     ;;
   token)
+    DECRYPT=(--with-decryption)
     pool_id="$(param user_pool_id token)"
     client_id="$(param client_id token)"
     email="$(param test_user_email token)"
