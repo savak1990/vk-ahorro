@@ -37,19 +37,16 @@ jobs:
         with:
           version: v2.13.2
 
+  # One job for both images, not a matrix per service: a matrix renames the
+  # check to "image (<svc>)", and branch protection requires the context
+  # "image", which would then never report and block the merge forever.
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
-    # One job per service: the Flutter build stage runs for minutes, and a
-    # failure should name the image that broke.
-    strategy:
-      fail-fast: false
-      matrix:
-        svc: [ahorro-api, ahorro-web]
     concurrency:
-      group: ci-image-${{ matrix.svc }}-${{ github.event.pull_request.number || github.ref }}
+      group: ci-image-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,16 +56,27 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Build both architectures without pushing, so a broken Dockerfile fails
-      # the pull request instead of the release.
+      # the pull request instead of the release. Separate cache scopes: one
+      # shared scope would have the two images evicting each other.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          file: deploy/docker/${{ matrix.svc }}.Dockerfile
+          file: deploy/docker/ahorro-api.Dockerfile
           platforms: linux/amd64,linux/arm64
           provenance: false
           push: false
-          cache-from: type=gha,scope=${{ matrix.svc }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.svc }}
+          cache-from: type=gha,scope=ahorro-api
+          cache-to: type=gha,mode=max,scope=ahorro-api
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/docker/ahorro-web.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          push: false
+          cache-from: type=gha,scope=ahorro-web
+          cache-to: type=gha,mode=max,scope=ahorro-web
 
   ui:
     runs-on: ubuntu-latest
