@@ -5,7 +5,7 @@ updated: "2026-09-21"
 ---
 # 060 — GitOps chart and the platform pointer
 
-**Status note:** Draft. Covers the `hello` Application only. 105 adds the
+**Status note:** Draft. Covers the `ahorro-api` Application only. 105 adds the
 `web` Application and its values keys, and the release commit of the web
 image tag.
 
@@ -29,9 +29,9 @@ files, and one ADR.
 
 ## Requirements
 
-1. `gitops/Chart.yaml` name `ahorro`. `gitops/values.yaml` MUST hold: `fqdn: ""`, `namespace: ahorro`, `repo: https://github.com/savak1990/vk-ahorro`, `charts.registry: ghcr.io/savak1990/vk-ahorro/charts`, `charts.hello.version`, `images.hello.tag`, and `cognito.clientId: ""` plus `cognito.issuer: ""` as empty defaults. Image tags are commit SHAs written by CI (030). The Cognito values MUST NOT be committed with content: there is one pool per platform project (constitution §4), so the platform fills them the way it already fills `fqdn`. `cognito.userPoolId` and `cognito.region` are not needed here — only `make ui-config` (080) wants them, and it reads SSM.
+1. `gitops/Chart.yaml` name `ahorro`. `gitops/values.yaml` MUST hold: `fqdn: ""`, `namespace: ahorro`, `repo: https://github.com/savak1990/vk-ahorro`, `charts.registry: ghcr.io/savak1990/vk-ahorro/charts`, `charts.ahorro-api.version`, `images.ahorro-api.tag`, and `cognito.clientId: ""` plus `cognito.issuer: ""` as empty defaults. Image tags are commit SHAs written by CI (030). The Cognito values MUST NOT be committed with content: there is one pool per platform project (constitution §4), so the platform fills them the way it already fills `fqdn`. `cognito.userPoolId` and `cognito.region` are not needed here — only `make ui-config` (080) wants them, and it reads SSM.
 2. `gitops/templates/validate.yaml` MUST `fail` when `fqdn` is empty (constitution §4). No template may contain a literal hostname.
-3. `gitops/templates/hello.yaml` renders one Argo `Application` in namespace `argocd`, `project: vk-ahorro`, source `repoURL: {{ .Values.charts.registry }}`, `chart: hello`, `targetRevision: {{ chart version }}`, destination namespace `ahorro`, `syncPolicy.automated {prune: true, selfHeal: true}`, `syncOptions [CreateNamespace=true, ServerSideApply=true]`, the `resources-finalizer.argocd.argoproj.io` finalizer, and helm `parameters`: `image.tag`, `host` (`api-ahorro.{{ .Values.fqdn }}` / `ahorro.{{ .Values.fqdn }}`), `cognito.issuer`, `cognito.clientId`, `corsAllowedOrigins` (`https://ahorro.{{ .Values.fqdn }}`). Every parameter MUST be a scalar: Argo's `helm.parameters` carries scalar overrides only.
+3. `gitops/templates/ahorro-api.yaml` renders one Argo `Application` in namespace `argocd`, `project: vk-ahorro`, source `repoURL: {{ .Values.charts.registry }}`, `chart: ahorro-api`, `targetRevision: {{ chart version }}`, destination namespace `ahorro`, `syncPolicy.automated {prune: true, selfHeal: true}`, `syncOptions [CreateNamespace=true, ServerSideApply=true]`, the `resources-finalizer.argocd.argoproj.io` finalizer, and helm `parameters`: `image.tag`, `host` (`api-ahorro.{{ .Values.fqdn }}` / `ahorro.{{ .Values.fqdn }}`), `cognito.issuer`, `cognito.clientId`, `corsAllowedOrigins` (`https://ahorro.{{ .Values.fqdn }}`). Every parameter MUST be a scalar: Argo's `helm.parameters` carries scalar overrides only.
 4. The Cognito values MUST reach the chart the way `fqdn` already does, in four places in `vk-lab-platform`: `scripts/argo-up.sh`'s SSM batch read gains `/<project>/persistent/ahorro-cognito/{client_id,issuer}` (six names today, eight after; `get-parameters` caps at ten); `--set` onto `gitops/bootstrap`; two `helm.parameters` entries in `gitops/bootstrap/templates/root-application.yaml`; and empty defaults in both `gitops/values.yaml` files. They MUST NOT be delivered by an `ExternalSecret`: they are public identifiers, and that path would store public data as secret data.
 5. Platform side, exactly these files in `vk-lab-platform`:
    - `gitops/templates/apps/vk-ahorro/appproject.yaml`: `AppProject vk-ahorro`, `sourceRepos: [https://github.com/savak1990/vk-ahorro, ghcr.io/savak1990/vk-ahorro/charts]`, `destinations: [{server: https://kubernetes.default.svc, namespace: ahorro}, {..., namespace: argocd}]`, `clusterResourceWhitelist: [{group: "", kind: Namespace}]`, sync-wave `4`.
@@ -43,7 +43,7 @@ files, and one ADR.
 
 ## Implementation hints
 
-- Argo CD 3.x (platform chart 10.4.0) reads OCI Helm sources with `repoURL: ghcr.io/...` and `chart:`; no repository credential is needed for a public package. Verify once with `argocd app get`; the fallback is a Git source (`repoURL` this repo, `path: deploy/helm/hello`).
+- Argo CD 3.x (platform chart 10.4.0) reads OCI Helm sources with `repoURL: ghcr.io/...` and `chart:`; no repository credential is needed for a public package. Verify once with `argocd app get`; the fallback is a Git source (`repoURL` this repo, `path: deploy/helm/ahorro-api`).
 - The `fqdn` value is sensitive on the platform (never echoed). Pass it only through the helm parameter; do not print it in `NOTES.txt` or logs.
 - Regenerate golden files with the platform's `scripts/gitops-render-check.sh update` (check the script's mode argument first).
 
@@ -51,7 +51,7 @@ files, and one ADR.
 
 - `make gitops-template` renders exactly one `Application` object; `helm template gitops` without `fqdn` fails.
 - In `vk-lab-platform`: `make gitops-check`, `helm lint gitops`, and kubeconform pass with the two new files; the pull request's `pr-gate` check is green.
-- After the platform's `make full-up` (or `make up` on an existing bootstrap): `argocd app get vk-ahorro` is `Synced`/`Healthy`; `argocd app list` shows `hello` in project `vk-ahorro`; `kubectl -n ahorro get pods` shows one Running pod.
+- After the platform's `make full-up` (or `make up` on an existing bootstrap): `argocd app get vk-ahorro` is `Synced`/`Healthy`; `argocd app list` shows `ahorro-api` in project `vk-ahorro`; `kubectl -n ahorro get pods` shows one Running pod.
 - `curl https://api-ahorro.<fqdn>/healthz` → 200. The `web` hostname is verified by 105.
 - A merged pull request produces exactly one `release` run and one `[skip ci]` commit; that commit does not start a second run.
 - `make down` then `make up` in the platform recreates the app with no manual step.

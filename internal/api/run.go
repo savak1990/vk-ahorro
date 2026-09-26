@@ -1,4 +1,4 @@
-package hello
+package api
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func Run(ctx context.Context, cfg Config, logger *slog.Logger) error {
 
 	listener, err := net.Listen("tcp", ":"+cfg.Port)
 	if err != nil {
-		return fmt.Errorf("hello: listening on port %s: %w", cfg.Port, err)
+		return fmt.Errorf("ahorro-api: listening on port %s: %w", cfg.Port, err)
 	}
 
 	srv := &http.Server{
@@ -40,7 +40,7 @@ func Run(ctx context.Context, cfg Config, logger *slog.Logger) error {
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
 		}
-		return fmt.Errorf("hello: serving: %w", err)
+		return fmt.Errorf("ahorro-api: serving: %w", err)
 	case <-ctx.Done():
 	}
 
@@ -48,7 +48,7 @@ func Run(ctx context.Context, cfg Config, logger *slog.Logger) error {
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("hello: shutting down: %w", err)
+		return fmt.Errorf("ahorro-api: shutting down: %w", err)
 	}
 	return nil
 }

@@ -10,7 +10,7 @@ architecture, [`docs/adr/`](docs/adr/) for decisions, and
 
 ## Status
 
-Milestone 1 is `specs/core/`, implemented in numeric order. The `hello`
+Milestone 1 is `specs/core/`, implemented in numeric order. The `ahorro-api`
 image and chart are on GHCR, the Cognito pool lives in the platform, and the
 Flutter shell runs locally. The GitOps link (060) is in progress.
 
@@ -18,9 +18,9 @@ Flutter shell runs locally. The GitOps link (060) is in progress.
 |---|---|---|
 | 000 | Constitution | done |
 | 010 | Repository bootstrap, GitHub publication | done |
-| 020 | Go `hello` service with Cognito JWT verification | done |
-| 030 | The `hello` image on GHCR, CI | done |
-| 040 | Helm chart for `hello` on GHCR | done |
+| 020 | Go `ahorro-api` service with Cognito JWT verification | done |
+| 030 | The `ahorro-api` image on GHCR, CI | done |
+| 040 | Helm chart for `ahorro-api` on GHCR | done |
 | 050 | Cognito: the platform's pool, one client, the test user | done |
 | 055 | Cognito identifiers from SSM, `make token` | done |
 | 060 | GitOps chart and the platform pointer | planned |
@@ -41,9 +41,9 @@ repository plugs in through one pointer `Application` in the platform
 ## Layout
 
 ```text
-cmd/hello         the hello service entry point
+cmd/ahorro-api    the Go API entry point
 internal/         service and shared Go code
-deploy/docker     Dockerfiles                    hello only
+deploy/docker     Dockerfiles                   ahorro-api only
 deploy/helm       one chart per service         (planned)
 gitops/           app-of-apps chart for Argo    (planned)
 flutter-ui/       Flutter client

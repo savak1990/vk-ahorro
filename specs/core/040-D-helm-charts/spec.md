@@ -5,10 +5,15 @@ updated: "2026-09-21"
 ---
 # 040 — Helm chart for hello
 
-**Status note:** Done. The `hello` chart, the chart Make targets, the `helm`
-CI job and the chart push all ship. `charts/hello` is public on GHCR. The
+**Status note:** Done. The `ahorro-api` chart, the chart Make targets, the `helm`
+CI job and the chart push all ship. `charts/ahorro-api` is public on GHCR. The
 `web` chart moved to 105, which cannot start before the Flutter web build
 exists.
+
+**Renamed since:** the service, its image and its chart were renamed from
+`hello` to `ahorro-api`, and the Flutter web artifacts are `ahorro-web`.
+The endpoint `/api/v1/hello` and the greeting it returns are unchanged.
+See [ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).
 
 **Complexity:** Small–Medium
 **Risk:** Low — a wrong `parentRef` or missing `SkipDryRunOnMissingResource` makes Argo fail the dry run before the Gateway CRDs exist.
@@ -19,7 +24,7 @@ exists.
 
 ## Scope
 
-One chart under `deploy/helm/hello`, rendering a Deployment, a Service, an
+One chart under `deploy/helm/ahorro-api`, rendering a Deployment, a Service, an
 HTTPRoute on the platform gateway, and its ConfigMap. The chart is packaged
 and pushed to GHCR as an OCI artifact. The Make targets and the CI job this
 spec adds MUST work for any chart, so 105 adds `web` without changing them.
@@ -29,7 +34,7 @@ these charts and the values Argo passes in (060).
 
 ## Requirements
 
-1. `deploy/helm/hello` MUST contain `Chart.yaml` (semver `version`, `appVersion` = image tag at package time), `values.yaml`, `templates/deployment.yaml`, `templates/service.yaml`, `templates/httproute.yaml`, `templates/configmap.yaml`, `templates/_helpers.tpl` and `templates/NOTES.txt`.
+1. `deploy/helm/ahorro-api` MUST contain `Chart.yaml` (semver `version`, `appVersion` = image tag at package time), `values.yaml`, `templates/deployment.yaml`, `templates/service.yaml`, `templates/httproute.yaml`, `templates/configmap.yaml`, `templates/_helpers.tpl` and `templates/NOTES.txt`.
 2. Deployment: `replicas: 1`, `image: {{ .Values.image.repository }}:{{ .Values.image.tag }}`, `imagePullPolicy` derived per 5a, readiness and liveness probes on `/healthz`, requests `10m/32Mi` and a memory limit of `128Mi` with no cpu limit (the platform's own convention), `securityContext` non-root with a read-only root filesystem, `automountServiceAccountToken: false`.
 3. Service: `ClusterIP`, port 80 → container 8080.
 4. HTTPRoute: `parentRefs: [{name: platform-gateway, namespace: envoy, sectionName: https}]`, `hostnames: [{{ .Values.host }}]`, one rule to the Service, annotations `argocd.argoproj.io/sync-wave: "2"` and `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true` (copy `vk-lab-platform/gitops/templates/platform/shared/envoy-gateway/httproutes.yaml`).
@@ -39,7 +44,7 @@ these charts and the values Argo passes in (060).
 7. Make targets: `helm-lint`, `helm-template` (renders with a placeholder host), `helm-package` (to `dist/`), `helm-push` (`helm push dist/*.tgz oci://ghcr.io/savak1990/vk-ahorro/charts`). `CHART_VERSION` is read from `Chart.yaml`.
 8. `.github/workflows/ci.yml` MUST gain a job that runs `helm lint`, renders the chart, validates the output with `kubeconform -strict` against the Gateway API schemas, and fails when a chart changed but its `version` did not.
 9. `.github/workflows/release.yml` MUST package and push the chart on a merge to `main`, keeping `contents: read` and `packages: write`.
-10. GHCR package `charts/hello` MUST be public so Argo pulls the chart without a secret.
+10. GHCR package `charts/ahorro-api` MUST be public so Argo pulls the chart without a secret.
 
 ## Implementation hints
 
@@ -52,8 +57,8 @@ these charts and the values Argo passes in (060).
 
 - `make helm-lint` clean.
 - `make helm-template` output passes `kubeconform -strict -summary`; the output contains one `HTTPRoute` with `parentRefs[0].name == platform-gateway`.
-- `helm template deploy/helm/hello` without `--set host=...` fails with "host is required".
+- `helm template deploy/helm/ahorro-api` without `--set host=...` fails with "host is required".
 - The placeholder host appears in no packaged chart and in no committed file.
-- `make helm-push` then `helm pull oci://ghcr.io/savak1990/vk-ahorro/charts/hello --version <v>` succeeds from a machine with no GitHub login.
+- `make helm-push` then `helm pull oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-api --version <v>` succeeds from a machine with no GitHub login.
 - `helm install` into a kind cluster with the Gateway API CRDs installed (no controller) results in a Ready pod; `kubectl port-forward` answers `/healthz` with `200 {"status":"ok"}`.
 - A pull request that edits the chart without bumping `version` fails CI.

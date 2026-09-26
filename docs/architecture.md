@@ -13,7 +13,7 @@ repository is the application monorepo. It runs on
 disposable EKS platform that provides the cluster, the public edge (NLB +
 Envoy Gateway), DNS, TLS, and Argo CD.
 
-The first milestone (`specs/core/`) delivers one service (`hello`), the
+The first milestone (`specs/core/`) delivers one service (`ahorro-api`), the
 Flutter shell, Cognito sign-in, and the full delivery chain from a commit
 to a running app on all three client platforms.
 
@@ -25,12 +25,12 @@ as-built.
 ```text
 vk-ahorro/
   go.mod                                   module github.com/savak1990/vk-ahorro
-  cmd/hello/main.go                        one entry point per service
-  internal/hello/                          service code: server, handlers, tests
+  cmd/ahorro-api/main.go                        one entry point per service
+  internal/api/                          service code: server, handlers, tests
   internal/platform/auth/                  Cognito JWT verification, shared by every service
   internal/platform/httpx/                 JSON helpers, request id, CORS, logging
-  deploy/docker/                 hello.Dockerfile; web.Dockerfile planned (multi-arch)
-  deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
+  deploy/docker/                 ahorro-api.Dockerfile; web.Dockerfile planned (multi-arch)
+  deploy/helm/ahorro-api/, web/       (planned) one chart per service, pushed to GHCR as OCI
   gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
   flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
   scripts/                                 specs-check.sh, domain-guard.sh, cognito.sh; later e2e-smoke.sh
@@ -69,7 +69,7 @@ secret: it reaches this repository's charts only as a Helm parameter and
 never appears in Git (§10).
 
 Two hostnames, not one with a path split, so the web build can move to a
-static host later without touching the API. The cost is CORS: `hello`
+static host later without touching the API. The cost is CORS: `ahorro-api`
 allows the origin `https://ahorro.<fqdn>`.
 
 # 4. Authentication
@@ -136,7 +136,7 @@ environment. Mobile builds bake the same keys in with `--dart-define`.
        ▼
   release.yml (GitHub Actions, no AWS credentials)
        ├── docker buildx  linux/amd64 + linux/arm64
-       │      ghcr.io/savak1990/vk-ahorro/hello:<sha>
+       │      ghcr.io/savak1990/vk-ahorro/ahorro-api:<sha>
        │      ghcr.io/savak1990/vk-ahorro/web:<sha>
        ├── helm package + push
        │      oci://ghcr.io/savak1990/vk-ahorro/charts/{hello,web}:<chart version>
@@ -171,7 +171,7 @@ Two-level app-of-apps, split by ownership (platform ADR 0015):
                         ▼
   vk-ahorro/gitops (chart "ahorro")
     ├── templates/validate.yaml   fails when fqdn is empty
-    ├── templates/hello.yaml      Application hello → oci chart hello, namespace ahorro
+    ├── templates/ahorro-api.yaml      Application ahorro-api → oci chart hello, namespace ahorro
     └── templates/web.yaml        Application web   → oci chart web,   namespace ahorro
 ```
 
@@ -199,7 +199,7 @@ in `gitops/values.yaml` exist on GHCR.
 
 # 9. Local development
 
-- Go: `make go-run` starts `hello` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
+- Go: `make go-run` starts `ahorro-api` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
 - Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the committed `flutter-ui/web/config.json` (localhost API, empty Cognito → the Authenticator is skipped only when auth is disabled server-side; otherwise the app shows a config error).
 - Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from the platform's SSM parameters; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
 - Images: `make image-build SVC=web && make web-serve-local` serves the production web image on `:8081`.

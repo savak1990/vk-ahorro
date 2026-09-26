@@ -13,6 +13,11 @@ process down in under a second. The check against a real Cognito token moves to
 the platform's spec AWS-035, which creates the pool (055, ADR 0004). This spec also added the repository's first
 `Makefile`, `.golangci.yml` (schema v2) and `scripts/specs-check.sh`.
 
+**Renamed since:** the service, its image and its chart were renamed from
+`hello` to `ahorro-api`, and the Flutter web artifacts are `ahorro-web`.
+The endpoint `/api/v1/hello` and the greeting it returns are unchanged.
+See [ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).
+
 **Complexity:** Small
 **Risk:** Low — the JWT middleware is the only part with a security consequence.
 **Estimated cost:** ~1 day
@@ -22,7 +27,7 @@ the platform's spec AWS-035, which creates the pool (055, ADR 0004). This spec a
 
 ## Scope
 
-One Go module, one service `hello`, and the shared packages every later
+One Go module, one service `ahorro-api`, and the shared packages every later
 service reuses: JWT verification against Cognito, JSON helpers, request id,
 CORS.
 
@@ -31,7 +36,7 @@ Excludes: the Dockerfile (030), the chart (040), the Cognito pool itself (the pl
 ## Requirements
 
 1. `go.mod` MUST declare `module github.com/savak1990/vk-ahorro` and Go `1.26`. One module for the whole repository (constitution §1).
-2. Layout MUST be `cmd/hello/main.go`, `internal/hello/` (server wiring, handlers, tests), `internal/platform/auth/` (JWT), `internal/platform/httpx/` (JSON responses, request id, CORS, logging middleware).
+2. Layout MUST be `cmd/ahorro-api/main.go`, `internal/api/` (server wiring, handlers, tests), `internal/platform/auth/` (JWT), `internal/platform/httpx/` (JSON responses, request id, CORS, logging middleware).
 3. Configuration comes from environment variables only: `PORT` (default `8080`), `COGNITO_ISSUER`, `COGNITO_CLIENT_ID`, `CORS_ALLOWED_ORIGINS` (comma list), `AUTH_DISABLED` (`true` only for local development; the service MUST log a warning at startup when set).
 4. Routes:
    - `GET /healthz` → `200 {"status":"ok"}`, no auth.

@@ -6,7 +6,7 @@ updated: "2026-09-21"
 # 105 — Web delivery: the image, the chart, and the Argo Application
 
 **Status note:** Draft. Collects every part of the web delivery path that
-030, 040 and 060 once carried. Those specs each cover `hello` only, so each
+030, 040 and 060 once carried. Those specs each cover `ahorro-api` only, so each
 can close before the Flutter build exists.
 
 **Complexity:** Medium
@@ -23,7 +23,7 @@ image, the `web` Helm chart, its Argo `Application`, and the CI steps for
 each.
 
 Excludes: the Flutter source itself (070, 080, 100), the `config.json` key
-meanings (080), the `hello` chart and the chart tooling it introduces (040),
+meanings (080), the `ahorro-api` chart and the chart tooling it introduces (040),
 the app-of-apps chart the Application lives in (060).
 
 ## Requirements
@@ -41,7 +41,7 @@ the app-of-apps chart the Application lives in (060).
 ## Implementation hints
 
 - The Flutter build stage is slow (5–8 min). Cache `~/.pub-cache` with `actions/cache` keyed on `pubspec.lock`.
-- `nginx-unprivileged` already runs as a non-root user and listens on 8080, so the chart's `securityContext` can match the `hello` chart's.
+- `nginx-unprivileged` already runs as a non-root user and listens on 8080, so the chart's `securityContext` can match the `ahorro-api` chart's.
 - A read-only root filesystem needs `emptyDir` mounts for nginx's cache and run directories. Confirm before setting it.
 
 ## Testing / acceptance criteria

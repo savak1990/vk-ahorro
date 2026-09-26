@@ -1,7 +1,7 @@
 apiVersion: v2
-name: hello
-description: The Ahorro hello service - a Deployment, a Service, and an HTTPRoute on the platform gateway.
+name: ahorro-api
+description: The Ahorro API service - a Deployment, a Service, and an HTTPRoute on the platform gateway.
 type: application
-version: 0.1.1
+version: 0.1.0
 # Overwritten at package time with the image tag; the default keeps `helm lint` quiet.
 appVersion: "0.1.0"

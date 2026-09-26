@@ -1,6 +1,6 @@
-// Package hello serves the first Ahorro API: a health probe and one greeting
+// Package api serves the first Ahorro API: a health probe and one greeting
 // endpoint behind Cognito authentication.
-package hello
+package api
 
 import (
 	"errors"
@@ -30,7 +30,7 @@ func ConfigFromEnv() (Config, error) {
 		AuthDisabled:       os.Getenv("AUTH_DISABLED") == "true",
 	}
 	if !cfg.AuthDisabled && (cfg.Issuer == "" || cfg.ClientID == "") {
-		return Config{}, errors.New("hello: COGNITO_ISSUER and COGNITO_CLIENT_ID are required unless AUTH_DISABLED=true")
+		return Config{}, errors.New("ahorro-api: COGNITO_ISSUER and COGNITO_CLIENT_ID are required unless AUTH_DISABLED=true")
 	}
 	return cfg, nil
 }
