@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted
+Accepted. Narrowed by
+[ADR 0004](0004-cognito-moves-to-the-platform.md): the Cognito pool, the state
+bucket and the SSM parameters this document leaves with `vk-ahorro` have since
+moved to the platform, and the bucket was never created. The reasoning below
+stands — in particular its third reason, placement by scope and lifecycle, is
+what ADR 0004 applies to Cognito.
 
 ## Context
 

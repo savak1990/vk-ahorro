@@ -1,11 +1,32 @@
 ---
 id: "CORE-050"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "SUPERSEDED"
+updated: "2026-09-26"
 ---
 # 050 — Terraform: state bucket and Cognito
 
-**Status note:** Draft.
+**Status note:** Superseded by `055-P-cognito-and-token` and by the platform's
+`vk-lab-platform/specs/aws/035-A-ahorro-cognito`. See
+[ADR 0004](../../../docs/adr/0004-cognito-moves-to-the-platform.md).
+
+This spec put the user pool and a dedicated state bucket in this repository.
+Nothing in the platform's lifecycle button applies another repository's
+Terraform, so the pool would have been created once, by hand, in a second
+repository with a second backend. The pool now belongs to the platform's
+persistent layer, and this repository holds no Terraform at all. The bucket
+`vk-ahorro-tf-state` was never created.
+
+Three of this spec's decisions survive the move and were carried into the
+platform's spec: one pool with email as the username attribute; exactly one app
+client (requirement 4's second client is dropped, because
+`internal/platform/auth/jwt.go` pins a single client id and would refuse its
+tokens); and the SSM publication of the identifiers. Requirement 4's
+`deletion_protection = "ACTIVE"` did not survive: the AWS API refuses
+`DeleteUserPool` on a protected pool, so it would fail the platform's
+`full-down`. Acceptance line 46 was wrong as written — a Cognito access token
+carries no `email` claim, so the email greeting is proved on the id token.
+
+The text below is kept unchanged as the record of what was planned.
 
 **Complexity:** Medium
 **Risk:** Medium — a user pool destroyed by accident loses every user; the state bucket destroy path must be guarded.

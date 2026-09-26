@@ -17,9 +17,10 @@ The image is public at `ghcr.io/savak1990/vk-ahorro/hello:<sha>` for
 This spec once carried every step any later spec would add to the workflows,
 which made it impossible to close. Each of those clauses now belongs to the
 spec that adds the step: the `helm` job and the chart push to 040, the
-`terraform fmt -check` step to 050, the `gitops/values.yaml` commit and the
-`contents: write` permission to 060, `flutter analyze` and `flutter test` to
-070, and everything `web` to 105.
+`gitops/values.yaml` commit and the `contents: write` permission to 060,
+`flutter analyze` and `flutter test` to 070, and everything `web` to 105. The
+`terraform fmt -check` step that once belonged to 050 is void: this repository
+holds no Terraform (ADR 0004).
 
 **Complexity:** Medium
 **Risk:** Medium — a CI loop (the SHA commit retriggers the build) or a `latest` tag breaks Argo's diff.

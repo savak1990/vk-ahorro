@@ -25,10 +25,8 @@
       "Bash(helm template *)",
       "Bash(helm lint *)",
       "Bash(kubeconform *)",
-      "Bash(terraform fmt -check*)",
-      "Bash(terraform fmt -recursive -check*)",
-      "Bash(terraform validate*)",
-      "Bash(terragrunt validate*)"
+      "Bash(make token*)",
+      "Bash(make cognito-config*)"
     ],
     "deny": [
       "Bash(aws iam create-*)",
@@ -43,17 +41,9 @@
       "Bash(aws s3api delete-objects*)",
       "Bash(aws s3api put-bucket-versioning*)",
       "Bash(aws ssm delete-parameter*)",
-      "Bash(aws configure*)",
-      "Bash(git push --force*)",
-      "Bash(git push -f*)"
+      "Bash(aws configure*)"
     ],
     "ask": [
-      "Bash(terraform apply*)",
-      "Bash(terraform destroy*)",
-      "Bash(terragrunt apply*)",
-      "Bash(terragrunt destroy*)",
-      "Bash(terragrunt run*)",
-      "Bash(make tf-*)",
       "Bash(make image-push*)",
       "Bash(make images-push*)",
       "Bash(make helm-push*)",

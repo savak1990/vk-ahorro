@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
 
 .DEFAULT_GOAL := help
 
@@ -40,6 +40,11 @@ UI_DIR := $(CURDIR)/flutter-ui
 AVD ?= pixel_phone
 IOS_DEVICE ?= iPhone 18 Pro
 
+# The platform project whose persistent layer owns the Cognito pool. The pool
+# is per project, so nothing about it can be committed here. Exported because
+# the scripts read it from the environment.
+export PROJECT_NAME ?= vk-hetzner-lab
+
 ## Print this help
 help:
 	@awk 'BEGIN { FS = ":" } \
@@ -73,6 +78,14 @@ specs-check:
 ## Check no file and no new commit contains the root domain
 domain-check:
 	@./scripts/domain-guard.sh
+
+## Print the Cognito pool's public identifiers as JSON
+cognito-config:
+	@./scripts/cognito.sh config
+
+## Print a one-hour Cognito id token for the test user
+token:
+	@./scripts/cognito.sh token
 
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:

@@ -1,5 +1,4 @@
-# Pull-request gate. Later specs add their own steps here: helm lint (040),
-# terraform fmt -check (050).
+# Pull-request gate.
 #
 # Every action is pinned to a full commit SHA. A tag can be moved; the 2025
 # tj-actions and 2026 trivy-action attacks both did exactly that to read

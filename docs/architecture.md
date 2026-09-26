@@ -31,11 +31,9 @@ vk-ahorro/
   internal/platform/httpx/                 JSON helpers, request id, CORS, logging
   deploy/docker/                 hello.Dockerfile; web.Dockerfile planned (multi-arch)
   deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
-  deploy/terraform/live/         (planned) Terragrunt units: state, persistent/cognito
-  deploy/terraform/modules/      (planned) terraform-state, cognito
   gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
   flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
-  scripts/                                 specs-check.sh, domain-guard.sh; later e2e-smoke.sh, tf state bootstrap
+  scripts/                                 specs-check.sh, domain-guard.sh, cognito.sh; later e2e-smoke.sh
   specs/core/                    milestone specs
   docs/architecture.md           this document
   docs/adr/                      decisions
@@ -76,11 +74,15 @@ allows the origin `https://ahorro.<fqdn>`.
 
 # 4. Authentication
 
-Identity provider: one Cognito user pool in the application's AWS account
-(`eu-west-1`), with a public app client (no client secret, SRP flow). The
+Identity provider: one Cognito user pool per platform project, in the same
+AWS account and region (`eu-west-1`), with a single public app client (no
+client secret). The client allows SRP for real sign-in and the admin password
+flow for scripted tokens; the non-admin password flow is off (ADR 0005). The
 alternatives compared were Firebase Auth and Supabase Auth; Cognito won on
-reuse (the Flutter code already uses Amplify), one cloud account, and
-Terraform parity (ADR 0001).
+reuse (the Flutter code already uses Amplify) and one cloud account.
+
+The pool is created by `vk-lab-platform`, not here — this repository holds no
+Terraform (ADR 0004).
 
 ```text
   Flutter (amplify_authenticator)          Cognito                 hello (Go)
@@ -113,8 +115,8 @@ image tags and chart versions.
 
 | Layer | Holds | Written by | Read by |
 |---|---|---|---|
-| Terraform outputs / SSM `/vk-ahorro/persistent/cognito/*` | pool id, client id, issuer | `make tf-apply` | `make ui-config`, the operator when editing `gitops/values.yaml` |
-| `gitops/values.yaml` (Git) | image tags (SHA), chart versions, Cognito ids, namespace | CI (tags), operator (the rest) | Argo through the pointer Application |
+| SSM `/<project>/persistent/ahorro-cognito/*` | pool id, client id, issuer, the test user and its password | the platform's `make persistent-up` | `make cognito-config`, `make token`, `make ui-config`, the platform's `argo-up.sh` |
+| `gitops/values.yaml` (Git) | image tags (SHA), chart versions, namespace; Cognito keys present but empty | CI (tags), operator (the rest) | Argo through the pointer Application |
 | `flutter-ui/config/<env>.json` (untracked) | API base URL, Cognito ids | `make ui-config ENV=lab FQDN=...` | mobile builds via `--dart-define-from-file` |
 | Runtime | env vars (hello), `/config.json` ConfigMap (web) | Helm charts from Argo parameters | the processes |
 
@@ -186,8 +188,7 @@ that.
 
 | Class | Resources | Created by | Destroyed by |
 |---|---|---|---|
-| State | S3 bucket `vk-ahorro-tf-state` | `make tf-state-up` | never in the normal flow |
-| Persistent | Cognito user pool + clients, SSM parameters, GHCR packages | `make tf-apply`; CI for packages | `CONFIRM_DESTROY=vk-ahorro make tf-destroy`; never by the platform |
+| Persistent | Cognito user pool + client + test user, its SSM parameters, GHCR packages | the platform's `make persistent-up`; CI for packages | the platform's `CONFIRM_DESTROY=<project> make persistent-down` |
 | Disposable | everything in namespace `ahorro`, the two child Applications | platform `make up` through the pointer | platform `make down` |
 
 The platform's `make full-up` (bootstrap → persistent → cluster → Argo)
@@ -200,7 +201,7 @@ in `gitops/values.yaml` exist on GHCR.
 
 - Go: `make go-run` starts `hello` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
 - Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the committed `flutter-ui/web/config.json` (localhost API, empty Cognito → the Authenticator is skipped only when auth is disabled server-side; otherwise the app shows a config error).
-- Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from Terraform outputs; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
+- Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from the platform's SSM parameters; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
 - Images: `make image-build SVC=web && make web-serve-local` serves the production web image on `:8081`.
 
 # 10. Invariants
@@ -208,8 +209,8 @@ in `gitops/values.yaml` exist on GHCR.
 1. No secret, root domain, or `<fqdn>` value in Git. CI greps for the domain.
 2. Images tagged by full commit SHA; `latest` never pushed.
 3. One AWS region, `eu-west-1`, as a constant.
-4. Terraform never manages a Kubernetes object; Argo never manages an AWS resource.
-5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, its golden files, and ADRs.
+4. Terraform never manages a Kubernetes object; Argo never manages an AWS resource. This repository holds no Terraform at all (ADR 0004).
+5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, `terraform/live/account/ahorro-ci-role/`, `terraform/live/persistent/ahorro-cognito/`, their golden files, and ADRs. This line listed only the first of those until ADR 0004; `ahorro-ci-role` had been in the platform since ADR 0003 and was never recorded here.
 6. `make` targets are the only supported entry points; every target has a doc comment.
 7. Every service verifies tokens itself with the shared `internal/platform/auth` package; no gateway-level auth exists on the platform today.
 
@@ -219,5 +220,5 @@ Not in the first milestone, listed so the layout leaves room:
 
 - More services under `cmd/` and `internal/`, each with its own chart and `gitops/templates/<svc>.yaml`.
 - Postgres access through the platform's CNPG cluster: an `ExternalSecret` against the platform's `aws-parameter-store` ClusterSecretStore and a `PreSync` hook that waits on the Secret (platform ADR 0015 consequences).
-- A `prod` environment: a second Cognito pool and a second `gitops` values file; the platform has one target today.
+- A `prod` environment: a second platform project, which already means a second Cognito pool, plus a second `gitops` values file.
 - Argo CD Image Updater is deliberately not used (platform ADR 0015).

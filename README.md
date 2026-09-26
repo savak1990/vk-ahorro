@@ -20,7 +20,8 @@ service runs locally; nothing is containerized or deployed yet.
 | 020 | Go `hello` service with Cognito JWT verification | done |
 | 030 | The `hello` image on GHCR, CI | done |
 | 040 | Helm chart for `hello` on GHCR | done |
-| 050 | Terraform: state bucket, Cognito | planned |
+| 050 | Terraform: state bucket, Cognito | superseded by 055 |
+| 055 | Cognito identifiers from SSM, `make token` | planned |
 | 060 | GitOps chart and the platform pointer | planned |
 | 070 | Flutter trimmed to the shell | planned |
 | 080 | Flutter runtime config and the "+" → hello call | planned |
@@ -43,7 +44,6 @@ cmd/hello         the hello service entry point
 internal/         service and shared Go code
 deploy/docker     Dockerfiles                    hello only
 deploy/helm       one chart per service         (planned)
-deploy/terraform  Terragrunt: state, Cognito    (planned)
 gitops/           app-of-apps chart for Argo    (planned)
 flutter-ui/       Flutter client
 specs/core/       milestone specs
@@ -63,7 +63,7 @@ repository folder yet.
 | Images | `image-build SVC=` `image-push SVC=` `images-push` | exists |
 | Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
 | Checks | `specs-check` `domain-check` `help` | exists |
-| Terraform | `tf-state-up` `tf-plan` `tf-apply` `tf-outputs` `tf-destroy` | planned |
+| Cognito | `cognito-config` `token` | exists |
 | GitOps | `gitops-lint` `gitops-template` `gitops-check` | planned |
 | Flutter config | `ui-config ENV=` `ui-build-web` `web-serve-local` | planned |
 
