@@ -1,13 +1,26 @@
 ---
 id: "CORE-060"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "IN_PROGRESS"
+updated: "2026-09-26"
 ---
 # 060 — GitOps chart and the platform pointer
 
-**Status note:** Draft. Covers the `ahorro-api` Application only. 105 adds the
-`web` Application and its values keys, and the release commit of the web
-image tag.
+**Status note:** In progress. The `gitops/` chart, its Make targets and the
+`ahorro-api` and `ahorro-web` Applications ship. The platform half - the
+pointer, the `AppProject` and the `argo-up.sh` threading - is a separate pull
+request against `vk-lab-platform`.
+
+Five requirements are not implemented as written; see
+[ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).
+Requirement 1 also needs `cognito.userPoolId`, because 105 requirement 5 puts
+it in `config.json`, so the platform resolver carries nine SSM names rather
+than the eight requirement 4 predicts. Requirement 3 sets `selfHeal: true`;
+both children ship with it false, because the operator installs by hand.
+Requirement 3 also implies one template per service; backend Applications
+render from a `range` instead. Requirement 5 names a platform ADR number that
+is already taken. Requirement 8 asks CI to commit the image SHA; nothing is
+pinned, so there is nothing to commit and `release.yml` keeps
+`contents: read`.
 
 **Complexity:** Medium
 **Risk:** Medium — the only cross-repository change; a broken pointer wedges the platform's `root` Application until its retry budget runs out.
