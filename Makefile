@@ -164,18 +164,13 @@ ui-build-web:
 ui-build-android:
 	cd $(UI_DIR) && flutter build apk --debug
 
-## Boot the Android emulator $AVD and print its adb serial
+## Start the Android emulator $AVD without waiting for it to boot
 emulator-android:
-	@$(CURDIR)/scripts/android-emulator.sh $(AVD)
+	@$(CURDIR)/scripts/android-emulator.sh $(AVD) nowait
 
-# Xcode 27 replaced Simulator.app with DeviceHub.app, which is the only way
-# to see the booted device; simctl alone boots it headless.
-## Boot the iOS simulator $IOS_DEVICE and show its window
+## Start the iOS simulator $IOS_DEVICE without waiting for it to boot
 emulator-ios:
-	@xcrun simctl boot "$(IOS_DEVICE)" 2>/dev/null || true
-	@xcrun simctl bootstatus "$(IOS_DEVICE)" >/dev/null
-	@open -a "$(shell xcode-select -p)/../Applications/DeviceHub.app"
-	@echo "$(IOS_DEVICE) ready"
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" nowait
 
 ## Run the Flutter app on the Android emulator $AVD
 ui-run-android:
@@ -183,8 +178,8 @@ ui-run-android:
 	  cd $(UI_DIR) && flutter run -d $$serial
 
 ## Run the Flutter app on the iOS simulator $IOS_DEVICE
-ui-run-ios: emulator-ios
-	cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)"
+ui-run-ios:
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)"
 
 # Port 3000 is the origin `make go-run` allows through CORS.
 ## Run the Flutter app in Chrome on :3000

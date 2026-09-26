@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Boots the named AVD if it is not already running and prints its adb serial.
 # The serial is required because adb refuses a bare command once a second
 # emulator is attached, and a phone plus a tablet is the normal local setup.
 set -euo pipefail
 
-avd="${1:?usage: android-emulator.sh <avd-name>}"
+avd="${1:?usage: android-emulator.sh <avd-name> [nowait]}"
+mode="${2:-wait}"
 
 serial_of() {
   local s
@@ -17,11 +17,23 @@ serial_of() {
   return 1
 }
 
-if ! serial_of >/dev/null; then
+if serial_of >/dev/null; then
+  running=1
+else
+  running=0
   flutter emulators --launch "$avd" >&2
-  until serial_of >/dev/null; do sleep 2; done
 fi
 
+if [ "$mode" = nowait ]; then
+  if [ "$running" = 1 ]; then
+    echo "$avd already running on $(serial_of)"
+  else
+    echo "$avd starting"
+  fi
+  exit 0
+fi
+
+until serial_of >/dev/null; do sleep 2; done
 serial=$(serial_of)
 until [ "$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; do
   sleep 2
