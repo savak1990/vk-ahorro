@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Spec 050 asked for two app clients on one pool: `vk-ahorro-app` with
+Spec 050 originally asked for two app clients on one pool: `vk-ahorro-app` with
 `ALLOW_USER_SRP_AUTH` for the Flutter app, and `vk-ahorro-e2e` with
 `ALLOW_ADMIN_USER_PASSWORD_AUTH` for the smoke test. Auth flows are configured
 per client, not per pool, so a second client is the only way to give the test
