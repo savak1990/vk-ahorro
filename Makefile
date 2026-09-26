@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
 
 .DEFAULT_GOAL := help
 
@@ -135,6 +135,19 @@ helm-package: require-chart
 ## Push one packaged chart to GHCR. Usage: make helm-push CHART=ahorro-api
 helm-push: helm-package
 	helm push $(DIST_DIR)/$(CHART)-$(CHART_VERSION).tgz $(CHARTS_REGISTRY)
+
+# A documented placeholder; the real fqdn exists only at install time.
+## Lint the app-of-apps chart
+gitops-lint:
+	@helm lint gitops --set fqdn=example.invalid
+
+## Render the app-of-apps chart to stdout
+gitops-template:
+	@helm template ahorro gitops --set fqdn=example.invalid
+
+## Render the app-of-apps chart and validate it with kubeconform
+gitops-check:
+	@./scripts/gitops-check.sh
 
 ## Fetch the Flutter package dependencies
 ui-get:

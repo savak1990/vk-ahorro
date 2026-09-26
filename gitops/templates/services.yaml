@@ -1,0 +1,46 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $name }}
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ $svc.wave | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: vk-ahorro
+  source:
+    repoURL: {{ $root.Values.charts.registry }}
+    chart: {{ $name }}
+    targetRevision: {{ $svc.chartVersion | quote }}
+    helm:
+      # Scalars only: Argo's helm.parameters carries nothing else, which is
+      # why corsAllowedOrigins is a comma-separated string.
+      parameters:
+        - name: image.tag
+          value: {{ $svc.tag | quote }}
+        - name: host
+          value: {{ printf "%s.%s" $svc.hostPrefix $root.Values.fqdn | quote }}
+        - name: cognito.issuer
+          value: {{ $root.Values.cognito.issuer | quote }}
+        - name: cognito.clientId
+          value: {{ $root.Values.cognito.clientId | quote }}
+        - name: corsAllowedOrigins
+          value: {{ printf "https://%s.%s" $root.Values.web.hostPrefix $root.Values.fqdn | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ $root.Values.namespace }}
+  syncPolicy:
+    # selfHeal is off on purpose: the operator installs this chart by hand
+    # from time to time and a reconcile would undo it. A change to this
+    # repository's values is still a desired-state change and does sync.
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+{{- end }}
