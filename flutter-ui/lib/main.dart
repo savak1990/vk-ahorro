@@ -16,10 +16,17 @@ import 'src/constants/app_strings.dart';
 import 'src/providers/amplify_provider.dart';
 import 'src/providers/app_state_provider.dart';
 import 'src/screens/main_screen.dart';
+import 'src/widgets/error_state_widget.dart';
 
 // Renders the shell without sign-in, for local UI work. kDebugMode keeps it
 // out of any release build, so a shipped app can never start unauthenticated.
 const skipAuth = bool.fromEnvironment('SKIP_AUTH') && kDebugMode;
+
+// Empty is a real state, not a fault: config.json ships with the Cognito keys
+// blank for local work, and the platform fills them per project.
+bool get _cognitoConfigured =>
+    AppConfig.cognitoUserPoolId.isNotEmpty &&
+    AppConfig.cognitoClientId.isNotEmpty;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,10 +56,10 @@ class _AhorroAppState extends State<AhorroApp> {
   }
 
   Future<void> _startAmplify() async {
-    if (skipAuth) return;
+    if (skipAuth || !_cognitoConfigured) return;
 
     final amplify = context.read<AppStateProvider>().amplify;
-    await amplify.configure(amplifyconfig);
+    await amplify.configure(amplifyConfig());
     await amplify.loadCurrentUserName();
 
     Amplify.Hub.listen(HubChannel.Auth, (event) {
@@ -64,8 +71,21 @@ class _AhorroAppState extends State<AhorroApp> {
     });
   }
 
+  // Naming the empty keys beats an Authenticator that throws
+  // ResourceNotFoundException against a pool that is not there.
+  Widget _home() {
+    if (skipAuth || _cognitoConfigured) return const MainScreen();
+    return const Scaffold(
+      body: ErrorStateWidget(
+        message: 'Cognito is not configured: config.json has no '
+            'cognitoUserPoolId or cognitoClientId.',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showAuthenticator = !skipAuth && _cognitoConfigured;
     final app = PlatformProvider(
       builder: (context) => PlatformTheme(
         materialLightTheme: AdaptiveTheme.lightTheme,
@@ -74,7 +94,7 @@ class _AhorroAppState extends State<AhorroApp> {
         cupertinoLightTheme: materialToCupertino(AdaptiveTheme.lightTheme),
         cupertinoDarkTheme: materialToCupertino(AdaptiveTheme.darkTheme),
         builder: (context) => PlatformApp(
-          builder: skipAuth ? null : Authenticator.builder(),
+          builder: showAuthenticator ? Authenticator.builder() : null,
           localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
             DefaultMaterialLocalizations.delegate,
             DefaultWidgetsLocalizations.delegate,
@@ -83,14 +103,14 @@ class _AhorroAppState extends State<AhorroApp> {
           title: AppStrings.appTitle,
           debugShowCheckedModeBanner: false,
           initialRoute: '/',
-          routes: {'/': (_) => const MainScreen()},
+          routes: {'/': (_) => _home()},
         ),
       ),
     );
 
     return ChangeNotifierProvider<AmplifyProvider>.value(
       value: context.read<AppStateProvider>().amplify,
-      child: skipAuth ? app : Authenticator(child: app),
+      child: showAuthenticator ? Authenticator(child: app) : app,
     );
   }
 }
