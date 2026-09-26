@@ -31,7 +31,7 @@ The real token path is `deploy/050`.
 ## Requirements
 
 1. `flutter-ui/integration_test/hello_test.dart` MUST start the app, tap the "+" action, and assert the text `Hello, anonymous` appears. `flutter-ui/test_driver/integration_test.dart` holds the standard driver.
-2. `make e2e-local` MUST run `scripts/e2e-local.sh`: start `go run ./cmd/hello` with `AUTH_DISABLED=true` on `:8080`, start `chromedriver --port=4444`, run `flutter drive --driver=test_driver/integration_test.dart --target=integration_test/hello_test.dart -d web-server --dart-define=SKIP_AUTH=true`, and stop both processes on exit through a `trap`. It exits non-zero when the test fails.
+2. `make e2e-local` MUST run `scripts/e2e-local.sh`: start `go run ./cmd/ahorro-api` with `AUTH_DISABLED=true` on `:8080`, start `chromedriver --port=4444`, run `flutter drive --driver=test_driver/integration_test.dart --target=integration_test/hello_test.dart -d web-server --dart-define=SKIP_AUTH=true`, and stop both processes on exit through a `trap`. It exits non-zero when the test fails.
 3. The web app under test MUST read `web/config.json` as shipped (`apiBaseUrl: http://localhost:8080`); no test-only config file.
 4. CI job `e2e-local` on `ubuntu-latest` MUST run when the `go` **or** the `flutter` filter matched, call `make e2e-local`, and join `ci-ok`. `ubuntu-latest` ships Chrome and a matching ChromeDriver, so no browser setup action is added.
 5. The test MUST run under `kDebugMode` builds only, which is what `flutter drive` produces; `SKIP_AUTH` is compiled out of release builds (core 110 req 6, kept).
@@ -46,5 +46,5 @@ The real token path is `deploy/050`.
 
 - `make e2e-local` on a laptop exits 0 and prints the driver's `All tests passed`.
 - Stopping the Go service before the tap makes the test fail with the error message shown in the app, and the script exits non-zero.
-- A pull request touching only `internal/hello/handler.go` runs `e2e-local`.
+- A pull request touching only `internal/api/handler.go` runs `e2e-local`.
 - The job finishes in under 8 minutes with warm caches.

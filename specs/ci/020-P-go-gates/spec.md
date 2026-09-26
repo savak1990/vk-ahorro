@@ -29,7 +29,7 @@ running cluster (`deploy/050`).
 3. `make go-vet` runs `go vet ./...`; `go test` runs only a subset of vet analyzers.
 4. `make go-tidy-check` runs `go mod tidy -diff` and fails on any output.
 5. `make go-vuln` runs `govulncheck ./...` through `go run golang.org/x/vuln/cmd/govulncheck@<version>` with the version pinned in the Makefile.
-6. `make go-arch` runs `go-arch-lint check` (pinned the same way) against `.go-arch-lint.yml` with three components: `cmd` (`cmd/**`), `hello` (`internal/hello`), `platform` (`internal/platform/**`). `cmd` may depend on `hello` and `platform`; `hello` may depend on `platform`; `platform` depends on nothing inside the module. A new service becomes a fourth component with the same rule.
+6. `make go-arch` runs `go-arch-lint check` (pinned the same way) against `.go-arch-lint.yml` with three components: `cmd` (`cmd/**`), `api` (`internal/api`), `platform` (`internal/platform/**`). `cmd` may depend on `api` and `platform`; `api` may depend on `platform`; `platform` depends on nothing inside the module. A new service becomes a fourth component with the same rule.
 7. The `go` job MUST run, in order: `go-build`, `go-vet`, `go-lint`, `go-test`, `go-cover`, `go-tidy-check`, `go-arch`, `go-vuln`. Each target carries a `##` doc line.
 8. Fuzz targets and OpenAPI contract tests are not added: the service has two routes and no parser. Recorded so the omission is deliberate.
 
@@ -42,7 +42,7 @@ running cluster (`deploy/050`).
 ## Testing / acceptance criteria
 
 - Every target in requirement 7 exits 0 on `main`.
-- Adding `import "vk-ahorro/internal/hello"` to a file under `internal/platform/` makes `make go-arch` fail and name the component.
+- Adding an import of `internal/api` to a file under `internal/platform/` makes `make go-arch` fail and name the component.
 - Deleting a test until coverage drops below 70% makes `make go-cover` fail with the measured number.
 - Adding an unused module to `go.mod` makes `make go-tidy-check` fail.
 - The `go` job on a pull request finishes in under 6 minutes with warm caches.

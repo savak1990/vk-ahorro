@@ -28,7 +28,7 @@ scans.
 
 ## Requirements
 
-1. The hello service MUST report its build: `GET /healthz` returns `{"status":"ok","version":"<sha>"}`, with the SHA injected at build time (`-ldflags -X` from a Docker build argument that `image-push` sets to `IMAGE_TAG`). Locally the version is `dev`.
+1. The `ahorro-api` service MUST report its build: `GET /healthz` returns `{"status":"ok","version":"<sha>"}`, with the SHA injected at build time (`-ldflags -X` from a Docker build argument that `image-push` sets to `IMAGE_TAG`). Locally the version is `dev`.
 2. `scripts/e2e-smoke.sh` MUST, in order, stopping at the first failure: poll `https://api-ahorro.$FQDN/healthz` until `version` equals `$EXPECTED_SHA` (cap 10 minutes); `curl -fsSI https://ahorro.$FQDN/` is 200 `text/html`; `GET /api/v1/hello` without a token is 401; `make -s token`; the same call with the bearer token is 200 and the body contains the test user's email. One `OK` line per step, under 100 lines, orchestrating Make targets rather than duplicating them.
 3. `FQDN` MUST come from the environment. In CI it is read from SSM `/$PROJECT_NAME/bootstrap/route53/fqdn` and masked with `::add-mask::` before use, never printed, never written to a file (constitution §4). `PROJECT_NAME` comes from a repository variable `PLATFORM_PROJECT`, default `vk-hetzner-lab`.
 4. The CI role MUST be widened in a `vk-lab-platform` pull request (core ADR 0003): `ssm:GetParameter` on `parameter/*/persistent/ahorro-cognito/*` and `parameter/*/bootstrap/route53/fqdn`; `kms:Decrypt` on `alias/lab-secrets` for the `SecureString`; `cognito-idp:AdminInitiateAuth` on `userpool/*`. Nothing else, and no cluster access.

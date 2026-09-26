@@ -1,0 +1,20 @@
+image:
+  repository: ghcr.io/savak1990/vk-ahorro/ahorro-web
+  # Required. GitOps always pins a commit SHA. A branch or release tag also
+  # works for a local install; never latest.
+  tag: ""
+  # Empty derives it from the tag: IfNotPresent for a SHA, Always otherwise.
+  pullPolicy: ""
+
+# Required. The hostname arrives from the platform at install time and is
+# never committed.
+host: ""
+
+# Rendered into /config.json and read by the Flutter app at startup, so one
+# image serves every environment. Every key is required at runtime: the app
+# reports a missing one rather than defaulting to a wrong value.
+config:
+  apiBaseUrl: ""
+  cognitoUserPoolId: ""
+  cognitoClientId: ""
+  cognitoRegion: eu-west-1

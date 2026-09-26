@@ -1,13 +1,22 @@
 ---
 id: "CORE-105"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "IN_PROGRESS"
+updated: "2026-09-26"
 ---
 # 105 — Web delivery: the image, the chart, and the Argo Application
 
-**Status note:** Draft. Collects every part of the web delivery path that
-030, 040 and 060 once carried. Those specs each cover `hello` only, so each
-can close before the Flutter build exists.
+**Status note:** In progress. The `ahorro-web` image, its chart and its Argo
+`Application` ship, and the Flutter client reads `config.json` at startup.
+The image and the chart are not yet on GHCR: the first `release.yml` run on
+`main` publishes them, and both packages must then be made public.
+
+Named `ahorro-web`, not `web`; see
+[ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).
+Requirement 3's `.dockerignore` blocker is solved with a per-Dockerfile ignore
+file rather than by editing the root one, so the Go build context does not
+gain the mobile asset tree. Requirement 1's read-only root filesystem is on,
+with `emptyDir` on `/tmp` and `/var/cache/nginx`: both were confirmed
+necessary, because with neither the container does not start.
 
 **Complexity:** Medium
 **Risk:** Medium — the Flutter build stage is slow and the runtime `config.json` must stay replaceable, or the image has to be rebuilt per environment.
@@ -23,7 +32,7 @@ image, the `web` Helm chart, its Argo `Application`, and the CI steps for
 each.
 
 Excludes: the Flutter source itself (070, 080, 100), the `config.json` key
-meanings (080), the `hello` chart and the chart tooling it introduces (040),
+meanings (080), the `ahorro-api` chart and the chart tooling it introduces (040),
 the app-of-apps chart the Application lives in (060).
 
 ## Requirements
@@ -41,7 +50,7 @@ the app-of-apps chart the Application lives in (060).
 ## Implementation hints
 
 - The Flutter build stage is slow (5–8 min). Cache `~/.pub-cache` with `actions/cache` keyed on `pubspec.lock`.
-- `nginx-unprivileged` already runs as a non-root user and listens on 8080, so the chart's `securityContext` can match the `hello` chart's.
+- `nginx-unprivileged` already runs as a non-root user and listens on 8080, so the chart's `securityContext` can match the `ahorro-api` chart's.
 - A read-only root filesystem needs `emptyDir` mounts for nginx's cache and run directories. Confirm before setting it.
 
 ## Testing / acceptance criteria

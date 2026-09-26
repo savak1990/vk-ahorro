@@ -1,4 +1,4 @@
-package hello_test
+package api_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/savak1990/vk-ahorro/internal/hello"
+	"github.com/savak1990/vk-ahorro/internal/api"
 )
 
 func quietLogger() *slog.Logger {
@@ -17,7 +17,7 @@ func quietLogger() *slog.Logger {
 }
 
 func TestHealthzIsOpen(t *testing.T) {
-	h := hello.NewHandler(context.Background(), hello.Config{AuthDisabled: true}, quietLogger())
+	h := api.NewHandler(context.Background(), api.Config{AuthDisabled: true}, quietLogger())
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
@@ -38,7 +38,7 @@ func TestHealthzIsOpen(t *testing.T) {
 }
 
 func TestHelloWithAuthDisabled(t *testing.T) {
-	h := hello.NewHandler(context.Background(), hello.Config{AuthDisabled: true}, quietLogger())
+	h := api.NewHandler(context.Background(), api.Config{AuthDisabled: true}, quietLogger())
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/hello", nil))
@@ -56,11 +56,11 @@ func TestHelloWithAuthDisabled(t *testing.T) {
 }
 
 func TestHelloNeedsATokenWhenAuthIsOn(t *testing.T) {
-	cfg := hello.Config{
+	cfg := api.Config{
 		Issuer:   "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_abc",
 		ClientID: "client-1",
 	}
-	h := hello.NewHandler(context.Background(), cfg, quietLogger())
+	h := api.NewHandler(context.Background(), cfg, quietLogger())
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/hello", nil))
@@ -71,8 +71,8 @@ func TestHelloNeedsATokenWhenAuthIsOn(t *testing.T) {
 }
 
 func TestCORSHeaderOnAllowedOrigin(t *testing.T) {
-	cfg := hello.Config{AuthDisabled: true, CORSAllowedOrigins: []string{"https://ahorro.example"}}
-	h := hello.NewHandler(context.Background(), cfg, quietLogger())
+	cfg := api.Config{AuthDisabled: true, CORSAllowedOrigins: []string{"https://ahorro.example"}}
+	h := api.NewHandler(context.Background(), cfg, quietLogger())
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/hello", nil)
 	req.Header.Set("Origin", "https://ahorro.example")
@@ -85,7 +85,7 @@ func TestCORSHeaderOnAllowedOrigin(t *testing.T) {
 }
 
 func TestUnknownPathIs404(t *testing.T) {
-	h := hello.NewHandler(context.Background(), hello.Config{AuthDisabled: true}, quietLogger())
+	h := api.NewHandler(context.Background(), api.Config{AuthDisabled: true}, quietLogger())
 
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/nope", nil))

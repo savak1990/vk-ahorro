@@ -1,4 +1,4 @@
-# ADR 0006: Argo tracks a bot-owned `deploy` branch; the deploy button is a Git push
+# ADR 0007: Argo tracks a bot-owned `deploy` branch; the deploy button is a Git push
 
 ## Status
 
@@ -28,8 +28,8 @@ Alternatives, in the order they were weighed:
 1. **A GitHub App as a ruleset bypass actor.** Keeps 060 as written. Adds a
    long-lived private key to repository secrets, which this repository has
    refused so far, and does nothing for the button.
-2. **A moving image tag** (`hello:main`) with no values commit. Satisfies
-   "deploy at cluster boot" and needs no push at all. But a new image under
+2. **A moving image tag** (`ahorro-api:main`) with no values commit, which
+   ADR 0006 shipped. Satisfies "deploy at cluster boot" and needs no push at all. But a new image under
    the same tag changes no manifest, so neither Kubernetes nor Argo rolls the
    pods, and Git no longer says which build runs. Kept as the interim until
    this decision is implemented.

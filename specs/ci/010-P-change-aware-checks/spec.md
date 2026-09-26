@@ -27,12 +27,12 @@ anything that runs after a merge (`deploy/`).
 ## Requirements
 
 1. `ci.yml` MUST keep a single `pull_request` trigger with no workflow-level `paths` or `paths-ignore`. A skipped workflow leaves a required check pending forever; a job skipped by `if:` reports success.
-2. A first job `changes` MUST run `dorny/paths-filter` (SHA-pinned, core 030 req 8) with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/hello.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/web.Dockerfile`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
+2. A first job `changes` MUST run `dorny/paths-filter` (SHA-pinned, core 030 req 8) with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/ahorro-api.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/ahorro-web.Dockerfile`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
 
    | Job | Runs when |
    |---|---|
    | `go` | `go` |
-   | `image-hello` | `go` |
+   | `image-api` | `go` |
    | `image-web` | `flutter` |
    | `ui` | `flutter` |
    | `helm` | `helm` |
@@ -55,7 +55,7 @@ anything that runs after a merge (`deploy/`).
 ## Testing / acceptance criteria
 
 - A pull request touching only `docs/` runs `changes`, `repo` and `ci-ok`; the run finishes in under 2 minutes.
-- A pull request touching only `internal/` runs `go` and `image-hello` and skips `ui`, `image-web`, `helm`, `gitops`; `ci-ok` is green.
+- A pull request touching only `internal/` runs `go` and `image-api` and skips `ui`, `image-web`, `helm`, `gitops`; `ci-ok` is green.
 - A pull request with a failing Go test makes `ci-ok` red and the merge button disabled.
 - `gh api repos/savak1990/vk-ahorro/branches/main/protection --jq .required_status_checks.contexts` prints `["ci-ok"]`.
 - `make repo-settings` twice in a row: the second run changes nothing.

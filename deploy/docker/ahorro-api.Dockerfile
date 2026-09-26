@@ -14,15 +14,15 @@ COPY internal ./internal
 
 ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags="-s -w" -o /hello ./cmd/hello
+    go build -trimpath -ldflags="-s -w" -o /ahorro-api ./cmd/ahorro-api
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
 
 # GHCR uses this label to link the package to the repository.
 LABEL org.opencontainers.image.source="https://github.com/savak1990/vk-ahorro"
 
-COPY --from=build /hello /hello
+COPY --from=build /ahorro-api /ahorro-api
 # Numeric, so a Kubernetes runAsNonRoot check can verify it without a lookup.
 USER 65532:65532
 EXPOSE 8080
-ENTRYPOINT ["/hello"]
+ENTRYPOINT ["/ahorro-api"]

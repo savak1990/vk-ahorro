@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "svc.fullname" . }}
+  labels:
+    {{- include "svc.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    # The Gateway CRDs may not exist when Argo runs its dry run.
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  # The route lives in this release's namespace and reaches the gateway across
+  # namespaces; the platform listener accepts routes from all of them.
+  parentRefs:
+    - name: platform-gateway
+      namespace: envoy
+      sectionName: https
+  hostnames:
+    - {{ include "svc.host" . | quote }}
+  rules:
+    - backendRefs:
+        - name: {{ include "svc.fullname" . }}
+          port: 80

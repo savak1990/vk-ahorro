@@ -1,0 +1,16 @@
+{{ .Chart.Name }} {{ .Chart.Version }} is installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Image: {{ include "svc.image" . }}
+
+The hostname is not printed here on purpose. Read it from the HTTPRoute:
+
+  kubectl -n {{ .Release.Namespace }} get httproute {{ include "svc.fullname" . }} -o jsonpath='{.spec.hostnames[0]}'
+
+Check the client without leaving the cluster:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "svc.fullname" . }} 18080:80
+  curl -i localhost:18080/healthz
+  curl -s localhost:18080/config.json
+
+config.json is what the browser reads at startup. If the client reports a
+missing key, that file is where it is missing.

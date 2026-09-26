@@ -1,4 +1,4 @@
-package hello_test
+package api_test
 
 import (
 	"bytes"
@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/savak1990/vk-ahorro/internal/hello"
+	"github.com/savak1990/vk-ahorro/internal/api"
 )
 
 func TestRunStopsWhenTheContextIsCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- hello.Run(ctx, hello.Config{Port: "0", AuthDisabled: true}, quietLogger()) }()
+	go func() { done <- api.Run(ctx, api.Config{Port: "0", AuthDisabled: true}, quietLogger()) }()
 
 	time.Sleep(50 * time.Millisecond)
 	cancel()
@@ -35,7 +35,7 @@ func TestRunWarnsWhenAuthIsDisabled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- hello.Run(ctx, hello.Config{Port: "0", AuthDisabled: true}, logger) }()
+	go func() { done <- api.Run(ctx, api.Config{Port: "0", AuthDisabled: true}, logger) }()
 	time.Sleep(50 * time.Millisecond)
 	cancel()
 	<-done
@@ -46,7 +46,7 @@ func TestRunWarnsWhenAuthIsDisabled(t *testing.T) {
 }
 
 func TestRunFailsOnABadPort(t *testing.T) {
-	err := hello.Run(context.Background(), hello.Config{Port: "not-a-port", AuthDisabled: true}, quietLogger())
+	err := api.Run(context.Background(), api.Config{Port: "not-a-port", AuthDisabled: true}, quietLogger())
 	if err == nil {
 		t.Fatal("Run() accepted an invalid port")
 	}
