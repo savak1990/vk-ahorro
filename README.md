@@ -29,7 +29,10 @@ Flutter shell runs locally. The GitOps link (060) is in progress.
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | planned |
 | 105 | Web delivery: image, chart, Argo Application | planned |
-| 110 | End-to-end verification | planned |
+| 110 | End-to-end verification | superseded by `ci/040` and `deploy/050` |
+
+The pipeline has its own groups: `specs/ci/` is what a pull request must
+prove, `specs/deploy/` is what a merge or the deploy button does.
 
 ## Relationship to vk-lab-platform
 

@@ -8,6 +8,8 @@ read the same way.
 |---|---|---|
 | `core/` | The first milestone: hello-world service, Flutter shell, Cognito sign-in, GitOps | `CORE-` |
 | `product/` | Feature specs for the application domain, one per feature, grouped by milestone (`milestone1/`, `milestone2/`, …), derived from `docs/product/vision.md` | `PROD-` |
+| `ci/` | What a pull request proves before it can merge: change-aware checks, Go and Flutter gates, the hermetic end-to-end test | `CI-` |
+| `deploy/` | What happens after a merge or on the deploy button: the `deploy` branch, store uploads, the real end-to-end test | `DEPLOY-` |
 
 ## Folder name
 
@@ -45,5 +47,6 @@ Front matter (`id`, `status`, `updated`), then:
 
 ## Order of work
 
-Implement `core/` specs in numeric order. Each spec depends on the ones it
-lists under **Depends on**.
+Implement `core/` specs in numeric order, then `ci/`, then `deploy/`. Each
+spec depends on the ones it lists under **Depends on**; a `deploy/` spec may
+depend on a `core/` spec that is still open, and waits for it.
