@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 
 import 'amplifyconfiguration.dart';
 import 'src/config/adaptive_theme.dart';
+import 'src/config/app_config.dart';
 import 'src/config/app_theme.dart';
 import 'src/constants/app_strings.dart';
 import 'src/providers/amplify_provider.dart';
@@ -20,8 +21,10 @@ import 'src/screens/main_screen.dart';
 // out of any release build, so a shipped app can never start unauthenticated.
 const skipAuth = bool.fromEnvironment('SKIP_AUTH') && kDebugMode;
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.load();
+  debugPrint('AppConfig.apiBaseUrl=${AppConfig.apiBaseUrl}');
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppStateProvider(),

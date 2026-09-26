@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "http://localhost:8080",
+  "cognitoUserPoolId": "",
+  "cognitoClientId": "",
+  "cognitoRegion": "eu-west-1"
+}
