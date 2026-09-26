@@ -12,7 +12,7 @@ what those two do not own and tracks the one open decision.
 **Risk:** Low — metadata and naming only; no behavior changes.
 **Estimated cost:** ~2 hours
 **Recommended model:** Sonnet.
-**Depends on:** [070-flutter-shell-trim](../070-P-flutter-shell-trim/spec.md), [100-flutter-platforms](../100-P-flutter-platforms/spec.md)
+**Depends on:** [070-flutter-shell-trim](../070-D-flutter-shell-trim/spec.md), [100-flutter-platforms](../100-P-flutter-platforms/spec.md)
 **Lifecycle class(es) touched:** None.
 
 ## Scope

@@ -24,7 +24,7 @@ Flutter shell runs locally. The GitOps link (060) is in progress.
 | 050 | Cognito: the platform's pool, one client, the test user | done |
 | 055 | Cognito identifiers from SSM, `make token` | done |
 | 060 | GitOps chart and the platform pointer | planned |
-| 070 | Flutter trimmed to the shell | planned |
+| 070 | Flutter trimmed to the shell | done |
 | 080 | Flutter runtime config and the "+" → hello call | planned |
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | planned |

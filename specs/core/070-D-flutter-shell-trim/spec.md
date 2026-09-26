@@ -1,11 +1,15 @@
 ---
 id: "CORE-070"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "DONE"
+updated: "2026-09-26"
 ---
 # 070 — Flutter: trim to the shell
 
-**Status note:** Draft.
+**Status note:** Done on 2026-09-26. `lib/` holds 26 Dart files, `make
+ui-analyze` reports no issues, `make ui-test` passes the one widget test, and
+the `ui` CI job runs both. The dependency list, the three tabs, the single
+`ActionData`, the `/`-only routes and the sign-out button match requirements
+3 to 6. Pull request #10 ran the shell on Chrome and the Android emulator.
 
 **Complexity:** Medium
 **Risk:** Low — deletions only; the compiler reports every dangling reference.
