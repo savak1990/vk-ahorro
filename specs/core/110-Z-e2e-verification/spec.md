@@ -1,11 +1,17 @@
 ---
 id: "CORE-110"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "SUPERSEDED"
+updated: "2026-09-26"
 ---
 # 110 — End-to-end verification
 
-**Status note:** Draft. Becomes DONE only with a dated results table below.
+**Status note:** Superseded on 2026-09-26. The core milestone ends at a web
+app that deploys when the cluster boots and mobile apps that build from
+`make`; a machine-run smoke test reaches past that. The test is split in two:
+`specs/ci/040-P-hermetic-e2e` runs on every pull request with no cluster, and
+`specs/deploy/050-P-post-deploy-e2e` runs after a deploy against the real
+hostnames and the real pool, and carries this spec's results table. The text
+below is kept as the record of what was planned.
 
 **Complexity:** Small
 **Risk:** Low — verification only; it consumes platform runtime cost while the cluster is up.

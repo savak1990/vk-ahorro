@@ -31,7 +31,10 @@ release run on `main` publishes the renamed artifacts to GHCR.
 | 100 | Android, iOS, web | mostly done |
 | 105 | Web delivery: image, chart, Argo Application | in progress |
 | 107 | The local target runs both apps in kind | planned |
-| 110 | End-to-end verification | planned |
+| 110 | End-to-end verification | superseded by `ci/040` and `deploy/050` |
+
+The pipeline has its own groups: `specs/ci/` is what a pull request must
+prove, `specs/deploy/` is what a merge or the deploy button does.
 
 ## Relationship to vk-lab-platform
 
