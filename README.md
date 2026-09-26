@@ -10,8 +10,9 @@ architecture, [`docs/adr/`](docs/adr/) for decisions, and
 
 ## Status
 
-Milestone 1 is `specs/core/`, implemented in numeric order. The Go `hello`
-service runs locally; nothing is containerized or deployed yet.
+Milestone 1 is `specs/core/`, implemented in numeric order. The `hello`
+image and chart are on GHCR, the Cognito pool lives in the platform, and the
+Flutter shell runs locally. The GitOps link (060) is in progress.
 
 | Spec | Delivers | State |
 |---|---|---|
@@ -20,8 +21,8 @@ service runs locally; nothing is containerized or deployed yet.
 | 020 | Go `hello` service with Cognito JWT verification | done |
 | 030 | The `hello` image on GHCR, CI | done |
 | 040 | Helm chart for `hello` on GHCR | done |
-| 050 | Terraform: state bucket, Cognito | superseded by 055 |
-| 055 | Cognito identifiers from SSM, `make token` | planned |
+| 050 | Cognito: the platform's pool, one client, the test user | done |
+| 055 | Cognito identifiers from SSM, `make token` | done |
 | 060 | GitOps chart and the platform pointer | planned |
 | 070 | Flutter trimmed to the shell | planned |
 | 080 | Flutter runtime config and the "+" → hello call | planned |

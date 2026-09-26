@@ -1,11 +1,18 @@
 ---
 id: "CORE-055"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-09-26"
 ---
 # 055 — Cognito consumption and the ad-hoc token
 
-**Status note:** Draft. Replaces the consumer half of 050.
+**Status note:** Done on 2026-09-26, verified against `vk-hetzner-lab` before
+its teardown. `make cognito-config | jq` printed the three identifiers and
+nothing else; `make token` printed a JWT whose payload decoded to
+`"token_use": "id"` with `aud` equal to the client id; the deployed API
+answered 401 without the header and 200 with it, with a body containing
+`e2e@vk-ahorro.invalid` rather than a UUID; `initiate-auth --auth-flow
+USER_PASSWORD_AUTH` against the client id was rejected; and the Terraform grep
+finds nothing. The pool itself is 050.
 
 **Complexity:** Small
 **Risk:** Low — two read-only targets; this repository creates no AWS resource.
