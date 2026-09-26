@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
 
 .DEFAULT_GOAL := help
 
@@ -65,11 +65,11 @@ go-test:
 go-lint:
 	golangci-lint run ./...
 
-## Run the hello service locally on $PORT with auth disabled
+## Run the ahorro-api service locally on $PORT with auth disabled
 go-run: export PORT := $(PORT)
 go-run: export AUTH_DISABLED := $(AUTH_DISABLED)
 go-run:
-	go run ./cmd/hello
+	go run ./cmd/ahorro-api
 
 ## Check the specs/ layout, front matter and links
 specs-check:
@@ -93,25 +93,25 @@ buildx-init:
 
 ## Fail unless SVC names an existing Dockerfile
 require-svc:
-	@test -n "$(SVC)" || { echo "set SVC=<service>, for example: make image-build SVC=hello" >&2; exit 1; }
+	@test -n "$(SVC)" || { echo "set SVC=<service>, for example: make image-build SVC=ahorro-api" >&2; exit 1; }
 	@test -f "$(DOCKERFILE)" || { echo "no $(DOCKERFILE)" >&2; exit 1; }
 
-## Build one image for this machine only. Usage: make image-build SVC=hello
+## Build one image for this machine only. Usage: make image-build SVC=ahorro-api
 image-build: require-svc
 	docker buildx build --load -f $(DOCKERFILE) -t $(IMAGE) .
 
-## Build and push one multi-arch image. Usage: make image-push SVC=hello
+## Build and push one multi-arch image. Usage: make image-push SVC=ahorro-api
 image-push: require-svc buildx-init
 	docker buildx build --builder $(BUILDER) --platform $(PLATFORMS) --provenance=false \
 	  --push -f $(DOCKERFILE) -t $(IMAGE) .
 
 ## Build and push every image
 images-push:
-	@$(MAKE) image-push SVC=hello
+	@$(MAKE) image-push SVC=ahorro-api
 
 ## Fail unless CHART names an existing chart
 require-chart:
-	@test -n "$(CHART)" || { echo "set CHART=<chart>, for example: make helm-template CHART=hello" >&2; exit 1; }
+	@test -n "$(CHART)" || { echo "set CHART=<chart>, for example: make helm-template CHART=ahorro-api" >&2; exit 1; }
 	@test -f "$(CHART_DIR)/Chart.yaml" || { echo "no $(CHART_DIR)/Chart.yaml" >&2; exit 1; }
 
 # lint renders the templates, so the required values must be present or every
@@ -122,19 +122,32 @@ helm-lint:
 	  helm lint "$$c" --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG); \
 	done
 
-## Render one chart to stdout with a placeholder host. Usage: make helm-template CHART=hello
+## Render one chart to stdout with a placeholder host. Usage: make helm-template CHART=ahorro-api
 helm-template: require-chart
 	@helm template $(CHART) $(CHART_DIR) \
 	  --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG)
 
-## Package one chart into dist/. Usage: make helm-package CHART=hello
+## Package one chart into dist/. Usage: make helm-package CHART=ahorro-api
 helm-package: require-chart
 	@mkdir -p $(DIST_DIR)
 	helm package $(CHART_DIR) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
 
-## Push one packaged chart to GHCR. Usage: make helm-push CHART=hello
+## Push one packaged chart to GHCR. Usage: make helm-push CHART=ahorro-api
 helm-push: helm-package
 	helm push $(DIST_DIR)/$(CHART)-$(CHART_VERSION).tgz $(CHARTS_REGISTRY)
+
+# A documented placeholder; the real fqdn exists only at install time.
+## Lint the app-of-apps chart
+gitops-lint:
+	@helm lint gitops --set fqdn=example.invalid
+
+## Render the app-of-apps chart to stdout
+gitops-template:
+	@helm template ahorro gitops --set fqdn=example.invalid
+
+## Render the app-of-apps chart and validate it with kubeconform
+gitops-check:
+	@./scripts/gitops-check.sh
 
 ## Fetch the Flutter package dependencies
 ui-get:

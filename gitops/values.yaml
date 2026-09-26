@@ -1,0 +1,39 @@
+# Set by the platform's pointer Application. fqdn is sensitive and is never
+# committed; the Cognito identifiers are public but are one pool per platform
+# project, so a committed value would be right for exactly one project.
+fqdn: ""
+
+namespace: ahorro
+
+charts:
+  # The bare registry form, not oci://. That is the form the platform's own
+  # OCI Application already uses and the one proven to sync here.
+  registry: ghcr.io/savak1990/vk-ahorro/charts
+
+cognito:
+  clientId: ""
+  issuer: ""
+  userPoolId: ""
+  # Written here and nowhere else. The platform publishes no region
+  # parameter, and the region is a constant for this project.
+  region: eu-west-1
+
+# One Argo Application per backend service. Adding a service is four lines
+# here and no new template; every Go service takes the same parameter shape.
+#
+# chartVersion "*" and tag "main" are deliberate: a bring-up always runs the
+# newest build with no edit. A running cluster does not pick up a new image,
+# because a moving tag leaves the manifest unchanged - use
+# `kubectl -n ahorro rollout restart deploy` for that. See ADR 0006.
+services:
+  ahorro-api:
+    chartVersion: "*"
+    tag: main
+    hostPrefix: api-ahorro
+    wave: 1
+
+web:
+  chartVersion: "*"
+  tag: main
+  hostPrefix: ahorro
+  wave: 2

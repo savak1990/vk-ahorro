@@ -1,0 +1,3 @@
+{{- if not .Values.fqdn -}}
+{{- fail "fqdn is required: the platform passes it in on the pointer Application" -}}
+{{- end -}}

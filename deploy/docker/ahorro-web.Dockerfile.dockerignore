@@ -1,0 +1,22 @@
+# Replaces the root .dockerignore for this build only. The root file excludes
+# flutter-ui, which is the one directory this image needs.
+.git
+.github
+bin
+cmd
+deploy/helm
+dist
+docs
+internal
+scripts
+specs
+Makefile
+README.md
+go.mod
+go.sum
+.golangci.yml
+CLAUDE.md
+flutter-ui/build
+flutter-ui/.dart_tool
+flutter-ui/android
+flutter-ui/ios

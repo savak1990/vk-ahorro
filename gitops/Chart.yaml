@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ahorro
+description: The Ahorro app-of-apps - one Argo Application per service, rendered by the platform's pointer Application.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

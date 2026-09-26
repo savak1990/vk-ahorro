@@ -47,7 +47,7 @@ runtime config (080); the end-to-end smoke test (110).
 
 - `aws ssm get-parameters-by-path --path <prefix>` returns every value in one call; `--with-decryption` is needed only for the password, so `cognito-config` MUST NOT ask for it and stays usable without `kms:Decrypt`.
 - Build the auth payload with `jq -n --arg`, never `printf` into a JSON template: a password containing a quote or a backslash would corrupt it.
-- The issuer already contains the region and the pool id, so the service needs neither separately: `internal/hello/config.go` reads `COGNITO_ISSUER` and `COGNITO_CLIENT_ID` and nothing else.
+- The issuer already contains the region and the pool id, so the service needs neither separately: `internal/api/config.go` reads `COGNITO_ISSUER` and `COGNITO_CLIENT_ID` and nothing else.
 - `make go-run` already exports `AUTH_DISABLED` with a default of `true`, so `AUTH_DISABLED=false make go-run` is enough to exercise the protected route locally.
 
 ## Testing / acceptance criteria

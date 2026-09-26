@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "svc.fullname" . }}
+  labels:
+    {{- include "svc.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {
+      "apiBaseUrl": {{ .Values.config.apiBaseUrl | quote }},
+      "cognitoUserPoolId": {{ .Values.config.cognitoUserPoolId | quote }},
+      "cognitoClientId": {{ .Values.config.cognitoClientId | quote }},
+      "cognitoRegion": {{ .Values.config.cognitoRegion | quote }}
+    }

@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ahorro-web
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.web.wave | quote }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: vk-ahorro
+  source:
+    repoURL: {{ .Values.charts.registry }}
+    chart: ahorro-web
+    targetRevision: {{ .Values.web.chartVersion | quote }}
+    helm:
+      # Its own template, not the services loop: the client's parameters are
+      # the four keys the browser reads, not the backend's shape.
+      parameters:
+        - name: image.tag
+          value: {{ .Values.web.tag | quote }}
+        - name: host
+          value: {{ printf "%s.%s" .Values.web.hostPrefix .Values.fqdn | quote }}
+        - name: config.apiBaseUrl
+          value: {{ printf "https://%s.%s" (index .Values.services "ahorro-api").hostPrefix .Values.fqdn | quote }}
+        - name: config.cognitoUserPoolId
+          value: {{ .Values.cognito.userPoolId | quote }}
+        - name: config.cognitoClientId
+          value: {{ .Values.cognito.clientId | quote }}
+        - name: config.cognitoRegion
+          value: {{ .Values.cognito.region | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

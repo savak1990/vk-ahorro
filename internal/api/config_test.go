@@ -1,10 +1,10 @@
-package hello_test
+package api_test
 
 import (
 	"slices"
 	"testing"
 
-	"github.com/savak1990/vk-ahorro/internal/hello"
+	"github.com/savak1990/vk-ahorro/internal/api"
 )
 
 // clearEnv sets every variable the config reads, so a value inherited from the
@@ -21,7 +21,7 @@ func TestConfigFromEnvDefaults(t *testing.T) {
 	t.Setenv("COGNITO_ISSUER", "https://cognito-idp.eu-west-1.amazonaws.com/eu-west-1_abc")
 	t.Setenv("COGNITO_CLIENT_ID", "client-1")
 
-	cfg, err := hello.ConfigFromEnv()
+	cfg, err := api.ConfigFromEnv()
 	if err != nil {
 		t.Fatalf("ConfigFromEnv() error = %v", err)
 	}
@@ -43,7 +43,7 @@ func TestConfigFromEnvReadsAll(t *testing.T) {
 	t.Setenv("COGNITO_CLIENT_ID", "client-1")
 	t.Setenv("CORS_ALLOWED_ORIGINS", "https://a.example, https://b.example ")
 
-	cfg, err := hello.ConfigFromEnv()
+	cfg, err := api.ConfigFromEnv()
 	if err != nil {
 		t.Fatalf("ConfigFromEnv() error = %v", err)
 	}
@@ -64,12 +64,12 @@ func TestConfigFromEnvRequiresCognitoUnlessAuthDisabled(t *testing.T) {
 	t.Setenv("COGNITO_ISSUER", "")
 	t.Setenv("COGNITO_CLIENT_ID", "")
 
-	if _, err := hello.ConfigFromEnv(); err == nil {
+	if _, err := api.ConfigFromEnv(); err == nil {
 		t.Fatal("ConfigFromEnv() accepted an empty issuer while auth is on")
 	}
 
 	t.Setenv("AUTH_DISABLED", "true")
-	cfg, err := hello.ConfigFromEnv()
+	cfg, err := api.ConfigFromEnv()
 	if err != nil {
 		t.Fatalf("ConfigFromEnv() error = %v", err)
 	}

@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/savak1990/vk-ahorro/hello
+  repository: ghcr.io/savak1990/vk-ahorro/ahorro-api
   # Required. GitOps always pins a commit SHA. A branch or release tag also
   # works for a local install; never latest.
   tag: ""

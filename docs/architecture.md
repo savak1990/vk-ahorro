@@ -13,7 +13,7 @@ repository is the application monorepo. It runs on
 disposable EKS platform that provides the cluster, the public edge (NLB +
 Envoy Gateway), DNS, TLS, and Argo CD.
 
-The first milestone (`specs/core/`) delivers one service (`hello`), the
+The first milestone (`specs/core/`) delivers one service (`ahorro-api`), the
 Flutter shell, Cognito sign-in, and the full delivery chain from a commit
 to a running app on all three client platforms.
 
@@ -25,14 +25,14 @@ as-built.
 ```text
 vk-ahorro/
   go.mod                                   module github.com/savak1990/vk-ahorro
-  cmd/hello/main.go                        one entry point per service
-  internal/hello/                          service code: server, handlers, tests
+  cmd/ahorro-api/main.go                        one entry point per service
+  internal/api/                          service code: server, handlers, tests
   internal/platform/auth/                  Cognito JWT verification, shared by every service
   internal/platform/httpx/                 JSON helpers, request id, CORS, logging
-  deploy/docker/                 hello.Dockerfile; web.Dockerfile planned (multi-arch)
-  deploy/helm/hello/, web/       (planned) one chart per service, pushed to GHCR as OCI
-  gitops/                        (planned) app-of-apps chart Argo renders (one Application per service)
-  flutter-ui/                    Flutter client (as-built, to be trimmed by spec 070)
+  deploy/docker/                 ahorro-api.Dockerfile, ahorro-web.Dockerfile (multi-arch)
+  deploy/helm/ahorro-api/, ahorro-web/  one chart per service, pushed to GHCR as OCI
+  gitops/                        app-of-apps chart Argo renders (one Application per service)
+  flutter-ui/                    Flutter client, trimmed to the shell by spec 070
   scripts/                                 specs-check.sh, domain-guard.sh, cognito.sh; later e2e-smoke.sh
   specs/core/                    milestone specs
   docs/architecture.md           this document
@@ -69,7 +69,7 @@ secret: it reaches this repository's charts only as a Helm parameter and
 never appears in Git (§10).
 
 Two hostnames, not one with a path split, so the web build can move to a
-static host later without touching the API. The cost is CORS: `hello`
+static host later without touching the API. The cost is CORS: `ahorro-api`
 allows the origin `https://ahorro.<fqdn>`.
 
 # 4. Authentication
@@ -136,21 +136,25 @@ environment. Mobile builds bake the same keys in with `--dart-define`.
        ▼
   release.yml (GitHub Actions, no AWS credentials)
        ├── docker buildx  linux/amd64 + linux/arm64
-       │      ghcr.io/savak1990/vk-ahorro/hello:<sha>
-       │      ghcr.io/savak1990/vk-ahorro/web:<sha>
-       ├── helm package + push
-       │      oci://ghcr.io/savak1990/vk-ahorro/charts/{hello,web}:<chart version>
-       └── git commit gitops/values.yaml  images.*.tag = <sha>   [skip ci]
+       │      ghcr.io/savak1990/vk-ahorro/{ahorro-api,ahorro-web}:<sha>
+       │      ghcr.io/savak1990/vk-ahorro/{ahorro-api,ahorro-web}:main
+       └── helm package + push
+              oci://ghcr.io/savak1990/vk-ahorro/charts/{ahorro-api,ahorro-web}:<chart version>
                                   │
                                   ▼
                        Argo CD reconciles on its next sync (or on operator sync)
 ```
 
-Images are tagged by full commit SHA, never `latest`, so an Argo diff is
-always meaningful (platform ADR 0015). GHCR replaces the ECR that ADR 0015
-proposed: the images are public, so the cluster needs no pull secret and CI
-needs no AWS role (ADR 0001). The CD handoff is a Git commit, which works
-while the cluster is destroyed; Argo catches up on `make up`.
+Every image carries the full commit SHA, and `latest` is never built. GHCR
+replaces the ECR that ADR 0015 proposed: the images are public, so the cluster
+needs no pull secret and CI needs no AWS role (ADR 0001).
+
+GitOps does not pin either of them today. `gitops/values.yaml` names the
+moving `main` tag and the `"*"` chart version, so a bring-up always runs the
+newest build and CI commits nothing back. The cost is that a *running* cluster
+does not pick up a new image — a moving tag leaves the manifest unchanged, so
+Argo creates no pod — and `kubectl -n ahorro rollout restart deploy` is the
+refresh. ADR 0006 records the trade and when to revisit it.
 
 Local builds use the same Make targets (`image-build`, `image-push`,
 `helm-push`) with `IMAGE_TAG` defaulting to `git rev-parse HEAD`.
@@ -171,14 +175,27 @@ Two-level app-of-apps, split by ownership (platform ADR 0015):
                         ▼
   vk-ahorro/gitops (chart "ahorro")
     ├── templates/validate.yaml   fails when fqdn is empty
-    ├── templates/hello.yaml      Application hello → oci chart hello, namespace ahorro
-    └── templates/web.yaml        Application web   → oci chart web,   namespace ahorro
+    ├── templates/services.yaml   one Application per backend service, from a
+    │                             range over .Values.services; today
+    │                             ahorro-api → chart ahorro-api, wave 1
+    └── templates/web.yaml        Application ahorro-web → chart ahorro-web, wave 2
 ```
 
-`selfHeal: false` on the pointer is deliberate: the platform's `make
-full-up` creates the app, and after that the operator decides when a new
-`gitops/values.yaml` goes live. The two child Applications keep
-`selfHeal: true` so drift inside the namespace is corrected.
+Backend Applications render from a loop because every Go service takes the
+same parameter shape, so adding one is four lines of values and no new
+template. The client keeps its own template: its parameters are the four keys
+the browser reads, not the backend's shape.
+
+`selfHeal: false` on the pointer is deliberate: the platform's `make full-up`
+creates the app, and after that the operator decides when a new
+`gitops/values.yaml` goes live. **Both child Applications also set
+`selfHeal: false`**, because the operator installs those charts by hand from
+time to time and a reconcile would undo it. A change to `gitops/values.yaml`
+is still a desired-state change and still syncs.
+
+The two child waves order the backend before the client. They are scoped to
+the pointer's own sync and never interact with the platform's waves, which
+order the pointer itself.
 
 Adding a service is a change in this repository only: a chart, a
 `templates/<svc>.yaml`, and values. The platform side never changes for
@@ -199,7 +216,7 @@ in `gitops/values.yaml` exist on GHCR.
 
 # 9. Local development
 
-- Go: `make go-run` starts `hello` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
+- Go: `make go-run` starts `ahorro-api` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
 - Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the committed `flutter-ui/web/config.json` (localhost API, empty Cognito → the Authenticator is skipped only when auth is disabled server-side; otherwise the app shows a config error).
 - Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from the platform's SSM parameters; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
 - Images: `make image-build SVC=web && make web-serve-local` serves the production web image on `:8081`.
