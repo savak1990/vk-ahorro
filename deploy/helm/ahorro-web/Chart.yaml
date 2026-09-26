@@ -1,0 +1,7 @@
+apiVersion: v2
+name: ahorro-web
+description: The Ahorro web client - nginx serving the Flutter build, its runtime config, and an HTTPRoute on the platform gateway.
+type: application
+version: 0.1.0
+# Overwritten at package time with the image tag; the default keeps `helm lint` quiet.
+appVersion: "0.1.0"
