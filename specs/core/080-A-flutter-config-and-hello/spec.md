@@ -1,11 +1,11 @@
 ---
 id: "CORE-080"
-status: "DRAFT"
-updated: "2026-09-21"
+status: "IN_PROGRESS"
+updated: "2026-09-27"
 ---
 # 080 — Flutter: runtime configuration, Cognito, and the hello call
 
-**Status note:** Draft.
+**Status note:** Requirements 1, 2, 3, 5 and 6 are delivered (2026-09-27): `HelloService` calls `GET /api/v1/hello` with the id token when Amplify is configured and without one under `SKIP_AUTH`, and the "+" action shows the answer. `make go-run` now allows the `:3000` origin, and every `ui-run-*` target passes `SKIP_AUTH` (default true) plus, on mobile, `API_BASE_URL` for the host machine. Open: requirement 4's `make ui-config`, and requirement 7.
 
 **Complexity:** Medium
 **Risk:** Medium — a wrong config path on web breaks the app silently; token handling must send the id token the Go service expects.
