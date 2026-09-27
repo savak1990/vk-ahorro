@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -94,6 +94,10 @@ cognito-config:
 ## Print a one-hour Cognito id token for the test user
 token:
 	@./scripts/cognito.sh token
+
+## Write flutter-ui/web/config.json from $PROJECT_NAME's Cognito pool
+ui-config:
+	@./scripts/ui-config.sh
 
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:
@@ -212,8 +216,8 @@ ui-run-ios:
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(UI_DEFINES) --dart-define=API_BASE_URL=http://localhost:$(PORT)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
-## Run the Flutter app in Chrome on :3000, auth skipped, API from web/config.json
-ui-run-web:
+## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool
+ui-run-web: ui-config
 	cd $(UI_DIR) && flutter run -d chrome --web-port 3000 $(UI_DEFINES)
 
 ## Shut down every running Android emulator and iOS simulator

@@ -19,8 +19,9 @@ cognito:
   clientId: ""
   issuer: ""
   userPoolId: ""
-  # Written here and nowhere else. The platform publishes no region
-  # parameter, and the region is a constant for this project.
+  # The fallback only. The platform publishes the pool's own region beside the
+  # other three identifiers and overrides this; it is left here so a target
+  # with no pool to read - local - still renders a usable client.
   region: eu-west-1
 
 # The local target only. Both services are reached through kubectl

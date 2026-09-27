@@ -29,6 +29,19 @@ param() {
   printf '%s' "$value"
 }
 
+# The region joined the unit after the other three, so a pool created before
+# that publishes no such parameter. Falling back keeps this working against
+# an older persistent layer instead of failing on a value that cannot differ.
+param_or() {
+  local value
+  if value="$(aws ssm get-parameter --region "$REGION" $DECRYPT \
+    --name "$PREFIX/$1" --query Parameter.Value --output text 2>/dev/null)"; then
+    printf '%s' "$value"
+  else
+    printf '%s' "$2"
+  fi
+}
+
 case "${1:-}" in
   config)
     # Assigned one at a time so set -e stops at the first missing parameter:
@@ -36,8 +49,9 @@ case "${1:-}" in
     pool_id="$(param user_pool_id cognito-config)"
     client_id="$(param client_id cognito-config)"
     issuer="$(param issuer cognito-config)"
-    printf '{\n  "user_pool_id": "%s",\n  "client_id": "%s",\n  "issuer": "%s"\n}\n' \
-      "$pool_id" "$client_id" "$issuer"
+    pool_region="$(param_or region "$REGION")"
+    printf '{\n  "user_pool_id": "%s",\n  "client_id": "%s",\n  "issuer": "%s",\n  "region": "%s"\n}\n' \
+      "$pool_id" "$client_id" "$issuer" "$pool_region"
     ;;
   token)
     DECRYPT=--with-decryption

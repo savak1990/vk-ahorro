@@ -17,6 +17,11 @@ spec:
     helm:
       # Its own template, not the services loop: the client's parameters are
       # the keys the browser reads, not the backend's shape.
+      #
+      # A parameter is omitted rather than passed empty. `value` is optional
+      # in the CRD, so the API server drops `value: ""` on write, and Argo
+      # then diffs the stored object against a manifest that still has it -
+      # permanent OutOfSync that selfHeal: false never corrects.
       parameters:
         - name: image.tag
           value: {{ .Values.web.tag | quote }}
@@ -25,19 +30,14 @@ spec:
 {{- if $local }}
         # No gateway route on this target: its listener is plain http and its
         # routing is by path, and an unmatched sectionName never goes Accepted.
+        # host is left at the chart default, which the route no longer reads.
         - name: httpRoute.enabled
           value: "false"
-        - name: host
-          value: ""
         - name: config.apiBaseUrl
           value: {{ printf "http://localhost:%v" .Values.local.apiPort | quote }}
-        - name: config.cognitoUserPoolId
-          value: ""
-        - name: config.cognitoClientId
-          value: ""
         # There is no pool to sign in against, so the shell renders with a
         # stand-in user. An explicit flag, never inferred from the empty
-        # identifiers above: a forgotten identifier must stay an error.
+        # identifiers: a forgotten identifier must stay an error.
         - name: config.authDisabled
           value: "true"
         - name: config.devUserEmail
@@ -49,10 +49,14 @@ spec:
           value: {{ printf "%s.%s" .Values.web.hostPrefix .Values.fqdn | quote }}
         - name: config.apiBaseUrl
           value: {{ printf "https://%s.%s" (index .Values.services "ahorro-api").hostPrefix .Values.fqdn | quote }}
+{{- if .Values.cognito.userPoolId }}
         - name: config.cognitoUserPoolId
           value: {{ .Values.cognito.userPoolId | quote }}
+{{- end }}
+{{- if .Values.cognito.clientId }}
         - name: config.cognitoClientId
           value: {{ .Values.cognito.clientId | quote }}
+{{- end }}
 {{- end }}
   destination:
     server: https://kubernetes.default.svc
