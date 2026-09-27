@@ -6,15 +6,30 @@ image:
   # Empty derives it from the tag: IfNotPresent for a SHA, Always otherwise.
   pullPolicy: ""
 
-# Required. The hostname arrives from the platform at install time and is
-# never committed.
+# Required whenever the route renders. The hostname arrives from the platform
+# at install time and is never committed.
 host: ""
 
+httpRoute:
+  # Off on a target whose gateway has no https listener and whose routing is
+  # by path: a route naming a listener that does not exist is never Accepted,
+  # and Argo then waits on it until the sync times out.
+  enabled: true
+
 # Rendered into /config.json and read by the Flutter app at startup, so one
-# image serves every environment. Every key is required at runtime: the app
-# reports a missing one rather than defaulting to a wrong value.
+# image serves every environment. The first four are required at runtime: the
+# app reports a missing one rather than defaulting to a wrong value.
 config:
   apiBaseUrl: ""
   cognitoUserPoolId: ""
   cognitoClientId: ""
   cognitoRegion: eu-west-1
+
+  # Renders the shell with no sign-in. Only for a target that has no user
+  # pool. An explicit flag, never inferred from the Cognito keys being empty:
+  # that would turn a forgotten identifier into a silently unauthenticated app.
+  authDisabled: false
+
+  # The identity shown while authDisabled is on, matching what the API answers.
+  devUserEmail: ""
+  devUserSub: ""

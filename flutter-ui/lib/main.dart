@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:amplify_authenticator/amplify_authenticator.dart';
 import 'package:amplify_flutter/amplify_flutter.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
@@ -18,9 +17,7 @@ import 'src/providers/app_state_provider.dart';
 import 'src/screens/main_screen.dart';
 import 'src/widgets/error_state_widget.dart';
 
-// Renders the shell without sign-in, for local UI work. kDebugMode keeps it
-// out of any release build, so a shipped app can never start unauthenticated.
-const skipAuth = bool.fromEnvironment('SKIP_AUTH') && kDebugMode;
+bool get skipAuth => AppConfig.skipAuth;
 
 // Empty is a real state, not a fault: config.json ships with the Cognito keys
 // blank for local work, and the platform fills them per project.
@@ -31,7 +28,7 @@ bool get _cognitoConfigured =>
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.load();
-  debugPrint('AppConfig.apiBaseUrl=${AppConfig.apiBaseUrl}');
+  debugPrint('AppConfig.apiBaseUrl=${AppConfig.apiBaseUrl} skipAuth=$skipAuth');
   runApp(
     ChangeNotifierProvider(
       create: (_) => AppStateProvider(),
@@ -77,7 +74,8 @@ class _AhorroAppState extends State<AhorroApp> {
     if (skipAuth || _cognitoConfigured) return const MainScreen();
     return const Scaffold(
       body: ErrorStateWidget(
-        message: 'Cognito is not configured: config.json has no '
+        message:
+            'Cognito is not configured: config.json has no '
             'cognitoUserPoolId or cognitoClientId.',
       ),
     );

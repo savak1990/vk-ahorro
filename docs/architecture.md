@@ -105,8 +105,16 @@ The Go middleware verifies signature (JWKS at
 tokens). It accepts both token types. No service calls Cognito on the
 request path.
 
-`AUTH_DISABLED=true` exists for local development only and logs a warning
-at startup.
+`AUTH_DISABLED=true` exists for local development and for the `local`
+platform target, which creates no pool. It logs a warning at startup and
+makes every request anonymous. `AUTH_ANONYMOUS_EMAIL` and
+`AUTH_ANONYMOUS_SUB` name the user those requests are answered as, so the
+client and the API agree; unset, the service says `anonymous`.
+
+The client skips the Authenticator only when its configuration asks for it,
+through `authDisabled` in `config.json`. It is never inferred from the
+Cognito identifiers being empty: that state means a project whose values were
+not threaded, and it must stay an error (ADR 0007).
 
 # 5. Configuration
 
@@ -169,12 +177,12 @@ Two-level app-of-apps, split by ownership (platform ADR 0015):
           ├── appproject.yaml     AppProject vk-ahorro  (namespaces ahorro + argocd, sources: this repo + GHCR charts)
           └── application.yaml    Application vk-ahorro (pointer)
                  source: https://github.com/savak1990/vk-ahorro  path: gitops  targetRevision: main
-                 helm parameter: fqdn = <platform's envoyGateway.fqdn>
+                 helm parameters: fqdn = <platform's envoyGateway.fqdn>, target
                  automated: prune=true, selfHeal=false
                         │
                         ▼
   vk-ahorro/gitops (chart "ahorro")
-    ├── templates/validate.yaml   fails when fqdn is empty
+    ├── templates/validate.yaml   fails when fqdn is empty, except on local
     ├── templates/services.yaml   one Application per backend service, from a
     │                             range over .Values.services; today
     │                             ahorro-api → chart ahorro-api, wave 1
@@ -220,6 +228,7 @@ in `gitops/values.yaml` exist on GHCR.
 - Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the committed `flutter-ui/web/config.json` (localhost API, empty Cognito → the Authenticator is skipped only when auth is disabled server-side; otherwise the app shows a config error).
 - Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from the platform's SSM parameters; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
 - Images: `make image-build SVC=web && make web-serve-local` serves the production web image on `:8081`.
+- A kind cluster: `PROVIDER=local make full-up` in the platform runs both services; `make forward-up` here puts the client on `:8090` and the API on `:8091`. That target has no gateway route, no public hostname and no user pool, so sign-in is skipped and both halves report the stand-in user `e2e@vk-ahorro.invalid` (ADR 0007). Argo still fetches this repository from GitHub `main` there, so a local bring-up runs merged code.
 
 # 10. Invariants
 

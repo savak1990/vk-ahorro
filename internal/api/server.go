@@ -19,7 +19,7 @@ func NewHandler(ctx context.Context, cfg Config, logger *slog.Logger) http.Handl
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", handleHealthz)
-	mux.Handle("GET /api/v1/hello", protect(http.HandlerFunc(handleHello)))
+	mux.Handle("GET /api/v1/hello", protect(helloHandler(cfg)))
 
 	return httpx.RequestID(httpx.Logging(logger)(httpx.CORS(cfg.CORSAllowedOrigins)(mux)))
 }

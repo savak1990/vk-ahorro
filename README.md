@@ -30,7 +30,7 @@ release run on `main` publishes the renamed artifacts to GHCR.
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | mostly done |
 | 105 | Web delivery: image, chart, Argo Application | in progress |
-| 107 | The local target runs both apps in kind | planned |
+| 107 | The local target runs both apps in kind | in progress |
 | 110 | End-to-end verification | superseded by `ci/040` and `deploy/050` |
 
 The pipeline has its own groups: `specs/ci/` is what a pull request must
@@ -86,7 +86,8 @@ spec adds.
 | Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
 | Checks | `specs-check` `domain-check` `help` | exists |
 | Cognito | `cognito-config` `token` | exists |
-| GitOps | `gitops-lint` `gitops-template` `gitops-check` | exists |
+| GitOps | `gitops-lint` `gitops-template TARGET=` `gitops-check` | exists |
+| Local cluster | `forward-up` `forward-down` | exists |
 | Flutter build | `ui-get` `ui-analyze` `ui-test` `ui-build-web` `ui-build-android` | exists |
 | Flutter config | `ui-config ENV=` `web-serve-local` | planned |
 
@@ -113,3 +114,28 @@ the same file from a ConfigMap, so one image serves every environment.
 
 Hostnames are `ahorro.<fqdn>` and `api-ahorro.<fqdn>`; the domain itself
 is never written in this repository.
+
+### Run both services on a local kind cluster
+
+`PROVIDER=local make full-up` in `vk-lab-platform` brings up kind and both
+applications. That target has no public hostname and no Cognito pool, so:
+
+```text
+make forward-up          the client on :8090, the API on :8091
+make forward-down        stop both
+```
+
+The platform's own `make forward-up` holds 8080 for the gateway, which is why
+these two are 8090 and 8091. The ports are rendered into `config.apiBaseUrl`
+and into the API's allowed CORS origin, so they live in `gitops/values.yaml`
+rather than being chosen at forward time.
+
+Sign-in is skipped there and both halves report the same stand-in user,
+`e2e@vk-ahorro.invalid`. The client asks for this through `authDisabled` in
+`config.json` and the API through `AUTH_DISABLED`; neither infers it from the
+Cognito keys being empty, because empty keys mean a project whose values were
+not threaded and must stay an error. See
+[ADR 0008](docs/adr/0008-the-local-target-and-the-stand-in-identity.md).
+
+Argo fetches this repository from GitHub `main` even on that target, so a
+local bring-up runs **merged** code, not the working tree.

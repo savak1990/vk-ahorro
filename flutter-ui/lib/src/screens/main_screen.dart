@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/app_config.dart';
 import '../providers/amplify_provider.dart';
 import '../services/hello_service.dart';
 import '../utils/message_utils.dart';
@@ -104,6 +105,20 @@ class AccountTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Amplify is never configured when sign-in is skipped, so signOut() would
+    // throw. Name the stand-in user instead of offering a button that fails.
+    if (AppConfig.skipAuth) {
+      return TabPlaceholder(
+        icon: Icons.account_circle,
+        label: 'Account',
+        child: Text(
+          AppConfig.devUserEmail.isEmpty
+              ? 'Signed in is skipped on this environment.'
+              : 'Signed in as ${AppConfig.devUserEmail} (sign-in skipped)',
+        ),
+      );
+    }
+
     return TabPlaceholder(
       icon: Icons.account_circle,
       label: 'Account',
