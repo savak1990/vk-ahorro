@@ -1,4 +1,5 @@
 {{- $root := . -}}
+{{- $local := eq .Values.target "local" -}}
 {{- range $name, $svc := .Values.services }}
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -22,6 +23,28 @@ spec:
       parameters:
         - name: image.tag
           value: {{ $svc.tag | quote }}
+{{- if $local }}
+        # No gateway route on this target: its listener is plain http and its
+        # routing is by path, and an unmatched sectionName never goes Accepted.
+        - name: httpRoute.enabled
+          value: "false"
+        - name: host
+          value: ""
+        # No user pool here, so the service would refuse to start with an
+        # empty issuer. The stand-in identity matches the client's.
+        - name: authDisabled
+          value: "true"
+        - name: anonymousEmail
+          value: {{ $root.Values.local.userEmail | quote }}
+        - name: anonymousSub
+          value: {{ $root.Values.local.userSub | quote }}
+        - name: cognito.issuer
+          value: ""
+        - name: cognito.clientId
+          value: ""
+        - name: corsAllowedOrigins
+          value: {{ printf "http://localhost:%v" $root.Values.local.webPort | quote }}
+{{- else }}
         - name: host
           value: {{ printf "%s.%s" $svc.hostPrefix $root.Values.fqdn | quote }}
         - name: cognito.issuer
@@ -30,6 +53,7 @@ spec:
           value: {{ $root.Values.cognito.clientId | quote }}
         - name: corsAllowedOrigins
           value: {{ printf "https://%s.%s" $root.Values.web.hostPrefix $root.Values.fqdn | quote }}
+{{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: {{ $root.Values.namespace }}

@@ -20,6 +20,24 @@ class AppConfig {
   static String cognitoClientId = '';
   static String cognitoRegion = '';
 
+  // Optional, and deliberately outside _keys: a required key must be supplied
+  // by every environment at once, and these three exist for the one target
+  // that has no user pool.
+  static bool authDisabled = false;
+  static String devUserEmail = '';
+  static String devUserSub = '';
+
+  // Renders the shell without sign-in, for local UI work. kDebugMode keeps it
+  // out of any release build, so a shipped app can never start
+  // unauthenticated on this flag alone.
+  static const bool debugSkipAuth =
+      bool.fromEnvironment('SKIP_AUTH') && kDebugMode;
+
+  // The deployed client is a release build, so the define above is always
+  // false there. A cluster with no user pool asks for this through its
+  // configuration, which is why this is a getter and not a constant.
+  static bool get skipAuth => debugSkipAuth || authDisabled;
+
   static const String helloEndpoint = '/api/v1/hello';
 
   static String get helloUrl => '$apiBaseUrl$helloEndpoint';
@@ -39,6 +57,9 @@ class AppConfig {
       cognitoUserPoolId = const String.fromEnvironment('COGNITO_USER_POOL_ID');
       cognitoClientId = const String.fromEnvironment('COGNITO_CLIENT_ID');
       cognitoRegion = const String.fromEnvironment('COGNITO_REGION');
+      authDisabled = const bool.fromEnvironment('AUTH_DISABLED');
+      devUserEmail = const String.fromEnvironment('DEV_USER_EMAIL');
+      devUserSub = const String.fromEnvironment('DEV_USER_SUB');
       return;
     }
 
@@ -56,6 +77,12 @@ class AppConfig {
     cognitoUserPoolId = parsed['cognitoUserPoolId']!;
     cognitoClientId = parsed['cognitoClientId']!;
     cognitoRegion = parsed['cognitoRegion']!;
+
+    // Compared as text, so a JSON true and the string "true" a chart may
+    // deliver both count, and everything else stays false.
+    authDisabled = json['authDisabled'].toString() == 'true';
+    devUserEmail = json['devUserEmail']?.toString() ?? '';
+    devUserSub = json['devUserSub']?.toString() ?? '';
   }
 
   // Names every missing key, so a chart that forgets one fails loudly rather

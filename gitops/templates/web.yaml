@@ -1,3 +1,4 @@
+{{- $local := eq .Values.target "local" -}}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -15,10 +16,35 @@ spec:
     targetRevision: {{ .Values.web.chartVersion | quote }}
     helm:
       # Its own template, not the services loop: the client's parameters are
-      # the four keys the browser reads, not the backend's shape.
+      # the keys the browser reads, not the backend's shape.
       parameters:
         - name: image.tag
           value: {{ .Values.web.tag | quote }}
+        - name: config.cognitoRegion
+          value: {{ .Values.cognito.region | quote }}
+{{- if $local }}
+        # No gateway route on this target: its listener is plain http and its
+        # routing is by path, and an unmatched sectionName never goes Accepted.
+        - name: httpRoute.enabled
+          value: "false"
+        - name: host
+          value: ""
+        - name: config.apiBaseUrl
+          value: {{ printf "http://localhost:%v" .Values.local.apiPort | quote }}
+        - name: config.cognitoUserPoolId
+          value: ""
+        - name: config.cognitoClientId
+          value: ""
+        # There is no pool to sign in against, so the shell renders with a
+        # stand-in user. An explicit flag, never inferred from the empty
+        # identifiers above: a forgotten identifier must stay an error.
+        - name: config.authDisabled
+          value: "true"
+        - name: config.devUserEmail
+          value: {{ .Values.local.userEmail | quote }}
+        - name: config.devUserSub
+          value: {{ .Values.local.userSub | quote }}
+{{- else }}
         - name: host
           value: {{ printf "%s.%s" .Values.web.hostPrefix .Values.fqdn | quote }}
         - name: config.apiBaseUrl
@@ -27,8 +53,7 @@ spec:
           value: {{ .Values.cognito.userPoolId | quote }}
         - name: config.cognitoClientId
           value: {{ .Values.cognito.clientId | quote }}
-        - name: config.cognitoRegion
-          value: {{ .Values.cognito.region | quote }}
+{{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: {{ .Values.namespace }}

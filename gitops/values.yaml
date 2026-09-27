@@ -3,6 +3,11 @@
 # project, so a committed value would be right for exactly one project.
 fqdn: ""
 
+# Which platform target is rendering this chart. Only "local" changes the
+# shape: no public hostname, no gateway route and no user pool, so the chart
+# cannot infer any of it from an empty fqdn.
+target: aws
+
 namespace: ahorro
 
 charts:
@@ -17,6 +22,20 @@ cognito:
   # Written here and nowhere else. The platform publishes no region
   # parameter, and the region is a constant for this project.
   region: eu-west-1
+
+# The local target only. Both services are reached through kubectl
+# port-forward, so the browser origin and the API base URL are localhost and
+# the two ports are part of the delivered configuration, not a local choice.
+#
+# 8090 and 8091 rather than 8080: the platform's own `make forward-up` puts
+# the gateway on 8080 and refuses to start when that port is held.
+local:
+  webPort: 8090
+  apiPort: 8091
+  # Stands in for a Cognito user. The address matches the pool's test user on
+  # the cloud targets and can never receive mail.
+  userEmail: e2e@vk-ahorro.invalid
+  userSub: "00000000-0000-0000-0000-000000000000"
 
 # One Argo Application per backend service. Adding a service is four lines
 # here and no new template; every Go service takes the same parameter shape.

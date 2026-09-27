@@ -11,7 +11,7 @@ import (
 // caller's environment cannot change the result.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, name := range []string{"PORT", "COGNITO_ISSUER", "COGNITO_CLIENT_ID", "CORS_ALLOWED_ORIGINS", "AUTH_DISABLED"} {
+	for _, name := range []string{"PORT", "COGNITO_ISSUER", "COGNITO_CLIENT_ID", "CORS_ALLOWED_ORIGINS", "AUTH_DISABLED", "AUTH_ANONYMOUS_EMAIL", "AUTH_ANONYMOUS_SUB"} {
 		t.Setenv(name, "")
 	}
 }
@@ -75,5 +75,35 @@ func TestConfigFromEnvRequiresCognitoUnlessAuthDisabled(t *testing.T) {
 	}
 	if !cfg.AuthDisabled {
 		t.Error("AUTH_DISABLED=true was not read")
+	}
+}
+
+func TestConfigFromEnvReadsTheStandInIdentity(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("AUTH_DISABLED", "true")
+
+	cfg, err := api.ConfigFromEnv()
+	if err != nil {
+		t.Fatalf("ConfigFromEnv() error = %v", err)
+	}
+	if cfg.AnonymousEmail != "anonymous" {
+		t.Errorf("email = %q, want the anonymous default", cfg.AnonymousEmail)
+	}
+	if cfg.AnonymousSub != "" {
+		t.Errorf("sub = %q, want empty by default", cfg.AnonymousSub)
+	}
+
+	t.Setenv("AUTH_ANONYMOUS_EMAIL", "e2e@vk-ahorro.invalid")
+	t.Setenv("AUTH_ANONYMOUS_SUB", "sub-local")
+
+	cfg, err = api.ConfigFromEnv()
+	if err != nil {
+		t.Fatalf("ConfigFromEnv() error = %v", err)
+	}
+	if cfg.AnonymousEmail != "e2e@vk-ahorro.invalid" {
+		t.Errorf("email = %q", cfg.AnonymousEmail)
+	}
+	if cfg.AnonymousSub != "sub-local" {
+		t.Errorf("sub = %q", cfg.AnonymousSub)
 	}
 }

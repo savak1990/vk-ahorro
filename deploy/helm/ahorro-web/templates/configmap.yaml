@@ -10,5 +10,10 @@ data:
       "apiBaseUrl": {{ .Values.config.apiBaseUrl | quote }},
       "cognitoUserPoolId": {{ .Values.config.cognitoUserPoolId | quote }},
       "cognitoClientId": {{ .Values.config.cognitoClientId | quote }},
-      "cognitoRegion": {{ .Values.config.cognitoRegion | quote }}
+      "cognitoRegion": {{ .Values.config.cognitoRegion | quote }},
+      {{- /* Compared as text: Argo may deliver the flag as a string, and a
+             non-empty "false" is truthy to a Go template. */}}
+      "authDisabled": {{ eq (toString .Values.config.authDisabled) "true" }},
+      "devUserEmail": {{ .Values.config.devUserEmail | quote }},
+      "devUserSub": {{ .Values.config.devUserSub | quote }}
     }

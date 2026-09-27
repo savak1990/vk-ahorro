@@ -6,9 +6,15 @@ image:
   # Empty derives it from the tag: IfNotPresent for a SHA, Always otherwise.
   pullPolicy: ""
 
-# Required. The hostname arrives from the platform at install time and is
-# never committed.
+# Required whenever the route renders. The hostname arrives from the platform
+# at install time and is never committed.
 host: ""
+
+httpRoute:
+  # Off on a target whose gateway has no https listener and whose routing is
+  # by path: a route naming a listener that does not exist is never Accepted,
+  # and Argo then waits on it until the sync times out.
+  enabled: true
 
 cognito:
   issuer: ""
@@ -16,3 +22,12 @@ cognito:
 
 # A comma-separated string, not a list: Argo passes scalar overrides only.
 corsAllowedOrigins: ""
+
+# Every request is anonymous. Only for a target that has no user pool; the
+# service logs a warning at startup.
+authDisabled: false
+
+# The identity an anonymous request is answered with while authDisabled is on,
+# so the client and the API name the same user. Empty means "anonymous".
+anonymousEmail: ""
+anonymousSub: ""

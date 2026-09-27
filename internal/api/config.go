@@ -10,6 +10,9 @@ import (
 
 const defaultPort = "8080"
 
+// The name an unauthenticated request is greeted by when auth is off.
+const defaultAnonymousEmail = "anonymous"
+
 // Config is the whole configuration of the service. It comes from the
 // environment only, so a container needs no files.
 type Config struct {
@@ -18,6 +21,8 @@ type Config struct {
 	ClientID           string
 	CORSAllowedOrigins []string
 	AuthDisabled       bool
+	AnonymousEmail     string
+	AnonymousSub       string
 }
 
 // ConfigFromEnv reads the configuration and rejects an incomplete one.
@@ -28,6 +33,8 @@ func ConfigFromEnv() (Config, error) {
 		ClientID:           os.Getenv("COGNITO_CLIENT_ID"),
 		CORSAllowedOrigins: splitList(os.Getenv("CORS_ALLOWED_ORIGINS")),
 		AuthDisabled:       os.Getenv("AUTH_DISABLED") == "true",
+		AnonymousEmail:     valueOr(os.Getenv("AUTH_ANONYMOUS_EMAIL"), defaultAnonymousEmail),
+		AnonymousSub:       os.Getenv("AUTH_ANONYMOUS_SUB"),
 	}
 	if !cfg.AuthDisabled && (cfg.Issuer == "" || cfg.ClientID == "") {
 		return Config{}, errors.New("ahorro-api: COGNITO_ISSUER and COGNITO_CLIENT_ID are required unless AUTH_DISABLED=true")

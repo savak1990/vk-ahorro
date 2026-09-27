@@ -8,3 +8,6 @@ data:
   COGNITO_ISSUER: {{ .Values.cognito.issuer | quote }}
   COGNITO_CLIENT_ID: {{ .Values.cognito.clientId | quote }}
   CORS_ALLOWED_ORIGINS: {{ .Values.corsAllowedOrigins | quote }}
+  AUTH_DISABLED: {{ eq (toString .Values.authDisabled) "true" | quote }}
+  AUTH_ANONYMOUS_EMAIL: {{ .Values.anonymousEmail | quote }}
+  AUTH_ANONYMOUS_SUB: {{ .Values.anonymousSub | quote }}

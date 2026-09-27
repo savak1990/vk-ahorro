@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down
 
 .DEFAULT_GOAL := help
 
@@ -33,6 +33,11 @@ DIST_DIR := $(CURDIR)/dist
 
 # A documented placeholder. The real hostname exists only at install time.
 TEMPLATE_HOST := api-ahorro.lab.example.com
+
+# Which platform target the app-of-apps chart renders for. local has no public
+# hostname at all, so it is the one target that passes no fqdn.
+TARGET ?= aws
+GITOPS_FQDN = $(if $(filter local,$(TARGET)),,--set fqdn=example.invalid)
 
 # Flutter UI. AVD and IOS_DEVICE name the simulators a developer boots locally;
 # override either on the command line to use a different one.
@@ -108,6 +113,7 @@ image-push: require-svc buildx-init
 ## Build and push every image
 images-push:
 	@$(MAKE) image-push SVC=ahorro-api
+	@$(MAKE) image-push SVC=ahorro-web
 
 ## Fail unless CHART names an existing chart
 require-chart:
@@ -139,15 +145,23 @@ helm-push: helm-package
 # A documented placeholder; the real fqdn exists only at install time.
 ## Lint the app-of-apps chart
 gitops-lint:
-	@helm lint gitops --set fqdn=example.invalid
+	@helm lint gitops --set target=$(TARGET) $(GITOPS_FQDN)
 
-## Render the app-of-apps chart to stdout
+## Render the app-of-apps chart to stdout. Usage: make gitops-template TARGET=local
 gitops-template:
-	@helm template ahorro gitops --set fqdn=example.invalid
+	@helm template ahorro gitops --set target=$(TARGET) $(GITOPS_FQDN)
 
 ## Render the app-of-apps chart and validate it with kubeconform
 gitops-check:
 	@./scripts/gitops-check.sh
+
+## Forward both services to localhost. Only the local target needs it.
+forward-up:
+	@./scripts/forward.sh up
+
+## Stop the forwards make forward-up started. Safe when nothing is up.
+forward-down:
+	@./scripts/forward.sh down
 
 ## Fetch the Flutter package dependencies
 ui-get:
