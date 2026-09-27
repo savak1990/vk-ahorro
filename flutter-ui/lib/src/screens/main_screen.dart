@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/amplify_provider.dart';
+import '../services/hello_service.dart';
 import '../utils/message_utils.dart';
 import '../utils/platform_utils.dart';
 import 'templates/app_shell.dart';
@@ -18,10 +19,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  void _onAddPressed() {
-    unawaited(
-      MessageUtils.showMessageSafely(context, 'Add is not wired up yet'),
-    );
+  Future<void> _onAddPressed() async {
+    String message;
+    try {
+      message = await HelloService().hello();
+    } on Exception catch (e) {
+      message = '$e';
+    }
+    if (!mounted) return;
+    unawaited(MessageUtils.showMessageSafely(context, message));
   }
 
   @override

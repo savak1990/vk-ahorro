@@ -12,6 +12,8 @@ BIN_DIR := $(CURDIR)/bin
 # and the service warns about it at startup.
 PORT ?= 8080
 AUTH_DISABLED ?= true
+SKIP_AUTH ?= true
+UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH)
 
 # Image coordinates. The tag is always the full commit SHA; `latest` is never
 # built or pushed.
@@ -68,6 +70,7 @@ go-lint:
 ## Run the ahorro-api service locally on $PORT with auth disabled
 go-run: export PORT := $(PORT)
 go-run: export AUTH_DISABLED := $(AUTH_DISABLED)
+go-run: export CORS_ALLOWED_ORIGINS := http://localhost:3000
 go-run:
 	go run ./cmd/ahorro-api
 
@@ -185,19 +188,19 @@ emulator-android:
 emulator-ios:
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" nowait
 
-## Run the Flutter app on the Android emulator $AVD
+## Run the Flutter app on the Android emulator $AVD, auth skipped, API on the host
 ui-run-android:
 	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(AVD)) && \
-	  cd $(UI_DIR) && flutter run -d $$serial
+	  cd $(UI_DIR) && flutter run -d $$serial $(UI_DEFINES) --dart-define=API_BASE_URL=http://10.0.2.2:$(PORT)
 
-## Run the Flutter app on the iOS simulator $IOS_DEVICE
+## Run the Flutter app on the iOS simulator $IOS_DEVICE, auth skipped, API on the host
 ui-run-ios:
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)"
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(UI_DEFINES) --dart-define=API_BASE_URL=http://localhost:$(PORT)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
-## Run the Flutter app in Chrome on :3000
+## Run the Flutter app in Chrome on :3000, auth skipped, API from web/config.json
 ui-run-web:
-	cd $(UI_DIR) && flutter run -d chrome --web-port 3000
+	cd $(UI_DIR) && flutter run -d chrome --web-port 3000 $(UI_DEFINES)
 
 ## Shut down every running Android emulator and iOS simulator
 emulator-stop:

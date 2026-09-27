@@ -26,7 +26,7 @@ release run on `main` publishes the renamed artifacts to GHCR.
 | 055 | Cognito identifiers from SSM, `make token` | done |
 | 060 | GitOps chart and the platform pointer | in progress |
 | 070 | Flutter trimmed to the shell | done |
-| 080 | Flutter runtime config and the "+" → hello call | config done, call planned |
+| 080 | Flutter runtime config and the "+" → hello call | config and call done, `ui-config` planned |
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | mostly done |
 | 105 | Web delivery: image, chart, Argo Application | in progress |
