@@ -20,16 +20,20 @@ spec:
     helm:
       # Scalars only: Argo's helm.parameters carries nothing else, which is
       # why corsAllowedOrigins is a comma-separated string.
+      #
+      # A parameter is omitted rather than passed empty. `value` is optional
+      # in the CRD, so the API server drops `value: ""` on write, and Argo
+      # then diffs the stored object against a manifest that still has it -
+      # permanent OutOfSync that selfHeal: false never corrects.
       parameters:
         - name: image.tag
           value: {{ $svc.tag | quote }}
 {{- if $local }}
         # No gateway route on this target: its listener is plain http and its
         # routing is by path, and an unmatched sectionName never goes Accepted.
+        # host is left at the chart default, which the route no longer reads.
         - name: httpRoute.enabled
           value: "false"
-        - name: host
-          value: ""
         # No user pool here, so the service would refuse to start with an
         # empty issuer. The stand-in identity matches the client's.
         - name: authDisabled
@@ -38,21 +42,21 @@ spec:
           value: {{ $root.Values.local.userEmail | quote }}
         - name: anonymousSub
           value: {{ $root.Values.local.userSub | quote }}
-        - name: cognito.issuer
-          value: ""
-        - name: cognito.clientId
-          value: ""
         - name: corsAllowedOrigins
           value: {{ printf "http://localhost:%v" $root.Values.local.webPort | quote }}
 {{- else }}
         - name: host
           value: {{ printf "%s.%s" $svc.hostPrefix $root.Values.fqdn | quote }}
-        - name: cognito.issuer
-          value: {{ $root.Values.cognito.issuer | quote }}
-        - name: cognito.clientId
-          value: {{ $root.Values.cognito.clientId | quote }}
         - name: corsAllowedOrigins
           value: {{ printf "https://%s.%s" $root.Values.web.hostPrefix $root.Values.fqdn | quote }}
+{{- if $root.Values.cognito.issuer }}
+        - name: cognito.issuer
+          value: {{ $root.Values.cognito.issuer | quote }}
+{{- end }}
+{{- if $root.Values.cognito.clientId }}
+        - name: cognito.clientId
+          value: {{ $root.Values.cognito.clientId | quote }}
+{{- end }}
 {{- end }}
   destination:
     server: https://kubernetes.default.svc

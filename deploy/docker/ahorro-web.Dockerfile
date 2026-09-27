@@ -11,6 +11,20 @@ RUN flutter pub get
 
 COPY flutter-ui/ ./
 
+# web/config.json is generated per platform project and never committed, so
+# the build writes a blank one. Every deployment mounts the real file over
+# it; blank Cognito keys make an unconfigured cluster say so rather than
+# guess, and the app refuses to start without the file at all.
+RUN printf '%s\n' '{' \
+      '  "apiBaseUrl": "http://localhost:8080",' \
+      '  "cognitoUserPoolId": "",' \
+      '  "cognitoClientId": "",' \
+      '  "cognitoRegion": "eu-west-1",' \
+      '  "authDisabled": false,' \
+      '  "devUserEmail": "",' \
+      '  "devUserSub": ""' \
+      '}' > web/config.json
+
 # --no-web-resources-cdn self-hosts CanvasKit rather than loading it from
 # gstatic.com: no third-party runtime dependency, and a deterministic build.
 RUN flutter build web --release --no-web-resources-cdn

@@ -41,4 +41,17 @@ if ! grep -q 'name: httpRoute.enabled' "$local_render"; then
   exit 1
 fi
 
+# `value` is optional in the Application CRD, so the API server drops
+# `value: ""` on write. Argo then compares a stored object without the field
+# against a manifest that has it and reports OutOfSync for ever, which
+# selfHeal: false never corrects. Omit the parameter instead.
+for rendered in "$cloud" "$local_render"; do
+  if grep -q '^ *value: ""$' "$rendered"; then
+    echo "GITOPS-CHECK: $rendered passes an empty helm parameter:" >&2
+    grep -B1 '^ *value: ""$' "$rendered" >&2
+    echo "GITOPS-CHECK: omit the parameter instead - an empty value never round-trips." >&2
+    exit 1
+  fi
+done
+
 echo "GITOPS-CHECK: the app-of-apps renders are valid for every target."

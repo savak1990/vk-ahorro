@@ -20,3 +20,5 @@ flutter-ui/build
 flutter-ui/.dart_tool
 flutter-ui/android
 flutter-ui/ios
+# Generated per project; the build writes a blank one instead.
+flutter-ui/web/config.json

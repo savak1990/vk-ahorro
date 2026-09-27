@@ -123,8 +123,9 @@ image tags and chart versions.
 
 | Layer | Holds | Written by | Read by |
 |---|---|---|---|
-| SSM `/<project>/persistent/ahorro-cognito/*` | pool id, client id, issuer, the test user and its password | the platform's `make persistent-up` | `make cognito-config`, `make token`, `make ui-config`, the platform's `argo-up.sh` |
+| SSM `/<project>/persistent/ahorro-cognito/*` | pool id, client id, issuer, region, the test user and its password | the platform's `make persistent-up` | `make cognito-config`, `make token`, `make ui-config`, the platform's `argo-up.sh` |
 | `gitops/values.yaml` (Git) | image tags (SHA), chart versions, namespace; Cognito keys present but empty | CI (tags), operator (the rest) | Argo through the pointer Application |
+| `flutter-ui/web/config.json` (untracked) | API base URL, Cognito ids and region | `make ui-config`, from SSM for `$PROJECT_NAME` | the Chrome dev server at `make ui-run-web` |
 | `flutter-ui/config/<env>.json` (untracked) | API base URL, Cognito ids | `make ui-config ENV=lab FQDN=...` | mobile builds via `--dart-define-from-file` |
 | Runtime | env vars (hello), `/config.json` ConfigMap (web) | Helm charts from Argo parameters | the processes |
 

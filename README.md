@@ -85,11 +85,11 @@ spec adds.
 | Images | `image-build SVC=` `image-push SVC=` `images-push` | exists |
 | Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
 | Checks | `specs-check` `domain-check` `help` | exists |
-| Cognito | `cognito-config` `token` | exists |
+| Cognito | `cognito-config` `token` `ui-config` | exists |
 | GitOps | `gitops-lint` `gitops-template TARGET=` `gitops-check` | exists |
 | Local cluster | `forward-up` `forward-down` | exists |
 | Flutter build | `ui-get` `ui-analyze` `ui-test` `ui-build-web` `ui-build-android` | exists |
-| Flutter config | `ui-config ENV=` `web-serve-local` | planned |
+| Flutter config | `web-serve-local` | planned |
 
 ### Run the Flutter client on a local device
 
@@ -108,9 +108,20 @@ Two variables name the device. Set a different value on the command line:
 | `AVD` | `pixel_phone` | `make ui-run-android AVD=pixel_tablet` |
 | `IOS_DEVICE` | `iPhone 18 Pro` | `make ui-run-ios IOS_DEVICE="iPhone 17"` |
 
-On web the client reads `flutter-ui/web/config.json` at startup, which is
-committed with local defaults. In the cluster the `ahorro-web` chart renders
-the same file from a ConfigMap, so one image serves every environment.
+On web the client reads `flutter-ui/web/config.json` at startup. That file is
+**generated, never committed**: the Cognito pool is one per platform project,
+so `make ui-config` resolves it from SSM for `$PROJECT_NAME` every time, and
+`make ui-run-web` does that first.
+
+```text
+make ui-run-web                              the default project, vk-hetzner-lab
+make ui-run-web PROJECT_NAME=vk-other-lab    another project's pool
+```
+
+With no pool it writes blank Cognito keys and says so, and the client reports
+that none is configured rather than skipping sign-in. In the cluster the
+`ahorro-web` chart renders the same file from a ConfigMap, so one image serves
+every environment.
 
 Hostnames are `ahorro.<fqdn>` and `api-ahorro.<fqdn>`; the domain itself
 is never written in this repository.
