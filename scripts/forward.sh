@@ -13,7 +13,12 @@ API_PORT="${API_PORT:-8091}"
 RUN_DIR="${TMPDIR:-/tmp}/vk-ahorro-forward"
 
 forward() {
-  local name="$1" port="$2" pidfile="$RUN_DIR/$name.pid"
+  # Declared separately: bash 3.2, which macOS ships, creates every name in a
+  # single `local` before assigning any of them, so a later initialiser
+  # reading an earlier one fails under set -u.
+  local name="$1"
+  local port="$2"
+  local pidfile="$RUN_DIR/$name.pid"
   if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
     echo "FORWARD: $name already on $port"
     return
@@ -31,7 +36,8 @@ forward() {
 }
 
 stop() {
-  local name="$1" pidfile="$RUN_DIR/$name.pid"
+  local name="$1"
+  local pidfile="$RUN_DIR/$name.pid"
   [ -f "$pidfile" ] || { echo "FORWARD: $name was not running"; return; }
   kill "$(cat "$pidfile")" 2>/dev/null || true
   rm -f "$pidfile"
