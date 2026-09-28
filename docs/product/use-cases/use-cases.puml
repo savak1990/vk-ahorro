@@ -1,0 +1,58 @@
+@startuml
+left to right direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Shopper" as Shopper
+actor "Scheduler" as Scheduler
+actor "Identity Provider" as IdentityProvider
+actor "LLM Receipt Parser" as LlmReceiptParser
+actor "Mercadona Website" as MercadonaWebsite
+actor "Consum Website" as ConsumWebsite
+actor "Open Food Facts" as OpenFoodFacts
+
+rectangle "Ahorro" {
+  package "Account" {
+    usecase "Create Account" as UC01_CreateAccount
+    usecase "Sign In" as UC02_SignIn
+    usecase "Reset Password" as UC03_ResetPassword
+    usecase "Sign Out" as UC04_SignOut
+    usecase "Delete Account and Data" as UC13_DeleteAccountAndData
+  }
+  package "Receipts" {
+    usecase "Submit Receipt" as UC06_SubmitReceipt
+    usecase "Correct Receipt Lines" as UC07_CorrectReceiptLines
+    usecase "Browse Receipts" as UC08_BrowseReceipts
+  }
+  package "Prices and insight" {
+    usecase "Compare Receipt Prices" as UC09_CompareReceiptPrices
+    usecase "Review Receipt Analysis" as UC10_ReviewReceiptAnalysis
+    usecase "Collect Supermarket Prices" as UC11_CollectSupermarketPrices
+    usecase "Refresh Product Library" as UC12_RefreshProductLibrary
+  }
+}
+
+Shopper --> UC01_CreateAccount
+Shopper --> UC02_SignIn
+Shopper --> UC03_ResetPassword
+Shopper --> UC04_SignOut
+Shopper --> UC13_DeleteAccountAndData
+Shopper --> UC06_SubmitReceipt
+Shopper --> UC07_CorrectReceiptLines
+Shopper --> UC08_BrowseReceipts
+Shopper --> UC09_CompareReceiptPrices
+Shopper --> UC10_ReviewReceiptAnalysis
+Scheduler --> UC11_CollectSupermarketPrices
+Scheduler --> UC12_RefreshProductLibrary
+
+UC01_CreateAccount <-- IdentityProvider
+UC02_SignIn <-- IdentityProvider
+UC03_ResetPassword <-- IdentityProvider
+UC04_SignOut <-- IdentityProvider
+UC13_DeleteAccountAndData <-- IdentityProvider
+UC06_SubmitReceipt <-- LlmReceiptParser
+UC11_CollectSupermarketPrices <-- MercadonaWebsite
+UC11_CollectSupermarketPrices <-- ConsumWebsite
+UC12_RefreshProductLibrary <-- OpenFoodFacts
+@enduml
