@@ -3,6 +3,11 @@
 # Every action is pinned to a full commit SHA. A tag can be moved; the 2025
 # tj-actions and 2026 trivy-action attacks both did exactly that to read
 # secrets out of other people's pipelines.
+#
+# The workflow itself carries no `paths` filter, and it must not gain one. A
+# skipped workflow never reports its checks, so a required context stays
+# pending for ever. A job skipped by `if:` reports success, which is what lets
+# `ci-ok` be the single required check.
 name: ci
 
 on:
@@ -11,7 +16,49 @@ on:
 permissions: {}
 
 jobs:
+  # Decides which jobs below do real work. No checkout: on a pull_request
+  # event the filter reads the diff through the API.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    concurrency:
+      group: ci-changes-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      flutter: ${{ steps.filter.outputs.flutter }}
+      helm: ${{ steps.filter.outputs.helm }}
+      gitops: ${{ steps.filter.outputs.gitops }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            go:
+              - 'cmd/**'
+              - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
+              - '.golangci.yml'
+              - 'deploy/docker/ahorro-api.Dockerfile'
+            flutter:
+              - 'flutter-ui/**'
+              - 'deploy/docker/ahorro-web.Dockerfile'
+              - 'deploy/docker/ahorro-web.nginx.conf'
+              - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
+            helm:
+              - 'deploy/helm/**'
+            gitops:
+              - 'gitops/**'
+            workflows:
+              - '.github/**'
+
   go:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -37,16 +84,19 @@ jobs:
         with:
           version: v2.13.2
 
-  # One job for both images, not a matrix per service: a matrix renames the
-  # check to "image (<svc>)", and branch protection requires the context
-  # "image", which would then never report and block the merge forever.
-  image:
+  # One job per image, each on its own filter, so a Go change never pays for a
+  # Flutter build. Neither is a matrix: a matrix renames the check to
+  # "image-api (<svc>)", and a renamed context is one branch protection waits
+  # on for ever.
+  image-api:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
     concurrency:
-      group: ci-image-${{ github.event.pull_request.number || github.ref }}
+      group: ci-image-api-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -56,8 +106,7 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Build both architectures without pushing, so a broken Dockerfile fails
-      # the pull request instead of the release. Separate cache scopes: one
-      # shared scope would have the two images evicting each other.
+      # the pull request instead of the release.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -68,6 +117,25 @@ jobs:
           cache-from: type=gha,scope=ahorro-api
           cache-to: type=gha,mode=max,scope=ahorro-api
 
+  image-web:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-image-web-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # A cache scope of its own: one shared scope has the two images evicting
+      # each other.
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -79,6 +147,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=ahorro-web
 
   ui:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -103,6 +173,8 @@ jobs:
       - run: make ui-test
 
   helm:
+    needs: changes
+    if: needs.changes.outputs.helm == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -151,7 +223,74 @@ jobs:
 
       - run: ./scripts/chart-version-check.sh "origin/${{ github.base_ref }}"
 
+  gitops:
+    needs: changes
+    if: needs.changes.outputs.gitops == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-gitops-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: 0.8.0
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+        run: |
+          set -euo pipefail
+          curl -sSLo kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          tar -xzf kubeconform.tar.gz kubeconform
+          sudo mv kubeconform /usr/local/bin/kubeconform
+
+      - run: make gitops-lint
+
+      - run: make gitops-check
+
+  # A released binary with a pinned checksum rather than a third-party action:
+  # the same shape the kubeconform install above already uses.
+  workflows:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-workflows-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          curl -sSLo actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          sudo mv actionlint /usr/local/bin/actionlint
+
+      - run: actionlint -color
+
   repo:
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -186,3 +325,27 @@ jobs:
 
       # Fails closed: no role, no parameter, no green.
       - run: make domain-check
+
+  # The only status check branch protection requires. `if: always()` is
+  # load-bearing: without it this job is skipped whenever any job it needs is
+  # skipped, and a skipped required context never reports, so every pull
+  # request waits for ever. A skipped result passes; a cancelled one must not,
+  # or a cancelled run merges green.
+  ci-ok:
+    needs:
+      - changes
+      - go
+      - image-api
+      - image-web
+      - ui
+      - helm
+      - gitops
+      - workflows
+      - repo
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
