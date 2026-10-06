@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -86,6 +86,10 @@ specs-check:
 ## Check no file and no new commit contains the root domain
 domain-check:
 	@./scripts/domain-guard.sh
+
+## Apply branch protection, the labels and the release environment on GitHub
+repo-settings:
+	@./scripts/repo-settings.sh
 
 ## Print the Cognito pool's public identifiers as JSON
 cognito-config:
