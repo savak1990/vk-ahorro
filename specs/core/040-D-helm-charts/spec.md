@@ -42,8 +42,9 @@ these charts and the values Argo passes in (060).
 5a. `image.tag` MUST accept any tag, not only a SHA. `imagePullPolicy` MUST be derived from the tag — `IfNotPresent` for a 40-character commit SHA, `Always` otherwise — because a node that cached a moving tag never re-pulls it. `image.pullPolicy` MAY override the derived value.
 6. The ConfigMap MUST carry the env values `COGNITO_ISSUER`, `COGNITO_CLIENT_ID` and `CORS_ALLOWED_ORIGINS`, with a checksum annotation on the pod template so a config change restarts the pods. Every value key MUST be a scalar: Argo's `helm.parameters` carries scalar overrides only.
 7. Make targets: `helm-lint`, `helm-template` (renders with a placeholder host), `helm-package` (to `dist/`), `helm-push` (`helm push dist/*.tgz oci://ghcr.io/savak1990/vk-ahorro/charts`). `CHART_VERSION` is read from `Chart.yaml`.
+7a. `helm-package` MUST accept a `--version` override, so one chart source publishes on three channels: `<version>-pr-<n>`, `<version>-main.<sha>` and the clean `<version>` at release (ADR 0009, `docs/delivery.md` §2). The image tag MUST equal the chart version, so one string identifies everything a deployment runs. A version MUST NOT carry `+build` metadata: Helm rewrites `+` to `_` because `+` is illegal in an OCI tag, and the result is no longer valid semver.
 8. `.github/workflows/ci.yml` MUST gain a job that runs `helm lint`, renders the chart, validates the output with `kubeconform -strict` against the Gateway API schemas, and fails when a chart changed but its `version` did not.
-9. `.github/workflows/release.yml` MUST package and push the chart on a merge to `main`, keeping `contents: read` and `packages: write`.
+9. `.github/workflows/deploy.yml` MUST package and push the chart on a merge to `main`, keeping `contents: read` and `packages: write`. *(Renamed from `release.yml` by ADR 0009.)*
 10. GHCR package `charts/ahorro-api` MUST be public so Argo pulls the chart without a secret.
 
 ## Implementation hints

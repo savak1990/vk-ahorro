@@ -1,4 +1,4 @@
-# ADR 0007: The local target, and the stand-in identity it signs in as
+# ADR 0008: The local target, and the stand-in identity it signs in as
 
 ## Status
 

@@ -27,7 +27,7 @@ anything that runs after a merge (`deploy/`).
 ## Requirements
 
 1. `ci.yml` MUST keep a single `pull_request` trigger with no workflow-level `paths` or `paths-ignore`. A skipped workflow leaves a required check pending forever; a job skipped by `if:` reports success.
-2. A first job `changes` MUST run `dorny/paths-filter` (SHA-pinned, core 030 req 8) with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/ahorro-api.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/ahorro-web.Dockerfile`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
+2. A first job `changes` MUST run `dorny/paths-filter` (SHA-pinned, core 030 req 8) with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/ahorro-api.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/ahorro-web.Dockerfile`, `deploy/docker/ahorro-web.nginx.conf`, `deploy/docker/ahorro-web.Dockerfile.dockerignore`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
 
    | Job | Runs when |
    |---|---|
@@ -38,12 +38,15 @@ anything that runs after a merge (`deploy/`).
    | `helm` | `helm` |
    | `gitops` (`make gitops-lint gitops-check`, core 060 req 7) | `gitops` |
    | `repo` | always |
+   | `workflows` (`actionlint`) | `workflows` |
    | `ci-ok` | always |
 
-3. `repo` MUST run `make specs-check`, `make domain-check` and `actionlint` over `.github/workflows/`; it is the only job that needs the OIDC token, so it stays the job that fails on a fork (CLAUDE.md, CI rules).
+   Two corrections from reading the Dockerfiles. The `flutter` filter above gains the nginx config and the dockerignore, which `deploy/docker/ahorro-web.Dockerfile` consumes — without them an nginx-only change skips `image-web`. And the `workflows` filter was defined with no job reading it; `actionlint` moves out of `repo` to consume it, so a workflow edit is checked and a docs-only change is not.
+
+3. `repo` MUST run `make specs-check` and `make domain-check`; it is the only job that needs the OIDC token, so it stays the job that fails on a fork (CLAUDE.md, CI rules). `actionlint` moves to its own job on the `workflows` filter, per the table above.
 4. `ci-ok` MUST declare `needs:` on every other job, run with `if: always()`, and exit non-zero when any `needs.*.result` is `failure` or `cancelled`. A `skipped` result passes. It MUST be the **only** required status check on `main`; the four contexts required today (`go`, `image`, `repo`, `helm`) are removed from the list, and a job rename never touches protection again.
 5. Branch protection on `main` MUST require `ci-ok`, keep `enforce_admins`, linear history, no force-push and no deletion, and require zero approvals: the repository has one or two developers. Squash is already the only merge method and the branch is deleted on merge; the spec records both as required.
-6. Protection, labels and the `release` Environment (020, `deploy/020`) MUST be applied by `make repo-settings`, a one-line target calling `scripts/repo-settings.sh`, which uses `gh api` and is idempotent. A setting clicked in the web UI is not reproducible.
+6. Protection, labels — including `preview`, which `deploy/070` needs and without which the preview workflow has no trigger — and the `release` Environment (`deploy/020`) MUST be applied by `make repo-settings`, a one-line target calling `scripts/repo-settings.sh`, which uses `gh api` and is idempotent. A setting clicked in the web UI is not reproducible.
 7. Each job keeps its own `concurrency` group keyed on the pull request number with `cancel-in-progress: true` (030 shipped this).
 
 ## Implementation hints

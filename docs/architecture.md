@@ -36,8 +36,9 @@ vk-ahorro/
   scripts/                                 specs-check.sh, domain-guard.sh, cognito.sh; later e2e-smoke.sh
   specs/core/                    milestone specs
   docs/architecture.md           this document
+  docs/delivery.md               how a commit becomes a running application
   docs/adr/                      decisions
-  .github/workflows/             ci.yml (pull requests), release.yml (main); actions pinned by commit SHA
+  .github/workflows/             ci.yml (pull requests), deploy.yml (main), preview.yml (the label); actions pinned by commit SHA
   Makefile                                 the only supported entry points
 ```
 
@@ -139,34 +140,34 @@ environment. Mobile builds bake the same keys in with `--dart-define`.
 
 # 6. Build and delivery
 
+**The rules live in [`docs/delivery.md`](delivery.md).** This section is the
+shape only.
+
 ```text
-  commit on main
-       │
-       ▼
-  release.yml (GitHub Actions, no AWS credentials)
-       ├── docker buildx  linux/amd64 + linux/arm64
-       │      ghcr.io/savak1990/vk-ahorro/{ahorro-api,ahorro-web}:<sha>
-       │      ghcr.io/savak1990/vk-ahorro/{ahorro-api,ahorro-web}:main
-       └── helm package + push
-              oci://ghcr.io/savak1990/vk-ahorro/charts/{ahorro-api,ahorro-web}:<chart version>
-                                  │
-                                  ▼
-                       Argo CD reconciles on its next sync (or on operator sync)
+  pull request ──▶ -pr-<n>    ──▶ ahorro-pr    (on the `preview` label)
+  merge        ──▶ -main.<sha>──▶ ahorro-dev   (every merge)
+  release      ──▶ 0.3.0      ──▶ ahorro       (Argo, when the platform pin moves)
 ```
 
-Every image carries the full commit SHA, and `latest` is never built. GHCR
-replaces the ECR that ADR 0015 proposed: the images are public, so the cluster
-needs no pull secret and CI needs no AWS role (ADR 0001).
+Each component carries its own semver, bumped by hand in the pull request
+that changes its chart. The image tag and the chart version are the same
+string, so one version identifies everything a deployment runs. Every image
+also carries its full commit SHA, and `latest` is never built.
 
-GitOps does not pin either of them today. `gitops/values.yaml` names the
-moving `main` tag and the `"*"` chart version, so a bring-up always runs the
-newest build and CI commits nothing back. The cost is that a *running* cluster
-does not pick up a new image — a moving tag leaves the manifest unchanged, so
-Argo creates no pod — and `kubectl -n ahorro rollout restart deploy` is the
-refresh. ADR 0006 records the trade and when to revisit it.
+GHCR replaces the ECR that platform ADR 0015 proposed: the packages are
+public, so the cluster needs no pull secret and CI needs no AWS role for them
+(ADR 0001).
+
+GitOps pins an exact version, never a range. Argo resolves chart versions with
+`Masterminds/semver`, where a constraint carrying no prerelease never matches
+a version that has one, so a range would stop seeing new builds while still
+reporting `Synced`.
 
 Local builds use the same Make targets (`image-build`, `image-push`,
 `helm-push`) with `IMAGE_TAG` defaulting to `git rev-parse HEAD`.
+
+See ADR 0009 for the environments and the versions, and ADR 0010 for how the
+pipeline reaches the cluster.
 
 # 7. GitOps topology
 
@@ -177,9 +178,10 @@ Two-level app-of-apps, split by ownership (platform ADR 0015):
     └── templates/apps/vk-ahorro/
           ├── appproject.yaml     AppProject vk-ahorro  (namespaces ahorro + argocd, sources: this repo + GHCR charts)
           └── application.yaml    Application vk-ahorro (pointer)
-                 source: https://github.com/savak1990/vk-ahorro  path: gitops  targetRevision: main
-                 helm parameters: fqdn = <platform's envoyGateway.fqdn>, target
-                 automated: prune=true, selfHeal=false
+                 source: https://github.com/savak1990/vk-ahorro  path: gitops
+                 targetRevision: <platform's ahorro.targetRevision>
+                 helm parameters: fqdn = <platform's envoyGateway.fqdn>, target, cognito.*
+                 automated: prune=true, selfHeal=true
                         │
                         ▼
   vk-ahorro/gitops (chart "ahorro")
@@ -195,12 +197,14 @@ same parameter shape, so adding one is four lines of values and no new
 template. The client keeps its own template: its parameters are the four keys
 the browser reads, not the backend's shape.
 
-`selfHeal: false` on the pointer is deliberate: the platform's `make full-up`
-creates the app, and after that the operator decides when a new
-`gitops/values.yaml` goes live. **Both child Applications also set
-`selfHeal: false`**, because the operator installs those charts by hand from
-time to time and a reconcile would undo it. A change to `gitops/values.yaml`
-is still a desired-state change and still syncs.
+`selfHeal: true` on the pointer and on both child Applications. It was `false`
+while the operator installed those charts by hand; that work now happens in
+`ahorro-dev` and `ahorro-pr`, which Argo does not watch, so drift in `ahorro`
+is always a mistake and is reverted within about three minutes (ADR 0009).
+
+Argo owns the `ahorro` namespace and nothing else. The pipeline owns
+`ahorro-dev` and `ahorro-pr` and is granted nothing in `ahorro`
+(`docs/delivery.md` §1).
 
 The two child waves order the backend before the client. They are scoped to
 the pointer's own sync and never interact with the platform's waves, which
@@ -234,12 +238,13 @@ in `gitops/values.yaml` exist on GHCR.
 # 10. Invariants
 
 1. No secret, root domain, or `<fqdn>` value in Git. CI greps for the domain.
-2. Images tagged by full commit SHA; `latest` never pushed.
+2. Images tagged by full commit SHA and by their chart's semver; `latest` never pushed. GitOps pins an exact version, never a range (ADR 0009).
 3. One AWS region, `eu-west-1`, as a constant.
 4. Terraform never manages a Kubernetes object; Argo never manages an AWS resource. This repository holds no Terraform at all (ADR 0004).
-5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, `terraform/live/account/ahorro-ci-role/`, `terraform/live/persistent/ahorro-cognito/`, their golden files, and ADRs. This line listed only the first of those until ADR 0004; `ahorro-ci-role` had been in the platform since ADR 0003 and was never recorded here.
+5. Platform changes for this app are limited to `vk-lab-platform/gitops/templates/apps/vk-ahorro/`, `terraform/live/account/ahorro-ci-role/`, `terraform/live/persistent/ahorro-cognito/`, the RBAC that grants the pipeline its two namespaces, the SSM publication of that ServiceAccount's token in `scripts/argo-up.sh`, their golden files, and ADRs. This line listed only the first of those until ADR 0004; `ahorro-ci-role` had been in the platform since ADR 0003 and was never recorded here. The last two arrived with ADR 0010.
 6. `make` targets are the only supported entry points; every target has a doc comment.
 7. Every service verifies tokens itself with the shared `internal/platform/auth` package; no gateway-level auth exists on the platform today.
+8. Argo owns the `ahorro` namespace. The pipeline owns `ahorro-dev` and `ahorro-pr` and is granted nothing in `ahorro` (ADR 0009, ADR 0010).
 
 # 11. Later
 

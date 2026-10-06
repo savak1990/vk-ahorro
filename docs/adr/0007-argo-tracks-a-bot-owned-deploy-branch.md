@@ -2,9 +2,18 @@
 
 ## Status
 
-Accepted
+Superseded by ADR 0009 and ADR 0010.
 
-Amends core spec 060 requirements 5 and 8 and core spec 030 requirement 6.
+Never implemented. The `deploy` branch, its force-push and the `contents:
+write` grant were all dropped: ADR 0009 pins a promoted version instead of a
+branch, and ADR 0010 reverses this ADR's "no cluster access from CI". What
+survives is the reasoning in Context, which is why `main` can never be
+committed to by a workflow, and the rejection of a `pull_request: closed`
+trigger — that one is narrower than it reads, and ADR 0009 records where it
+does not apply.
+
+Amended core spec 060 requirements 5 and 8 and core spec 030 requirement 6;
+`specs/deploy/010` carried the detail and is superseded with it.
 
 ## Context
 

@@ -19,7 +19,7 @@ updated: "2026-09-26"
 What the `go` job proves, expressed as Make targets so CI and a laptop run
 the same commands (constitution §8).
 
-Excludes: image build and push (`deploy/010`); API contract tests against a
+Excludes: image build and push (`deploy/060`); API contract tests against a
 running cluster (`deploy/050`).
 
 ## Requirements
