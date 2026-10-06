@@ -46,18 +46,22 @@ repository plugs in through one pointer `Application` in the platform
 A merge to `main` publishes four artifacts to GHCR, all public:
 
 ```text
-ghcr.io/savak1990/vk-ahorro/ahorro-api:<sha>  and :main
-ghcr.io/savak1990/vk-ahorro/ahorro-web:<sha>  and :main
-oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-api:<chart version>
-oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-web:<chart version>
+ghcr.io/savak1990/vk-ahorro/ahorro-api:<version>  and :<sha>
+ghcr.io/savak1990/vk-ahorro/ahorro-web:<version>  and :<sha>
+oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-api:<version>
+oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-web:<version>
 ```
 
-`gitops/values.yaml` names the moving `main` tag and the `"*"` chart version,
-so a fresh bring-up always runs the newest build and nothing has to be edited
-per release. A cluster that is already running needs
-`kubectl -n ahorro rollout restart deploy` to pick up a new image, because a
-moving tag leaves the manifest unchanged. See
-[ADR 0006](docs/adr/0006-web-delivery-and-the-gitops-chart.md).
+One version names the whole repository and comes from a git tag, so the image
+tag and the chart version are the same string. A pull request publishes
+`<version>-pr-<n>`, a merge publishes `<version>-main.<sha>`, and a release
+publishes the clean `<version>`.
+
+`gitops/values.yaml` pins one exact released version, never a range and never
+a moving tag, so a cluster recreate always returns to a known-good baseline.
+Promoting a new release into `ahorro` is a deliberate edit here followed by a
+one-line pull request in `vk-lab-platform`. See
+[`docs/delivery.md`](docs/delivery.md).
 
 ## Layout
 
