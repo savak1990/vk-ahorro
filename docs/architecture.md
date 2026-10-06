@@ -149,10 +149,12 @@ shape only.
   release      ──▶ 0.3.0      ──▶ ahorro       (Argo, when the platform pin moves)
 ```
 
-Each component carries its own semver, bumped by hand in the pull request
-that changes its chart. The image tag and the chart version are the same
-string, so one version identifies everything a deployment runs. Every image
-also carries its full commit SHA, and `latest` is never built.
+One version number names the whole repository, carried by a git tag. Every
+component is published at it on every channel; only the ones whose inputs
+changed are rebuilt, and the rest have their manifest copied. The image tag
+and the chart version are the same string, so one number identifies
+everything an environment runs. Every image also carries its full commit SHA,
+and `latest` is never built.
 
 GHCR replaces the ECR that platform ADR 0015 proposed: the packages are
 public, so the cluster needs no pull secret and CI needs no AWS role for them

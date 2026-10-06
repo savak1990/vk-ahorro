@@ -75,9 +75,12 @@ This is the shape platform ADR 0015 endorses over ApplicationSet.
 ### 4. Nothing is pinned, for now
 
 > **Closed by ADR 0009.** The interim ended as this decision said it would.
-> Both values are now exact versions, each component carries its own semver,
-> and the contradiction with constitution §5 is resolved by amending that
-> clause rather than by pinning a SHA. The wildcard had a second defect
+> Both values are now exact versions, one version number names the whole
+> repository, and the contradiction with constitution §5 is resolved by
+> amending that clause rather than by pinning a SHA. `chart-version-check.sh`
+> goes with it: the version comes from a git tag, so there is no hand bump to
+> forget, which is what that script existed to catch. The wildcard had a
+> second defect
 > nobody knew of at the time: `"*"` never matches a prerelease, so it would
 > have stopped seeing new builds the moment the version scheme changed.
 
