@@ -62,4 +62,4 @@ these charts and the values Argo passes in (060).
 - The placeholder host appears in no packaged chart and in no committed file.
 - `make helm-push` then `helm pull oci://ghcr.io/savak1990/vk-ahorro/charts/ahorro-api --version <v>` succeeds from a machine with no GitHub login.
 - `helm install` into a kind cluster with the Gateway API CRDs installed (no controller) results in a Ready pod; `kubectl port-forward` answers `/healthz` with `200 {"status":"ok"}`.
-- A pull request that edits the chart without bumping `version` fails CI.
+- `make helm-package CHART=ahorro-api VERSION=0.2.1-pr-42` produces `ahorro-api-0.2.1-pr-42.tgz`, and `helm show chart` of it reports that version. *(Replaces the criterion that a chart edit without a `version` bump fails CI. The version comes from a git tag, so there is no hand bump to forget, and `scripts/chart-version-check.sh` is deleted.)*

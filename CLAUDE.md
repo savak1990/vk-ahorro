@@ -58,11 +58,13 @@ Cognito user pool id and client id are public identifiers and MAY be committed. 
 
 Every image carries the full commit SHA as a tag. `latest` is never built or pushed.
 
-A release also publishes the branch or release-tag name beside the SHA. That moving tag is a convenience for a local run. GitOps references the SHA only, because Argo diffs manifest text: a moving tag leaves the rendered manifest unchanged, so Argo reports `Synced` while the cluster serves an older build.
+One version number names the whole repository, and it comes from a git tag. Every image also carries that version as a tag, and the image tag and the chart version are the same string. GitOps pins that exact version and never a moving tag or a range, because Argo diffs manifest text: a moving tag leaves the rendered manifest unchanged, so Argo reports `Synced` while the cluster serves an older build. A range is worse — `Masterminds/semver` never matches a prerelease, so `"*"` stops resolving new builds while still reporting `Synced`.
+
+`Chart.yaml`'s `version:` is a placeholder. It is overridden at package time with `--version` and is never hand-edited, so there is no bump to forget. `appVersion` carries the image SHA as the audit trail.
 
 A chart derives `imagePullPolicy` from the tag — `IfNotPresent` for a 40-character SHA, `Always` for anything else — because a node that cached a moving tag never pulls it again.
 
-Images and charts both live on GHCR under `ghcr.io/savak1990/vk-ahorro/`. A chart carries a semver `version`; its `appVersion` carries the image SHA. A published chart version is immutable in practice, because Argo pins a `targetRevision` — bump the version whenever a chart changes.
+Images and charts both live on GHCR under `ghcr.io/savak1990/vk-ahorro/`. A published chart version is immutable in practice. The channels, the promotion path and the three environments are written in `docs/delivery.md`.
 
 One region, `eu-west-1`, declared as a constant and never read from an environment variable.
 

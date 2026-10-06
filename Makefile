@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -29,9 +29,14 @@ PLATFORMS := linux/amd64,linux/arm64
 # Chart coordinates. CHART names a directory under deploy/helm.
 CHART ?=
 CHART_DIR = deploy/helm/$(CHART)
-CHART_VERSION = $(shell sed -n 's/^version: *//p' $(CHART_DIR)/Chart.yaml)
 CHARTS_REGISTRY ?= oci://$(REGISTRY)/charts
 DIST_DIR := $(CURDIR)/dist
+
+# One version names the whole repository, derived from the git tag. The
+# Chart.yaml value is a placeholder that keeps `helm lint` quiet; the pipeline
+# always overrides it, so nothing has to remember a hand bump.
+VERSION ?= $(shell ./scripts/version.sh base)
+CHART_VERSION = $(VERSION)
 
 # A documented placeholder. The real hostname exists only at install time.
 TEMPLATE_HOST := api-ahorro.lab.example.com
@@ -91,6 +96,10 @@ domain-check:
 repo-settings:
 	@./scripts/repo-settings.sh
 
+## Print the version the next build publishes under
+version:
+	@echo $(VERSION)
+
 ## Print the Cognito pool's public identifiers as JSON
 cognito-config:
 	@./scripts/cognito.sh config
@@ -144,10 +153,10 @@ helm-template: require-chart
 	@helm template $(CHART) $(CHART_DIR) \
 	  --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG)
 
-## Package one chart into dist/. Usage: make helm-package CHART=ahorro-api
+## Package one chart into dist/. Usage: make helm-package CHART=ahorro-api VERSION=0.2.1-pr-42
 helm-package: require-chart
 	@mkdir -p $(DIST_DIR)
-	helm package $(CHART_DIR) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
+	helm package $(CHART_DIR) --version $(VERSION) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
 
 ## Push one packaged chart to GHCR. Usage: make helm-push CHART=ahorro-api
 helm-push: helm-package
