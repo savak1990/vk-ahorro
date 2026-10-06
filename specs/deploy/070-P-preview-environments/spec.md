@@ -6,7 +6,7 @@ updated: "2026-10-06"
 # 070 — A deployed preview per labeled pull request
 
 **Status note:** Draft. Implements the preview half of
-[ADR 0009](../../../docs/adr/0009-three-environments-and-per-component-versions.md)
+[ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md)
 and [ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md);
 the rules are written in [`docs/delivery.md`](../../../docs/delivery.md) §3.1.
 
@@ -28,7 +28,7 @@ would need a GitHub token living in the cluster. Mobile builds.
 
 ## Requirements
 
-1. Every pull request MUST publish an image and a chart as `<version>-pr-<n>` for each changed component, from `ci.yml`. This happens with or without the label: an artifact that exists is what makes the deployment a single `helm install`.
+1. Every pull request MUST publish an image and a chart as `<version>-pr-<n>` for **every** component, from `ci.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). This happens with or without the label: an artifact that exists is what makes the deployment a single `helm install`, and one version names the whole preview.
 2. Deployment MUST live in a **new** workflow file, `.github/workflows/preview.yml`, and MUST NOT be a job in `ci.yml`. `ci.yml` relies on the default `pull_request` types, so a label event does not re-run it today; its required status checks are maintained by hand, and a context that never reports blocks every merge.
 3. `preview.yml` MUST trigger on `pull_request` types `[labeled, unlabeled, synchronize, closed]` and act only as follows:
 
@@ -70,7 +70,7 @@ event types, which `github.event.pull_request.number` is not.
 
 ## Testing / acceptance criteria
 
-1. Opening a pull request that changes `flutter-ui/` publishes `ahorro-web` as `-pr-<n>` and does not publish `ahorro-api`. No namespace is created.
+1. Opening a pull request that changes `flutter-ui/` **rebuilds** `ahorro-web` and skips the `ahorro-api` build, while publishing both at the same `-pr-<n>`. No namespace is created.
 2. Adding the `preview` label creates `ahorro-pr`, installs the release, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host.
 3. Signing in on that hostname with a real pool user succeeds.
 4. Adding any other label does nothing: no workflow run beyond `ci.yml`, and no change in the cluster.

@@ -6,7 +6,7 @@ updated: "2026-09-26"
 # 020 — The deploy button and the release labels
 
 **Status note:** Draft, and narrowed by
-[ADR 0009](../../../docs/adr/0009-three-environments-and-per-component-versions.md).
+[ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md).
 The `web` half is gone: `deploy/070` deploys a branch with the `preview`
 label, which is a better fit than a dispatch — it is per pull request rather
 than single-slot, and it tears itself down. What remains here is the mobile

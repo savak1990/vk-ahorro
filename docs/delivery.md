@@ -43,24 +43,65 @@ every hostname from it.
 
 # 2. Versions
 
-Each component carries its own semver in its own `Chart.yaml`, bumped by hand
-in the pull request that changes the chart. `scripts/chart-version-check.sh`
-fails a pull request that changes a chart without bumping it.
+**One version number for the whole repository**, carried by a git tag. Every
+component is published at that number on every channel, whether or not it
+changed. `Chart.yaml`'s `version:` is overridden at package time and is never
+hand-edited.
 
 | Event | Version | Published |
 |---|---|---|
-| pull request | `0.3.0-pr-42` | image and chart |
-| merge to `main` | `0.3.0-main.a1b2c3d` | image and chart |
-| release | `0.3.0` | image and chart |
+| pull request | `0.5.1-pr-42` | image and chart, **every component** |
+| merge to `main` | `0.5.1-main.a1b2c3d` | image and chart, **every component** |
+| release | `0.5.1` | image and chart, **every component** |
 
 The image tag and the chart version are the same string. A chart installed at
-`0.3.0-pr-42` therefore pulls the image of the same name with no second flag,
+`0.5.1-pr-42` therefore pulls the image of the same name with no second flag,
 and one version identifies everything a deployment runs.
 
 Every image also carries its full commit SHA as a tag. The SHA is the audit
 trail; the semver is what a human promotes.
 
-## 2.1 A prerelease is not matched by a range
+## 2.1 Publish everything; build only what changed
+
+A component whose inputs did not change is **not rebuilt**. Its existing
+manifest is copied to the new tag:
+
+```sh
+docker buildx imagetools create -t <repo>:0.5.1 <repo>:0.5.0
+```
+
+That is a registry-side operation: no build runs, no layer is re-uploaded, and
+it takes seconds. The chart is repackaged at the new version, which is equally
+cheap.
+
+Change detection therefore still decides what is **built**, which is where the
+cost is, while every channel publishes a complete and coherent set.
+
+Publishing only the changed component was considered and rejected. It leaves
+the two at different numbers, so no single number names what an environment
+runs, the platform pins two values instead of one, and something has to
+remember the unchanged component's current version.
+
+## 2.2 The base is the next version, not the last
+
+A prerelease sorts **below** its release: `0.5.0-main.abc` is older than
+`0.5.0`. A build made after release `0.5.0` therefore cannot be called
+`0.5.0-main.<sha>` — it would claim to predate the release it followed.
+
+The base is the next patch version, derived with `git describe --tags`:
+
+```text
+release        0.5.0
+then merges    0.5.1-main.a1b2c3d
+then PR 42     0.5.1-pr-42
+then release   0.5.1, or 0.6.0 if the change earns a minor
+```
+
+When the release turns out to be `0.6.0`, the builds that preceded it carry
+`0.5.1-*`. That is harmless: nothing pins a prerelease, and nothing resolves
+one by range.
+
+## 2.3 A prerelease is not matched by a range
 
 Argo resolves a chart version with `Masterminds/semver`, and a constraint
 without a prerelease never matches a version with one. The constraint `*`
@@ -69,7 +110,7 @@ matches `0.3.0` and does not match `0.3.0-pr-42`.
 This is why GitOps pins an exact version and never a range. A range would
 silently stop seeing new builds while Argo continued to report `Synced`.
 
-## 2.2 No build metadata
+## 2.4 No build metadata
 
 A version may not carry `+build` metadata. Helm rewrites `+` to `_` because
 `+` is illegal in an OCI tag, and the rewritten string is no longer valid
@@ -77,13 +118,14 @@ semver. The prerelease suffix carries the commit instead.
 
 # 3. The pipeline
 
-Only a component whose inputs changed is built, versioned and published. A
-change under `internal/` never rebuilds the Flutter image.
+Only a component whose inputs changed is **built**. A change under
+`internal/` never rebuilds the Flutter image. Every component is still
+**published** at the channel's version, by the manifest copy of §2.1.
 
 ## 3.1 Pull request
 
-`ci.yml` runs the checks. Each changed component publishes an image and a
-chart as `-pr-<n>`.
+`ci.yml` runs the checks. Every component publishes an image and a chart as
+`-pr-<n>`.
 
 A deployment happens only when the pull request carries the `preview` label.
 That lives in its own workflow file, `preview.yml`, so a label event never
@@ -107,15 +149,19 @@ removing one pull request's own release races nothing.
 
 ## 3.2 Merge to `main`
 
-`deploy.yml` publishes `-main.<sha>` for each changed component and upgrades
-the releases in `ahorro-dev`. Nothing reaches `ahorro`.
+`deploy.yml` publishes `-main.<sha>` for every component and upgrades both
+releases in `ahorro-dev`. Nothing reaches `ahorro`.
+
+Both carry the same version, so the namespace names one build of `main`
+rather than a mixture. That is worth the two seconds a manifest copy costs.
 
 ## 3.3 Release
 
-A normal pull request bumps the chart versions and pins them in
-`gitops/values.yaml`. After it merges, the release action publishes the clean
-version. A pull request in `vk-lab-platform` then bumps the pinned versions,
-and Argo moves `ahorro` on its next sync.
+The release action tags the repository and publishes the clean version for
+every component. `gitops/values.yaml` pins that one version. A pull request
+in `vk-lab-platform` then bumps `ahorro.targetRevision` — **one line**,
+because both components are at the same number — and Argo moves `ahorro` on
+its next sync.
 
 The promotion is deliberate at both ends. Nothing automatic moves `ahorro`.
 
@@ -179,7 +225,8 @@ keeping the package list readable, not about cost.
 1. Argo owns `ahorro`. The pipeline owns `ahorro-dev` and `ahorro-pr`. Neither
    crosses.
 2. GitOps pins an exact chart version, never a range and never a moving tag.
-3. One component, one semver, bumped by hand in the pull request that earns it.
+3. One version number for the whole repository, carried by a git tag. Every
+   component is published at it; only the changed ones are rebuilt.
 4. The image tag and the chart version are the same string.
 5. No hostname, no root domain and no secret is ever committed.
 6. Nothing automatic changes what `ahorro` runs.
