@@ -69,7 +69,12 @@ A kubeconfig built in the job needs the CA as base64 in
 so it cannot be picked up by an upload step.
 
 `git describe --tags --abbrev=0` gives the last release; the patch bump of it
-is the prerelease base. On a repository with no tag yet, start at `0.0.1`.
+is the prerelease base. On a repository with no tag at all the scheme has no
+base, and `scripts/version.sh` MUST fail saying so rather than guess. Seeding
+is a one-off human act: this repository was seeded at `v0.2.0`, matching the
+highest chart version already on GHCR, because a lower base would publish
+*behind* artifacts that already exist. `0.0.1` is correct only for a
+repository that has published nothing.
 
 `docker buildx imagetools create -t <repo>:<new> <repo>:<old>` is the copy for
 an unchanged component. It needs the old tag to exist, so the very first

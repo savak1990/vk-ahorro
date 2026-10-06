@@ -183,7 +183,7 @@ jobs:
       group: ci-helm-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     steps:
-      # The version check diffs against the base commit, so it needs history.
+      # The version comes from the tag history, so the tags must be here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -221,7 +221,16 @@ jobs:
             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             rendered.yaml
 
-      - run: ./scripts/chart-version-check.sh "origin/${{ github.base_ref }}"
+      # Packaging at the pull request's own version is what proves the version
+      # override works before a merge depends on it.
+      - name: Package every chart at the pull request version
+        run: |
+          set -euo pipefail
+          version="$(./scripts/version.sh pr "${{ github.event.pull_request.number }}")"
+          for dir in deploy/helm/*/; do
+            make helm-package CHART="$(basename "${dir%/}")" VERSION="$version"
+          done
+          ls dist/
 
   gitops:
     needs: changes

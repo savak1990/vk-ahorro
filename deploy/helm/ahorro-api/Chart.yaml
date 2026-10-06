@@ -3,5 +3,6 @@ name: ahorro-api
 description: The Ahorro API service - a Deployment, a Service, and an HTTPRoute on the platform gateway.
 type: application
 version: 0.2.0
-# Overwritten at package time with the image tag; the default keeps `helm lint` quiet.
+# A placeholder. The pipeline overrides both with --version and --app-version;
+# the version is a git tag, so there is no hand bump to forget.
 appVersion: "0.1.0"

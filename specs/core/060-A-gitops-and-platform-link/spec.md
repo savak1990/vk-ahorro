@@ -68,5 +68,5 @@ files, and one ADR.
 - In `vk-lab-platform`: `make gitops-check`, `helm lint gitops`, and kubeconform pass with the two new files; the pull request's `pr-gate` check is green.
 - After the platform's `make full-up` (or `make up` on an existing bootstrap): `argocd app get vk-ahorro` is `Synced`/`Healthy`; `argocd app list` shows `ahorro-api` in project `vk-ahorro`; `kubectl -n ahorro get pods` shows one Running pod.
 - `curl https://api-ahorro.<fqdn>/healthz` → 200. The `web` hostname is verified by 105.
-- A merged pull request produces exactly one `release` run and one `[skip ci]` commit; that commit does not start a second run.
+- A merged pull request produces exactly one `deploy` run and **no** commit back to this repository. *(Was: one `release` run and one `[skip ci]` commit. Requirement 8 deleted the commit-back, and ADR 0009 renamed the workflow, so the old criterion contradicted its own spec.)*
 - `make down` then `make up` in the platform recreates the app with no manual step.
