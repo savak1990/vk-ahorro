@@ -41,19 +41,23 @@ local:
 # One Argo Application per backend service. Adding a service is four lines
 # here and no new template; every Go service takes the same parameter shape.
 #
-# chartVersion "*" and tag "main" are deliberate: a bring-up always runs the
-# newest build with no edit. A running cluster does not pick up a new image,
-# because a moving tag leaves the manifest unchanged - use
-# `kubectl -n ahorro rollout restart deploy` for that. See ADR 0006.
+# Every component sits at one released version, and the chart version and the
+# image tag are the same string. This is the baseline a cluster recreate
+# returns to, so it moves only when a human promotes a release here.
+#
+# Never a range and never a moving tag. Argo resolves a chart version with
+# Masterminds/semver, and no constraint matches a prerelease - "*" would stop
+# seeing new builds while still reporting Synced. A moving tag leaves the
+# rendered manifest unchanged, so Argo creates no pod at all.
 services:
   ahorro-api:
-    chartVersion: "*"
-    tag: main
+    chartVersion: "0.2.1"
+    tag: "0.2.1"
     hostPrefix: api-ahorro
     wave: 1
 
 web:
-  chartVersion: "*"
-  tag: main
+  chartVersion: "0.2.1"
+  tag: "0.2.1"
   hostPrefix: ahorro
   wave: 2

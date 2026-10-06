@@ -1,3 +1,24 @@
 {{- if and (ne .Values.target "local") (not .Values.fqdn) -}}
 {{- fail "fqdn is required: the platform passes it in on the pointer Application" -}}
 {{- end -}}
+
+{{/*
+An unpinned render must be impossible rather than merely discouraged. An empty
+chartVersion renders targetRevision: "" and an empty tag renders a parameter
+the API server drops, which Argo then reports OutOfSync for ever.
+*/}}
+{{- range $name, $svc := .Values.services -}}
+{{- if not $svc.chartVersion -}}
+{{- fail (printf "services.%s.chartVersion is required: GitOps pins one exact version" $name) -}}
+{{- end -}}
+{{- if not $svc.tag -}}
+{{- fail (printf "services.%s.tag is required: GitOps pins one exact version" $name) -}}
+{{- end -}}
+{{- end -}}
+
+{{- if not .Values.web.chartVersion -}}
+{{- fail "web.chartVersion is required: GitOps pins one exact version" -}}
+{{- end -}}
+{{- if not .Values.web.tag -}}
+{{- fail "web.tag is required: GitOps pins one exact version" -}}
+{{- end -}}

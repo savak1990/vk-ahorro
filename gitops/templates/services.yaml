@@ -24,7 +24,8 @@ spec:
       # A parameter is omitted rather than passed empty. `value` is optional
       # in the CRD, so the API server drops `value: ""` on write, and Argo
       # then diffs the stored object against a manifest that still has it -
-      # permanent OutOfSync that selfHeal: false never corrects.
+      # permanent OutOfSync, and selfHeal cannot fix it: every re-sync writes the
+      # field and the API server drops it again.
       parameters:
         - name: image.tag
           value: {{ $svc.tag | quote }}
@@ -62,12 +63,11 @@ spec:
     server: https://kubernetes.default.svc
     namespace: {{ $root.Values.namespace }}
   syncPolicy:
-    # selfHeal is off on purpose: the operator installs this chart by hand
-    # from time to time and a reconcile would undo it. A change to this
-    # repository's values is still a desired-state change and does sync.
+    # Hand installs happen in ahorro-dev and ahorro-pr, which Argo does not
+    # watch, so any drift here is a mistake and reverting it is correct.
     automated:
       prune: true
-      selfHeal: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
