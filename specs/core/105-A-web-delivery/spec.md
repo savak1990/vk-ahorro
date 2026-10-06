@@ -38,13 +38,13 @@ the app-of-apps chart the Application lives in (060).
 ## Requirements
 
 1. `deploy/docker/web.Dockerfile`: build stage `ghcr.io/cirruslabs/flutter:<pinned>` with `--platform=$BUILDPLATFORM` running `flutter build web --release`; final stage `nginxinc/nginx-unprivileged:<pinned>` serving `/usr/share/nginx/html` on port 8080 with SPA fallback (`try_files $uri /index.html`) and `Cache-Control: no-store` for `config.json` and `index.html`. `config.json` MUST be replaceable at runtime by a mounted file.
-2. The image MUST be multi-arch (`linux/amd64,linux/arm64`), tagged by the full commit SHA as `ghcr.io/savak1990/vk-ahorro/web:<sha>`, never `latest` (constitution §5). It MUST build through the existing `image-push SVC=web` target with no change to that target (030 requirement 4), and `images-push` MUST gain a `web` line.
+2. The image MUST be multi-arch (`linux/amd64,linux/arm64`), tagged by the full commit SHA as `ghcr.io/savak1990/vk-ahorro/web:<sha>` and by its chart's semver, never `latest` (constitution §5, as amended by ADR 0009). It MUST build through the existing `image-push SVC=web` target with no change to that target (030 requirement 4), and `images-push` MUST gain a `web` line.
 3. `.dockerignore` currently excludes `flutter-ui`, so the build context MUST be corrected before this image can build.
 4. `deploy/helm/web` MUST follow the chart layout 040 establishes: `Chart.yaml`, `values.yaml`, `templates/` with `_helpers.tpl`, `deployment.yaml`, `service.yaml`, `httproute.yaml`, `configmap.yaml` and `NOTES.txt`. Resources: requests `10m/16Mi`, memory limit `64Mi`. Probe path `/`.
 5. The ConfigMap MUST render `config.json` with the keys `apiBaseUrl`, `cognitoUserPoolId`, `cognitoClientId` and `cognitoRegion` (080), mounted at `/usr/share/nginx/html/config.json`, with a checksum annotation on the pod template so a value change restarts the pods.
 6. `host` MUST have no default and `helm template` MUST fail with a clear message when it is empty (constitution §4). `NOTES.txt` MUST NOT print the host.
 7. `gitops/templates/web.yaml` MUST render the second Argo `Application`, and `gitops/values.yaml` MUST gain `charts.web.version`, `images.web.tag` and the four `config.*` keys, with the parameters 060 requirement 3 describes.
-8. `.github/workflows/ci.yml` MUST build the `web` image without pushing it, and `release.yml` MUST push the image and the chart.
+8. `.github/workflows/ci.yml` MUST build the `web` image without pushing it, and `deploy.yml` MUST push the image and the chart. *(Renamed from `release.yml` by ADR 0009. A pull request also publishes a `-pr-<n>` build; see `deploy/070`.)*
 9. GHCR packages `web` and `charts/web` MUST be public so the cluster pulls without a secret.
 
 ## Implementation hints

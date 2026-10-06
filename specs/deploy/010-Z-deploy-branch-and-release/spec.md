@@ -1,12 +1,29 @@
 ---
 id: "DEPLOY-010"
-status: "DRAFT"
-updated: "2026-09-26"
+status: "SUPERSEDED"
+updated: "2026-10-06"
 ---
 # 010 — The `deploy` branch and release on merge
 
-**Status note:** Draft. Replaces core 060 requirement 8 (the `[skip ci]`
-commit to `main`) and core 030 requirement 6's `release.yml`. See
+**Status note:** Superseded, never implemented. Replaced by
+[`deploy/060`](../060-P-versioned-delivery/spec.md) and
+[`deploy/070`](../070-P-preview-environments/spec.md), under
+[ADR 0009](../../../docs/adr/0009-three-environments-and-per-component-versions.md)
+and
+[ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md).
+
+A promoted version replaces the bot-owned branch, so requirement 3's
+`targetRevision: deploy`, requirement 6's force-push and requirement 8's
+`scripts/deploy-branch.sh` are all gone, and with them the `contents: write`
+grant. Requirement 4 — `main` kept unrenderable by empty image tags — is no
+longer needed either: a pinned version renders everywhere.
+
+What survives into 060: the `changes` job of requirement 5, and the reasoning
+in requirement 1 for triggering on `push` to `main` rather than
+`pull_request: closed`.
+
+Originally replaced core 060 requirement 8 (the `[skip ci]` commit to `main`)
+and core 030 requirement 6's `release.yml`. See
 [ADR 0007](../../../docs/adr/0007-argo-tracks-a-bot-owned-deploy-branch.md).
 
 **Complexity:** Medium

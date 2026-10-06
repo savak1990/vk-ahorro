@@ -5,13 +5,19 @@ updated: "2026-09-26"
 ---
 # 020 — The deploy button and the release labels
 
-**Status note:** Draft.
+**Status note:** Draft, and narrowed by
+[ADR 0009](../../../docs/adr/0009-three-environments-and-per-component-versions.md).
+The `web` half is gone: `deploy/070` deploys a branch with the `preview`
+label, which is a better fit than a dispatch — it is per pull request rather
+than single-slot, and it tears itself down. What remains here is the mobile
+half, the two release labels and the `release` Environment. Requirement 8 is
+new and carries the release dispatch that `deploy/060` req 8 defines.
 
 **Complexity:** Small
 **Risk:** Low — the button reuses 010's jobs; the only new surface is three boolean inputs and two labels.
 **Estimated cost:** ~0.5 day
 **Recommended model:** Sonnet.
-**Depends on:** [010-deploy-branch-and-release](../010-P-deploy-branch-and-release/spec.md)
+**Depends on:** [060-versioned-delivery](../060-P-versioned-delivery/spec.md) and [070-preview-environments](../070-P-preview-environments/spec.md), which replaced the superseded [010](../010-Z-deploy-branch-and-release/spec.md)
 **Lifecycle class(es) touched:** Disposable.
 
 ## Scope
@@ -25,9 +31,9 @@ Excludes: what the mobile jobs do (030, 040).
 
 ## Requirements
 
-1. `workflow_dispatch` inputs: `web` (boolean, default `true`), `android` (boolean, default `false`), `ios` (boolean, default `false`). The ref is the branch the operator picks; no `ref` input.
-2. `web` on dispatch MUST run 010's image, chart and `deploy-branch` jobs from the chosen ref, with the `changes` job comparing against `origin/main` so an unchanged service is not rebuilt. The lab then runs that branch until the next merge, which is the intended single-slot behaviour.
-3. On a push to `main`, `web` always runs (010). `android` runs when the merged pull request carried the label `release:android`, `ios` when it carried `release:ios`. A push event carries no labels, so a first step recovers them with one call, `gh api repos/{owner}/{repo}/commits/{sha}/pulls`, and exposes two boolean outputs. No `pull_request_target`, ever.
+1. `workflow_dispatch` inputs: `release` (boolean, default `true`), `android` (boolean, default `false`), `ios` (boolean, default `false`). The ref is the branch the operator picks; no `ref` input. *(Amended by ADR 0009: the input was `web` and meant "deploy this branch to the lab". Deploying a branch is now the `preview` label of `deploy/070`, so the box that remains publishes the clean release version per `deploy/060` req 8.)*
+2. `release` on dispatch MUST publish the clean `<version>` for each component whose `Chart.yaml` version is not yet published, and MUST NOT deploy anything. Promotion into `ahorro` stays a pull request against `vk-lab-platform` (`deploy/060` req 9).
+3. On a push to `main`, the merge path of `deploy/060` req 5 always runs. `android` runs when the merged pull request carried the label `release:android`, `ios` when it carried `release:ios`. A push event carries no labels, so a first step recovers them with one call, `gh api repos/{owner}/{repo}/commits/{sha}/pulls`, and exposes two boolean outputs. No `pull_request_target`, ever.
 4. The two mobile jobs MUST be reusable workflows, `mobile-android.yml` and `mobile-ios.yml`, called with `workflow_call` from both paths so the button and the label run identical code.
 5. Both mobile jobs MUST declare `environment: release`. The Environment holds every signing secret (030, 040) and allows any branch, so a dispatch from a pull request branch can publish a tester build. Who may dispatch is who may push: collaborators only.
 6. `make repo-settings` (ci/010) MUST create the two labels and the `release` Environment; secrets are added by hand once and listed by name in 030 and 040.

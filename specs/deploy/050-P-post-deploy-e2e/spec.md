@@ -13,7 +13,7 @@ below.
 **Risk:** Low — read-only against the cluster; the only write is the platform PR that widens the CI role.
 **Estimated cost:** ~1 day, half of it the platform pull request · AWS runtime: none beyond the running lab.
 **Recommended model:** Sonnet.
-**Depends on:** [010-deploy-branch-and-release](../010-P-deploy-branch-and-release/spec.md), [055-cognito-and-token](../../core/055-D-cognito-and-token/spec.md), [050-cognito](../../core/050-D-cognito/spec.md)
+**Depends on:** [060-versioned-delivery](../060-P-versioned-delivery/spec.md), [055-cognito-and-token](../../core/055-D-cognito-and-token/spec.md), [050-cognito](../../core/050-D-cognito/spec.md)
 **Lifecycle class(es) touched:** None.
 
 ## Scope
