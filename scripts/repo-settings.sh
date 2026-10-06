@@ -22,8 +22,10 @@ echo "REPO-SETTINGS: applying to $REPO"
 #
 # strict stays false: with one developer, forcing every branch up to date
 # before merge only re-runs CI for no new information.
+# PATCH, not PUT: PUT exists only on the parent .../protection and answers 404
+# here, which reads like a missing branch rather than a wrong method.
 echo '{"strict":false,"checks":[{"context":"ci-ok"}]}' |
-  gh api -X PUT "repos/$REPO/branches/$BRANCH/protection/required_status_checks" \
+  gh api -X PATCH "repos/$REPO/branches/$BRANCH/protection/required_status_checks" \
     --input - --silent
 echo "REPO-SETTINGS: required status check is ci-ok"
 
