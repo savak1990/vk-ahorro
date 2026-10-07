@@ -25,15 +25,20 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Exit 2 from kubeconfig.sh means the cluster is not reachable, which is a
-# normal state for a lab that is torn down when unused. The caller decides
-# whether that is a skip or a failure; this script just passes it through.
+# The path is passed in rather than read back from stdout. kubeconfig.sh also
+# writes `::add-mask::` there, and a command substitution would capture that
+# directive into the path instead of letting the runner act on it.
+KUBECONFIG="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ahorro-deploy.kubeconfig"
+export KUBECONFIG
+
+# Exit 2 means the cluster is not reachable, which is a normal state for a lab
+# that is torn down when unused. The caller decides whether that is a skip or
+# a failure; this script just passes it through.
 set +e
-KUBECONFIG_PATH="$("$REPO_ROOT/scripts/kubeconfig.sh")"
+"$REPO_ROOT/scripts/kubeconfig.sh" "$KUBECONFIG"
 status=$?
 set -e
 [ "$status" -eq 0 ] || exit "$status"
-export KUBECONFIG="$KUBECONFIG_PATH"
 
 ssm() {
   local name="$1"
@@ -61,12 +66,12 @@ web_host="$WEB_HOST_LABEL.$fqdn"
 
 echo "DEPLOY-DEV: upgrading $NAMESPACE to $VERSION."
 
-# --atomic rolls back a failed upgrade rather than leaving the namespace half
-# updated; --wait alone would leave the broken release in place.
+# --rollback-on-failure (--atomic before Helm 4.3) restores the previous
+# release rather than leaving the namespace half updated.
 helm upgrade --install ahorro-api "$CHARTS/ahorro-api" \
   --version "$VERSION" \
   --namespace "$NAMESPACE" \
-  --atomic --timeout 5m \
+  --rollback-on-failure --timeout 5m \
   --set image.tag="$VERSION" \
   --set host="$api_host" \
   --set corsAllowedOrigins="https://$web_host" \
@@ -76,7 +81,7 @@ helm upgrade --install ahorro-api "$CHARTS/ahorro-api" \
 helm upgrade --install ahorro-web "$CHARTS/ahorro-web" \
   --version "$VERSION" \
   --namespace "$NAMESPACE" \
-  --atomic --timeout 5m \
+  --rollback-on-failure --timeout 5m \
   --set image.tag="$VERSION" \
   --set host="$web_host" \
   --set config.apiBaseUrl="https://$api_host" \
