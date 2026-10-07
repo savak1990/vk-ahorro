@@ -21,7 +21,7 @@ func TestHelloUsesTheVerifiedClaims(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body is not JSON: %v", err)
 	}
-	if body["message"] != "Hello, user@example.com" {
+	if body["message"] != "Hola, user@example.com" {
 		t.Errorf("message = %q", body["message"])
 	}
 	if body["sub"] != "sub-1" {
@@ -45,7 +45,7 @@ func TestHelloUsesTheStandInIdentityWithoutClaims(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body is not JSON: %v", err)
 	}
-	if body["message"] != "Hello, e2e@vk-ahorro.invalid" {
+	if body["message"] != "Hola, e2e@vk-ahorro.invalid" {
 		t.Errorf("message = %q", body["message"])
 	}
 	if body["sub"] != "00000000-0000-0000-0000-000000000000" {

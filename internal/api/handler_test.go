@@ -50,7 +50,7 @@ func TestHelloWithAuthDisabled(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("body is not JSON: %v", err)
 	}
-	if body["message"] != "Hello, anonymous" {
+	if body["message"] != "Hola, anonymous" {
 		t.Errorf("message = %q", body["message"])
 	}
 }
