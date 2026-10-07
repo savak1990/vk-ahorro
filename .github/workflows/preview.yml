@@ -1,0 +1,294 @@
+# Deploys a labeled pull request into the shared ahorro-pr namespace, and
+# removes it when the label goes or the pull request closes.
+#
+# Its own file, never a job in ci.yml. ci.yml relies on the default
+# pull_request types, so a label event does not re-run it, and its one
+# required status check is maintained by hand - a context that never reports
+# blocks every merge.
+#
+# Every action is pinned to a full commit SHA; see ci.yml for why.
+name: preview
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize, closed]
+
+permissions: {}
+
+# Keyed on the pull request, and never cancelled: a teardown killed half way
+# through leaves a release and a DNS record behind, and nothing else notices.
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: false
+
+jobs:
+  # One place decides what this event means, so no job below repeats the
+  # guard. Any label other than `preview` reaches "none" and nothing runs.
+  decide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      action: ${{ steps.d.outputs.action }}
+      version: ${{ steps.d.outputs.version }}
+      go: ${{ steps.filter.outputs.go }}
+      flutter: ${{ steps.filter.outputs.flutter }}
+    steps:
+      # version.sh reads the tag history, and the copy source below is found
+      # through the log, so the whole history is needed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: d
+        env:
+          EVENT: ${{ github.event.action }}
+          LABEL: ${{ github.event.label.name }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+          PR: ${{ github.event.number }}
+        run: |
+          set -uo pipefail
+          action=none
+          case "$EVENT" in
+            labeled)     [ "$LABEL" = preview ] && action=up ;;
+            unlabeled)   [ "$LABEL" = preview ] && action=down ;;
+            synchronize) [ "$HAS_LABEL" = true ] && action=up ;;
+            # Always, label or not: a close is the last chance to clean up, and
+            # a teardown with nothing to remove succeeds anyway.
+            closed)      action=down ;;
+          esac
+          echo "action=$action" >> "$GITHUB_OUTPUT"
+          if [ "$action" = up ]; then
+            version="$(./scripts/version.sh pr "$PR")"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "### Preview $PR -> \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "version=" >> "$GITHUB_OUTPUT"
+          fi
+          echo "preview: event=$EVENT label=${LABEL:-none} -> $action"
+
+      # Only what changed in this pull request is rebuilt. A component the
+      # pull request did not touch still has an image on main to copy.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: steps.d.outputs.action == 'up'
+        with:
+          filters: |
+            go:
+              - 'cmd/**'
+              - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'deploy/docker/ahorro-api.Dockerfile'
+            flutter:
+              - 'flutter-ui/**'
+              - 'deploy/docker/ahorro-web.Dockerfile'
+              - 'deploy/docker/ahorro-web.nginx.conf'
+              - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
+
+  # Every component is published at the one version, so a single string names
+  # the whole preview. Only what changed is built.
+  images:
+    needs: decide
+    if: needs.decide.outputs.action == 'up'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - svc: ahorro-api
+            changed: ${{ needs.decide.outputs.go }}
+          - svc: ahorro-web
+            changed: ${{ needs.decide.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - if: matrix.changed == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/docker/${{ matrix.svc }}.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          push: true
+          tags: ghcr.io/${{ github.repository }}/${{ matrix.svc }}:${{ needs.decide.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.svc }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.svc }}
+
+      # The pull request did not touch this component, so the commit that last
+      # did is on main and its build pushed an image under that SHA.
+      - if: matrix.changed != 'true'
+        name: Copy the unchanged image to the preview version
+        env:
+          REPO: ghcr.io/${{ github.repository }}/${{ matrix.svc }}
+          VERSION: ${{ needs.decide.outputs.version }}
+          SVC: ${{ matrix.svc }}
+        run: |
+          set -euo pipefail
+          case "$SVC" in
+            ahorro-api) paths="cmd internal go.mod go.sum deploy/docker/ahorro-api.Dockerfile" ;;
+            ahorro-web) paths="flutter-ui deploy/docker/ahorro-web.Dockerfile deploy/docker/ahorro-web.nginx.conf deploy/docker/ahorro-web.Dockerfile.dockerignore" ;;
+            *) echo "no path set for $SVC" >&2; exit 1 ;;
+          esac
+          # shellcheck disable=SC2086
+          src="$(git log -1 --format=%H -- $paths)"
+          [ -n "$src" ] || { echo "no commit ever touched $SVC" >&2; exit 1; }
+          echo "copying $REPO:$src to $REPO:$VERSION"
+          docker buildx imagetools create -t "$REPO:$VERSION" "$REPO:$src"
+
+  charts:
+    needs: [decide, images]
+    if: needs.decide.outputs.action == 'up'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - name: Package and push every chart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          echo "$GITHUB_TOKEN" | helm registry login ghcr.io \
+            --username '${{ github.actor }}' --password-stdin
+          for dir in deploy/helm/*/; do
+            make helm-push CHART="$(basename "${dir%/}")" VERSION="$VERSION"
+          done
+
+  install:
+    needs: [decide, images, charts]
+    if: needs.decide.outputs.action == 'up'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Install the preview
+        env:
+          VERSION: ${{ needs.decide.outputs.version }}
+          PR: ${{ github.event.number }}
+        run: |
+          set -uo pipefail
+          # The script, not `make preview-up`: make collapses every recipe
+          # failure to exit 2, which is the code that means "unreachable" here.
+          PROJECT_NAME="$(make -s print-project)"
+          export PROJECT_NAME
+          # `|| status=$?`, because the default shell is `bash -e`: a bare call
+          # would abort the step and the branches below would never run.
+          status=0
+          ./scripts/preview.sh up "$PR" "$VERSION" || status=$?
+          if [ "$status" -eq 0 ]; then
+            {
+              echo "### Preview $PR is up at \`$VERSION\`"
+              echo
+              echo "Hostname label: \`ahorro-pr-$PR\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$status" -eq 2 ]; then
+            {
+              echo "### Preview $PR was not deployed"
+              echo
+              echo "The cluster is not reachable, so \`$VERSION\` was published"
+              echo "but nothing was installed."
+              echo
+              echo "Run 'make up' in vk-lab-platform, then re-run this job."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::preview $PR was not deployed: the cluster is not reachable. Run 'make up' in vk-lab-platform, then re-run this job."
+            exit 0
+          fi
+          exit "$status"
+
+  # Removing a preview must not depend on anything being published, so this
+  # needs only `decide`. It must also succeed when there is nothing to remove:
+  # unlabelling can arrive for a pull request that was never deployed.
+  teardown:
+    needs: decide
+    if: needs.decide.outputs.action == 'down'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - name: Remove the preview
+        env:
+          PR: ${{ github.event.number }}
+        run: |
+          set -uo pipefail
+          PROJECT_NAME="$(make -s print-project)"
+          export PROJECT_NAME
+          status=0
+          ./scripts/preview.sh down "$PR" || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "### Preview $PR removed" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # A destroyed cluster took every preview with it, so there is nothing
+          # left to remove and that is not a failure.
+          if [ "$status" -eq 2 ]; then
+            {
+              echo "### Preview $PR was already gone"
+              echo
+              echo "The cluster is not reachable, so its releases no longer exist."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::preview $PR was not removed explicitly: the cluster is not reachable, so it is already gone."
+            exit 0
+          fi
+          exit "$status"
