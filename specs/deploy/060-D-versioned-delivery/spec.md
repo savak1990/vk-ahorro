@@ -1,16 +1,20 @@
 ---
 id: "DEPLOY-060"
-status: "IN_REVIEW"
+status: "DONE"
 updated: "2026-10-06"
 ---
 # 060 — Versioned delivery: the channels, `ahorro-dev`, and the release
 
-**Status note:** In review. Everything except the merge path
-itself is implemented and verified live on the hetzner lab (2026-10-07): the
-version scheme, the release channel, the credential chain, and `ahorro-dev`
-serving both components over public TLS with the real user pool. What remains
-unrun is criteria 4, 5 and 9, which need a merge and a cluster rebuild. The
-status flips in the commit that records those, not before.
+**Status note:** Done. Every criterion has been run on the hetzner lab.
+
+The closing evidence (2026-10-07): a Go-only change merged while the cluster was
+**destroyed**. The pipeline derived `0.2.2-main.cf648aa`, rebuilt `ahorro-api`,
+**copied** `ahorro-web` without a build, published both charts, and then
+skipped the deploy in five seconds with a notice naming `make up` - job green,
+because an unreachable lab is the normal state and not a failure. After
+`make up` the credential was republished automatically with a new CA and
+token, the job was re-run unchanged, and an authenticated call against the
+real Cognito pool returned the new greeting.
 
 Replaces [`deploy/010`](../010-Z-deploy-branch-and-release/spec.md),
 which is superseded. Implements
@@ -26,7 +30,7 @@ requirements 5, 6 and 8, core 105 requirements 2 and 8, and constitution §5.
 **Risk:** Medium — a wrong version pin leaves Argo reporting `Synced` over an old build, and a wrong RBAC grant lets the pipeline reach the released environment.
 **Estimated cost:** ~3 days, plus a pull request against `vk-lab-platform`.
 **Recommended model:** Opus.
-**Depends on:** `ci/010-A-change-aware-checks` (the `changes` job and `make repo-settings`), `core/060-A-gitops-and-platform-link`, and the platform spec that creates the `ahorro-deploy` ServiceAccount.
+**Depends on:** `ci/010-D-change-aware-checks` (the `changes` job and `make repo-settings`), `core/060-D-gitops-and-platform-link`, and the platform spec that creates the `ahorro-deploy` ServiceAccount.
 **Lifecycle class(es) touched:** Disposable (the two pipeline-owned namespaces). The SSM parameters the pipeline reads are the platform's persistent and cluster classes.
 
 ## Scope
@@ -98,11 +102,11 @@ release has nothing to copy from and builds everything.
 1. `make helm-package CHART=ahorro-api VERSION=0.5.1-main.abc1234` produces `ahorro-api-0.5.1-main.abc1234.tgz`, and `helm template` of it names the image at the same tag.
 2. `helm template gitops` fails with a clear message when a chart version or an image tag is empty, and renders when both are pinned.
 3. `make gitops-check` passes for both targets and reports no range and no moving tag.
-4. A merge touching only `internal/` **rebuilds** `ahorro-api` and does not rebuild `ahorro-web`, visible as a skipped job. Both are nonetheless **published** at the same `-main.<sha>`, and the web image's digest is unchanged from the previous version.
+4. A merge touching only `internal/` **rebuilds** `ahorro-api` and does not rebuild `ahorro-web`, visible as a skipped job. Both are nonetheless **published** at the same `-main.<sha>`, and the web image's digest is unchanged from the previous version. *(Verified 2026-10-07: the matrix reported `images (ahorro-api, true)` and `images (ahorro-web, false)`, the second taking the `imagetools create` copy path.)*
 5. After that merge, `helm -n ahorro-dev list` shows **both** releases at that one version, and `helm -n ahorro list` is empty of pipeline releases. *(The second half is already true: Argo renders manifests and creates no Helm release, so `helm -n ahorro list` is empty by construction. Verified 2026-10-07.)*
 6. `https://ahorro-dev.<fqdn>` serves `config.json` whose `apiBaseUrl` names `api-ahorro-dev.<fqdn>`, and signing in with a real pool user succeeds. *(Verified 2026-10-07 by `make deploy-dev VERSION=0.2.1`: both releases deployed, both pods Running, both HTTPRoutes `Accepted`, external-dns created a record for each, HTTPS answered 200 with a valid chain on the web host and on `/healthz` of the api host, and `config.json` carried a non-empty `apiBaseUrl` labelled `api-ahorro-dev` plus all three Cognito identifiers. The interactive sign-in is the one half still to be done by hand.)*
 7. `argocd app get vk-ahorro` reports the pinned version, unchanged by the merge.
 8. A `workflow_dispatch` release with bump level `patch` after `0.5.0` tags `v0.5.1`, publishes both components at `0.5.1`, and the resulting platform pull request changes exactly one line. *(Verified 2026-10-07: a `patch` dispatch after `v0.2.0` tagged `v0.2.1`, published both images and both charts at `0.2.1`, and rebuilt neither image - both manifests were copied. `helm pull` of each chart at `0.2.1` succeeded anonymously.)*
 8a. A build published after release `0.5.0` is named `0.5.1-main.<sha>`, and `helm show chart` confirms it sorts **above** `0.5.0`.
-9. `make down` then `make up` returns `ahorro` to the pinned version, and the next merge still deploys — proving the SSM token was republished.
+9. `make down` then `make up` returns `ahorro` to the pinned version, and the next merge still deploys — proving the SSM token was republished. *(Verified 2026-10-07. `make down` left **zero** parameters under `/<project>/cluster/ahorro-deploy/`, so the merge that followed skipped green rather than timing out; `make up` republished all four; the re-run deployed. `ahorro-dev` came back **empty** after the rebuild and filled only on that re-run, because nothing declares its state - that is by design, unlike `ahorro`.)*
 10. `make domain-check` passes with `ROOT_DOMAIN` supplied, and no file in the diff carries a hostname.
