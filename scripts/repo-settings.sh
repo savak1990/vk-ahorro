@@ -63,9 +63,9 @@ add_label() {
   gh label create "$1" --repo "$REPO" --color "$2" --description "$3" --force >/dev/null
   echo "REPO-SETTINGS: label $1"
 }
-add_label preview 0e8a16 "Deploy this pull request to the ahorro-pr namespace"
-add_label release:android 5319e7 "Publish an Android build from the release dispatch"
-add_label release:ios 5319e7 "Publish an iOS build from the release dispatch"
+add_label ci:preview-web 0e8a16 "Deploy this pull request to the ahorro-pr namespace"
+add_label ci:release-android 5319e7 "Publish an Android build from the release dispatch"
+add_label ci:release-ios 5319e7 "Publish an iOS build from the release dispatch"
 
 # The Environment holds the mobile signing secrets, which are added by hand
 # once and named in the deploy specs. Creating it here is what makes

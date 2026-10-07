@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Usage: preview.sh up <pr> <version>
 #        preview.sh down <pr>
+#        preview.sh url <pr>
 #
 # Deploys one pull request into the shared ahorro-pr namespace, on its own
 # hostname, against the real user pool. Many previews coexist there: the
@@ -21,8 +22,8 @@ ACTION="${1:-}"
 PR="${2:-}"
 
 case "$ACTION" in
-  up|down) ;;
-  *) echo "PREVIEW: usage: preview.sh up <pr> <version> | preview.sh down <pr>" >&2; exit 1 ;;
+  up|down|url) ;;
+  *) echo "PREVIEW: usage: preview.sh up <pr> <version> | down <pr> | url <pr>" >&2; exit 1 ;;
 esac
 
 # A pull request number, not a branch name: it is the only identifier that is
@@ -43,6 +44,27 @@ API_HOST_LABEL="api-ahorro-pr-$PR"
 WEB_HOST_LABEL="ahorro-pr-$PR"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+ssm() {
+  local name="$1"
+  local value
+  if ! value="$(aws ssm get-parameter --region "$REGION" \
+    --name "$name" --query Parameter.Value --output text 2>/dev/null)"; then
+    echo "PREVIEW: no SSM parameter $name." >&2
+    echo "PREVIEW: PROJECT_NAME=$PROJECT_NAME. Has that project's persistent layer been applied?" >&2
+    exit 1
+  fi
+  printf '%s' "$value"
+}
+
+# Prints the clickable URL, which the workflow deliberately never does: the
+# lab domain must not reach a public pull request comment or a CI log. Run it
+# on your own machine, where the output is not public. Needs no cluster.
+if [ "$ACTION" = url ]; then
+  printf 'https://%s.%s\n' "$WEB_HOST_LABEL" \
+    "$(ssm "/$PROJECT_NAME/cluster/ahorro-deploy/fqdn")"
+  exit 0
+fi
 
 # The path is passed in rather than read back from stdout. kubeconfig.sh also
 # writes `::add-mask::` there, and a command substitution would capture that
@@ -77,18 +99,6 @@ if [ -z "$VERSION" ]; then
   echo "PREVIEW: usage: preview.sh up <pr> <version>, for example: preview.sh up 42 0.2.3-pr-42" >&2
   exit 1
 fi
-
-ssm() {
-  local name="$1"
-  local value
-  if ! value="$(aws ssm get-parameter --region "$REGION" \
-    --name "$name" --query Parameter.Value --output text 2>/dev/null)"; then
-    echo "PREVIEW: no SSM parameter $name." >&2
-    echo "PREVIEW: PROJECT_NAME=$PROJECT_NAME. Has that project's persistent layer been applied?" >&2
-    exit 1
-  fi
-  printf '%s' "$value"
-}
 
 # The domain is published beside the deploy credential: this role cannot read
 # the bootstrap parameter it comes from. Never echoed.
