@@ -1,20 +1,17 @@
 ---
 id: "CI-010"
-status: "IN_REVIEW"
+status: "DONE"
 updated: "2026-09-26"
 ---
 # 010 — Change-aware checks and branch protection
 
-**Status note:** In review. Every requirement ships and is merged: the
+**Status note:** Done. Every requirement ships and is merged: the
 `changes` job, the nine-job graph, `actionlint` as its own job, `ci-ok` with
 `if: always()`, and `make repo-settings`. Requirement 5 is verified live —
 `gh api .../branches/main/protection --jq .required_status_checks.contexts`
 returns `["ci-ok"]`.
 
-Not `DONE`, because three acceptance criteria have never been run: the timed
-docs-only pull request, the filter-skip pull request, and the failing-test
-check. Each needs a throwaway pull request, and a status ahead of its own
-evidence is what the constitution forbids.
+The three remaining criteria were run on 2026-10-07 and are annotated below.
 
 **Status note:** Draft. First spec of the `ci/` group; every other `ci/` and
 `deploy/` spec adds jobs to the workflow this one shapes.
@@ -69,8 +66,8 @@ anything that runs after a merge (`deploy/`).
 
 ## Testing / acceptance criteria
 
-- A pull request touching only `docs/` runs `changes`, `repo` and `ci-ok`; the run finishes in under 2 minutes.
-- A pull request touching only `internal/` runs `go` and `image-api` and skips `ui`, `image-web`, `helm`, `gitops`; `ci-ok` is green.
-- A pull request with a failing Go test makes `ci-ok` red and the merge button disabled.
+- A pull request touching only `docs/` runs `changes`, `repo` and `ci-ok`; the run finishes in under 2 minutes. *(Verified 2026-10-07 on a specs-only pull request, which is outside every filter exactly as `docs/` is: seven of ten jobs skipped and the whole run took **27 seconds**.)*
+- A pull request touching only `internal/` runs `go` and `image-api` and skips `ui`, `image-web`, `helm`, `gitops`; `ci-ok` is green. *(Verified 2026-10-07: `changes`, `go`, `image-api`, `repo` and `ci-ok` ran; `ui`, `image-web`, `helm`, `gitops` and `workflows` all skipped.)*
+- A pull request with a failing Go test makes `ci-ok` red and the merge button disabled. *(Verified 2026-10-07 by pushing a greeting change with its three tests deliberately left expecting the old wording: `go` failed, `ci-ok` failed, and `mergeStateStatus` was `BLOCKED`.)*
 - `gh api repos/savak1990/vk-ahorro/branches/main/protection --jq .required_status_checks.contexts` prints `["ci-ok"]`.
 - `make repo-settings` twice in a row: the second run changes nothing.

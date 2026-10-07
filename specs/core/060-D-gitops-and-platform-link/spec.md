@@ -1,14 +1,20 @@
 ---
 id: "CORE-060"
-status: "IN_PROGRESS"
+status: "DONE"
 updated: "2026-09-26"
 ---
 # 060 — GitOps chart and the platform pointer
 
-**Status note:** In progress. The `gitops/` chart, its Make targets and the
-`ahorro-api` and `ahorro-web` Applications ship. The platform half - the
-pointer, the `AppProject` and the `argo-up.sh` threading - is a separate pull
-request against `vk-lab-platform`.
+**Status note:** Done. The `gitops/` chart, its Make targets and the
+`ahorro-api` and `ahorro-web` Applications ship, and the platform half - the
+pointer, the `AppProject` and the `argo-up.sh` threading - is merged in
+`vk-lab-platform`.
+
+Closed on 2026-10-07 by a full `make down` / `make up` cycle on the hetzner lab:
+the cluster was destroyed and rebuilt, and Argo restored both Applications at
+the pinned `0.2.1` with no manual step. That is only possible because
+`gitops/values.yaml` pins an exact version; under the old `chartVersion: "*"`
+the rebuild would have returned whatever `main` last published.
 
 Five requirements are not implemented as written; see
 [ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).
@@ -67,6 +73,6 @@ files, and one ADR.
 - `make gitops-template` renders **two** `Application` objects, `ahorro-api` and `ahorro-web`; `helm template gitops` without `fqdn` fails. *(Was "exactly one". 105 req 7 added the web Application, so one was never going to be right. Both halves verified 2026-10-07.)*
 - In `vk-lab-platform`: `make gitops-check`, `helm lint gitops`, and kubeconform pass with the two new files; the pull request's `pr-gate` check is green.
 - After the platform's `make full-up` (or `make up` on an existing bootstrap): `argocd app get vk-ahorro` is `Synced`/`Healthy`; `argocd app list` shows `ahorro-api` in project `vk-ahorro`; `kubectl -n ahorro get pods` shows one Running pod.
-- `curl https://api-ahorro.<fqdn>/healthz` → 200. The `web` hostname is verified by 105.
+- `curl https://api-ahorro.<fqdn>/healthz` → 200. The `web` hostname is verified by 105. *(Verified 2026-10-07, before and after the rebuild.)*
 - A merged pull request produces exactly one `deploy` run and **no** commit back to this repository. *(Was: one `release` run and one `[skip ci]` commit. Requirement 8 deleted the commit-back, and ADR 0009 renamed the workflow, so the old criterion contradicted its own spec.)*
-- `make down` then `make up` in the platform recreates the app with no manual step.
+- `make down` then `make up` in the platform recreates the app with no manual step. *(Verified 2026-10-07: after the rebuild, `kubectl -n ahorro get deploy` showed both components at `0.2.1` and Ready, with no human action between `make up` finishing and the check.)*
