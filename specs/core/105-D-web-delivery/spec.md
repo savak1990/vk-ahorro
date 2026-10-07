@@ -1,12 +1,19 @@
 ---
 id: "CORE-105"
-status: "IN_PROGRESS"
+status: "DONE"
 updated: "2026-09-26"
 ---
 # 105 — Web delivery: the image, the chart, and the Argo Application
 
-**Status note:** In progress. The `ahorro-web` image, its chart and its Argo
+**Status note:** Done. The `ahorro-web` image, its chart and its Argo
 `Application` ship, and the Flutter client reads `config.json` at startup.
+
+The last criterion was closed on 2026-10-07, after a full cluster rebuild: the web
+pod is Running in namespace `ahorro` and the application answers over its
+public hostname with HTTPS 200 and a valid certificate chain. A deep link to
+`/settings` returns the application rather than a 404, and `index.html` and
+`config.json` both carry `Cache-Control: no-store`. The published image is a
+multi-architecture index listing `amd64` and `arm64`.
 Both are on GHCR and both packages are public: release `0.2.1` published the
 image and the chart, and `helm pull` of the chart succeeds from a machine with
 no GitHub login (verified 2026-10-07). The one criterion still unrun is the
@@ -64,4 +71,4 @@ the app-of-apps chart the Application lives in (060).
 - `make helm-lint` and `make helm-template CHART=web` pass, and the rendered output passes `kubeconform -strict`.
 - `helm template deploy/helm/web` without `--set host=...` fails with "host is required".
 - `docker pull` and `helm pull` of the web artifacts work from a machine with no GitHub login.
-- After the platform syncs: `kubectl -n ahorro get pods` shows the `web` pod Running, and the app answers over its public hostname.
+- After the platform syncs: `kubectl -n ahorro get pods` shows the `ahorro-web` pod Running, and the app answers over its public hostname. *(Verified 2026-10-07 after a `make down` / `make up` cycle: HTTPS 200 with `ssl_verify_result 0`, `/settings` returns the application, and both `index.html` and `config.json` answer `Cache-Control: no-store`.)*

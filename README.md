@@ -29,7 +29,8 @@ rebuilt.
 | 080 | Flutter runtime config and the "+" → hello call | config and call done, `ui-config` planned |
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | mostly done |
-| 105 | Web delivery: image, chart, Argo Application | in progress |
+| 120 | Imported app cleanup | done |
+| 105 | Web delivery: image, chart, Argo Application | done |
 | 107 | The local target runs both apps in kind | in progress |
 | 110 | End-to-end verification | superseded by `ci/040` and `deploy/050` |
 
