@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -107,6 +107,14 @@ print-project:
 ## Upgrade both releases in ahorro-dev. Usage: make deploy-dev VERSION=0.2.2-main.abc1234
 deploy-dev:
 	@./scripts/deploy-dev.sh $(VERSION)
+
+## Deploy one pull request to ahorro-pr. Usage: make preview-up PR=42 VERSION=0.2.3-pr-42
+preview-up:
+	@./scripts/preview.sh up $(PR) $(VERSION)
+
+## Remove one pull request from ahorro-pr. Usage: make preview-down PR=42
+preview-down:
+	@./scripts/preview.sh down $(PR)
 
 ## Write a kubeconfig for the ahorro-dev deploy credential and print its path
 kubeconfig:
