@@ -11,7 +11,7 @@ name: preview
 
 on:
   pull_request:
-    types: [labeled, unlabeled, synchronize, closed]
+    types: [opened, labeled, unlabeled, synchronize, closed]
 
 permissions: {}
 
@@ -32,44 +32,55 @@ jobs:
       pull-requests: read
     outputs:
       action: ${{ steps.d.outputs.action }}
-      version: ${{ steps.d.outputs.version }}
+      version: ${{ steps.v.outputs.version }}
       go: ${{ steps.filter.outputs.go }}
       flutter: ${{ steps.filter.outputs.flutter }}
     steps:
-      # version.sh reads the tag history, and the copy source below is found
-      # through the log, so the whole history is needed.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
+      # Decided from the event payload alone, before any checkout. Most events
+      # this workflow sees are a push to a pull request nobody has labeled, and
+      # those must not pay for a full-history clone to conclude "do nothing".
       - id: d
         env:
           EVENT: ${{ github.event.action }}
           LABEL: ${{ github.event.label.name }}
           HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:preview-web') }}
-          PR: ${{ github.event.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -uo pipefail
           action=none
           case "$EVENT" in
             labeled)     [ "$LABEL" = ci:preview-web ] && action=up ;;
             unlabeled)   [ "$LABEL" = ci:preview-web ] && action=down ;;
+            # A pull request opened with the label already on it, which happens
+            # when it is created through the API or from a template, would
+            # otherwise need the label removed and re-added to deploy.
+            opened)      [ "$HAS_LABEL" = true ] && action=up ;;
             synchronize) [ "$HAS_LABEL" = true ] && action=up ;;
             # Always, label or not: a close is the last chance to clean up, and
             # a teardown with nothing to remove succeeds anyway.
             closed)      action=down ;;
           esac
           echo "action=$action" >> "$GITHUB_OUTPUT"
-          if [ "$action" = up ]; then
-            version="$(./scripts/version.sh pr "$PR" "$HEAD_SHA")"
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "### Preview $PR -> \`$version\`" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "version=" >> "$GITHUB_OUTPUT"
-          fi
           echo "preview: event=$EVENT label=${LABEL:-none} -> $action"
+
+      # version.sh reads the tag history, and the copy source in `images` is
+      # found through the log, so when there is work to do the whole history
+      # is needed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.d.outputs.action == 'up'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: v
+        if: steps.d.outputs.action == 'up'
+        env:
+          PR: ${{ github.event.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          version="$(./scripts/version.sh pr "$PR" "$HEAD_SHA")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### Preview $PR -> \`$version\`" >> "$GITHUB_STEP_SUMMARY"
 
       # Only what changed in this pull request is rebuilt. A component the
       # pull request did not touch still has an image on main to copy.

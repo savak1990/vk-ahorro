@@ -31,16 +31,19 @@ would need a GitHub token living in the cluster. Mobile builds.
 1. A **labeled** pull request MUST publish an image and a chart as `<version>-pr-<n>.<short-sha>` for **every** component, from `preview.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). One version names the whole preview, and the commit is part of it (`deploy/060` req 2b) so a second push actually rolls the pods.
 1a. `ci.yml` MUST NOT publish anything and MUST NOT hold `packages: write`. *(Amended: requirement 1 originally published from `ci.yml` on every pull request. Three reasons it cannot. A fork's `GITHUB_TOKEN` is read-only, so the push would fail there, and today only the `repo` job fails on a fork, deliberately. Both image jobs and the `helm` job are gated on the `changes` filter, so a Go-only pull request packages no chart at all - "every component" would need all three gates reworked. And every pull request that nobody previews would leave four artifacts behind that cannot be deleted; see req 8.)*
 2. Deployment MUST live in a **new** workflow file, `.github/workflows/preview.yml`, and MUST NOT be a job in `ci.yml`. `ci.yml` relies on the default `pull_request` types, so a label event does not re-run it today; its required status checks are maintained by hand, and a context that never reports blocks every merge.
-3. `preview.yml` MUST trigger on `pull_request` types `[labeled, unlabeled, synchronize, closed]` and act only as follows:
+3. `preview.yml` MUST trigger on `pull_request` types `[opened, labeled, unlabeled, synchronize, closed]` and act only as follows:
 
    | Event | Condition | Action |
    |---|---|---|
    | `labeled` | `github.event.label.name == 'ci:preview-web'` | install |
+   | `opened` | the pull request carries `ci:preview-web` | install |
    | `synchronize` | the pull request carries `ci:preview-web` | upgrade |
-   | `unlabeled` | `github.event.label.name == 'ci:preview-web'` | uninstall and delete artifacts |
-   | `closed` | always | the same |
+   | `unlabeled` | `github.event.label.name == 'ci:preview-web'` | uninstall |
+   | `closed` | always | uninstall |
 
    Any other label MUST do nothing at all.
+3a. `opened` is in the list because a pull request created with the label already on it - through the API, or from a template that applies labels - emits no `labeled` event, so it would otherwise need the label removed and re-added before it deployed. *(Amended: the original list omitted `opened`.)*
+3b. The action MUST be decided from the event payload **before** any checkout, and the checkout MUST be conditional on there being work to do. Most events this workflow sees are a push to a pull request nobody labeled, and those must not pay for a full-history clone to conclude "do nothing" - the same principle as the `changes` job in `ci/010`.
 4. The label MUST be `ci:preview-web`, created by `make repo-settings` (`ci/010` req 6). A comment trigger MUST NOT be used: `issue_comment` fires on every issue in the repository, runs the workflow file from the default branch rather than the pull request head, and carries no state, so a release nobody cleaned up becomes invisible.
 5. Releases MUST share one namespace, `ahorro-pr`, and MUST be named `pr-<n>-api` and `pr-<n>-web`. `svc.fullname` is `{{- if eq .Release.Name (include "svc.name" .) }}` - **exact equality**, not `contains` - so these render as `pr-42-api-ahorro-api`. The helper MUST NOT be changed to `contains`: it would rename every live object in `ahorro`. *(Amended: the original text said "named per pull request" and cited `<release>-<chart>`, which does not survive two components sharing one number - both would have been `pr-42`.)*
 6. Hostnames MUST be `ahorro-pr-<n>.<fqdn>` — exactly one label below the domain. The platform's wildcard certificate and the external-dns domain filter are both single-label, so `pr-42.ahorro.<fqdn>` would have neither TLS nor DNS.

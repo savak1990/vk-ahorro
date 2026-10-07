@@ -155,13 +155,24 @@ one of which failing to report blocks every merge.
 | Event | Condition | Action |
 |---|---|---|
 | `labeled` | the label is `ci:preview-web` | install into `ahorro-pr` |
+| `opened` | the pull request already carries it | install |
 | `synchronize` | the pull request carries `ci:preview-web` | upgrade that release |
-| `unlabeled` | the label is `ci:preview-web` | uninstall, and delete the published versions |
+| `unlabeled` | the label is `ci:preview-web` | uninstall |
 | `closed` | always | the same |
 
 The label is state, not an event: it answers "is this pull request deployed
 right now" by looking at the pull request, so a release nobody cleaned up is
 visible. `make repo-settings` creates the label.
+
+`opened` is there because a pull request created with the label already on it
+emits no `labeled` event, and would otherwise need the label removed and
+re-added before anything happened.
+
+**Nothing is published without the label.** `ci.yml` builds both images to
+prove the Dockerfiles work and pushes neither, and it holds no
+`packages: write`, so it cannot push even by mistake. Artifacts exist only for
+pull requests somebody actually previewed - which is also why they are never
+deleted automatically (§3.1 and `deploy/070` req 8b).
 
 Tearing down on `closed` is safe here. ADR 0007 rejected a `pull_request:
 closed` trigger because it would race a second merge for a shared branch;
