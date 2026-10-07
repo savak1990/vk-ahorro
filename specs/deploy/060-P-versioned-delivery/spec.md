@@ -5,7 +5,12 @@ updated: "2026-10-06"
 ---
 # 060 — Versioned delivery: the channels, `ahorro-dev`, and the release
 
-**Status note:** Draft. Replaces [`deploy/010`](../010-Z-deploy-branch-and-release/spec.md),
+**Status note:** Draft, and nearly closed. Everything except the merge path
+itself is implemented and verified live on the hetzner lab (2026-10-07): the
+version scheme, the release channel, the credential chain, and `ahorro-dev`
+serving both components over public TLS with the real user pool. What remains
+unrun is criteria 4, 5 and 9, which need a merge and a cluster rebuild. The
+status flips in the commit that records those, not before. Replaces [`deploy/010`](../010-Z-deploy-branch-and-release/spec.md),
 which is superseded. Implements
 [ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md)
 and [ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md);
@@ -45,12 +50,15 @@ platform-side ServiceAccount, RBAC and SSM publication, which are a spec in
 3. `gitops/values.yaml` MUST pin an exact version for every chart and every image, and MUST NOT use a range or a moving tag. `gitops/templates/validate.yaml` MUST `fail` when any of them is empty, so an unpinned render is impossible rather than merely discouraged.
 4. `.github/workflows/release.yml` MUST be renamed `deploy.yml`. It MUST gain the `changes` job of `ci/010` req 2, which decides what is rebuilt.
 5. On a push to `main`, `deploy.yml` MUST publish `<version>-main.<short-sha>` for **every** component, then `helm upgrade --install` both releases into namespace `ahorro-dev`. It MUST NOT touch namespace `ahorro`. Both releases carry the same version, so the namespace names one build of `main` rather than a mixture.
-6. The pipeline MUST obtain cluster access by assuming `ahorro-ci-role` through OIDC and reading `/<project>/cluster/ahorro-deploy/{token,ca,endpoint}` from SSM, building a kubeconfig in the workspace. No kubeconfig and no token is persisted between runs, and none is stored as a GitHub secret: the cluster is disposable, so a stored credential dies at the next `make up` (ADR 0010).
-7. The pipeline MUST read the root domain from `/account/root_domain` and build `host`, `config.apiBaseUrl` and `corsAllowedOrigins` from it. It MUST read the Cognito identifiers from `/<project>/persistent/ahorro-cognito/` and pass them, so `ahorro-dev` signs in against the real user pool. No hostname and no domain is committed (constitution §4).
+6. The pipeline MUST obtain cluster access by assuming `ahorro-ci-role` through OIDC and reading `/<project>/cluster/ahorro-deploy/{token,ca,endpoint}` from SSM, building a kubeconfig under `$RUNNER_TEMP` and **never the workspace**, where an upload step could sweep it up. No kubeconfig and no token is persisted between runs, and none is stored as a GitHub secret: the cluster is disposable, so a stored credential dies at the next `make up` (ADR 0010).
+6a. The kubeconfig builder MUST preflight the cluster with a ten-second timeout and MUST exit with a **distinct status** when it is unreachable, so the caller can tell *the lab is down* from *the deploy is broken*. A missing parameter MUST report the same way: the platform deletes the credential on teardown, so absent means destroyed.
+6b. An unreachable cluster MUST be reported loudly and leave the job **green**; any other failure MUST fail it. The lab is deliberately torn down when unused, so unreachable is the normal state, and a red run on every merge trains everyone to ignore the colour.
+6c. CI MUST invoke `scripts/deploy-dev.sh` directly, **never** `make deploy-dev`. GNU make collapses every recipe failure to exit 2, which is the very status 6a reserves for *unreachable* - going through make would report a broken deploy as a skip and leave the job green.
+7. The pipeline MUST read the lab domain from `/<project>/cluster/ahorro-deploy/fqdn` and build `host`, `config.apiBaseUrl` and `corsAllowedOrigins` from it. *(Amended: an earlier draft said `/account/root_domain`. That parameter holds the account root, and the project's domain carries one more label; `ahorro-ci-role` can read neither the project fqdn parameter nor the subdomain it is composed from, so there is nothing to compose. The platform publishes a copy beside the deploy credential, which the role's existing wildcard already covers - vk-lab-platform spec `shared/049` req 4a.)* It MUST read the Cognito identifiers from `/<project>/persistent/ahorro-cognito/` and pass them, so `ahorro-dev` signs in against the real user pool. No hostname and no domain is committed (constitution §4).
 8. A release MUST be a `workflow_dispatch` on `deploy.yml` that tags the repository and publishes the clean `<version>` for **every** component. It MUST take only the bump level — patch, minor or major — never a version string, so the number is always derivable from the tag history.
 9. Promotion into `ahorro` MUST be a pull request against `vk-lab-platform` that bumps `ahorro.targetRevision`. It MUST be **one line**, because every component is at the same version. Nothing automatic MUST move it.
 10. Both child Applications and the platform pointer MUST set `selfHeal: true` (core 060 req 6, as amended). `prune: true` stays.
-11. Make targets MUST cover every pipeline action, so each runs from a laptop with the operator's own credentials: `deploy-dev` and the `deploy/070` preview pair. The Makefile keeps one line per recipe; the logic goes to `scripts/`.
+11. Make targets MUST cover every pipeline action, so each runs from a laptop with the operator's own credentials: `deploy-dev`, `kubeconfig` and the `deploy/070` preview pair. Each recipe is one line and the logic goes to `scripts/`, which is also what lets CI call the script directly per 6c.
 
 ## Implementation hints
 
@@ -86,10 +94,10 @@ release has nothing to copy from and builds everything.
 2. `helm template gitops` fails with a clear message when a chart version or an image tag is empty, and renders when both are pinned.
 3. `make gitops-check` passes for both targets and reports no range and no moving tag.
 4. A merge touching only `internal/` **rebuilds** `ahorro-api` and does not rebuild `ahorro-web`, visible as a skipped job. Both are nonetheless **published** at the same `-main.<sha>`, and the web image's digest is unchanged from the previous version.
-5. After that merge, `helm -n ahorro-dev list` shows **both** releases at that one version, and `helm -n ahorro list` is empty of pipeline releases.
-6. `https://ahorro-dev.<fqdn>` serves `config.json` whose `apiBaseUrl` names `api-ahorro-dev.<fqdn>`, and signing in with a real pool user succeeds.
+5. After that merge, `helm -n ahorro-dev list` shows **both** releases at that one version, and `helm -n ahorro list` is empty of pipeline releases. *(The second half is already true: Argo renders manifests and creates no Helm release, so `helm -n ahorro list` is empty by construction. Verified 2026-10-07.)*
+6. `https://ahorro-dev.<fqdn>` serves `config.json` whose `apiBaseUrl` names `api-ahorro-dev.<fqdn>`, and signing in with a real pool user succeeds. *(Verified 2026-10-07 by `make deploy-dev VERSION=0.2.1`: both releases deployed, both pods Running, both HTTPRoutes `Accepted`, external-dns created a record for each, HTTPS answered 200 with a valid chain on the web host and on `/healthz` of the api host, and `config.json` carried a non-empty `apiBaseUrl` labelled `api-ahorro-dev` plus all three Cognito identifiers. The interactive sign-in is the one half still to be done by hand.)*
 7. `argocd app get vk-ahorro` reports the pinned version, unchanged by the merge.
-8. A `workflow_dispatch` release with bump level `patch` after `0.5.0` tags `v0.5.1`, publishes both components at `0.5.1`, and the resulting platform pull request changes exactly one line.
+8. A `workflow_dispatch` release with bump level `patch` after `0.5.0` tags `v0.5.1`, publishes both components at `0.5.1`, and the resulting platform pull request changes exactly one line. *(Verified 2026-10-07: a `patch` dispatch after `v0.2.0` tagged `v0.2.1`, published both images and both charts at `0.2.1`, and rebuilt neither image - both manifests were copied. `helm pull` of each chart at `0.2.1` succeeded anonymously.)*
 8a. A build published after release `0.5.0` is named `0.5.1-main.<sha>`, and `helm show chart` confirms it sorts **above** `0.5.0`.
 9. `make down` then `make up` returns `ahorro` to the pinned version, and the next merge still deploys — proving the SSM token was republished.
 10. `make domain-check` passes with `ROOT_DOMAIN` supplied, and no file in the diff carries a hostname.

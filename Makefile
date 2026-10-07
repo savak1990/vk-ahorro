@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -99,6 +99,18 @@ repo-settings:
 ## Print the version the next build publishes under
 version:
 	@echo $(VERSION)
+
+## Print the platform project this repository targets
+print-project:
+	@echo $(PROJECT_NAME)
+
+## Upgrade both releases in ahorro-dev. Usage: make deploy-dev VERSION=0.2.2-main.abc1234
+deploy-dev:
+	@./scripts/deploy-dev.sh $(VERSION)
+
+## Write a kubeconfig for the ahorro-dev deploy credential and print its path
+kubeconfig:
+	@./scripts/kubeconfig.sh
 
 ## Print the Cognito pool's public identifiers as JSON
 cognito-config:
