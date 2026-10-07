@@ -22,7 +22,7 @@ func helloHandler(cfg Config) http.HandlerFunc {
 			name, sub = claims.Email, claims.Subject
 		}
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{
-			"message": "Hello, " + name,
+			"message": "Hola, " + name,
 			"sub":     sub,
 		})
 	}
