@@ -1,6 +1,6 @@
 ---
 id: "CORE-120"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-09-25"
 ---
 # 120 — Imported app cleanup
@@ -84,4 +84,4 @@ overlap between `lib/src/widgets/typography.dart` and
   they are not defects.)*
 - `grep -c "platform:" flutter-ui/.metadata` returns 4 (root, android, ios, web).
 - `analysis_options.yaml` lists rules under `linter: rules:`.
-- `make ui-analyze` stays clean after the rules are enabled.
+- `make ui-analyze` stays clean after the rules are enabled. *(All six criteria verified 2026-10-07: no "A new Flutter project" string, no non-ASCII under `lib/` or `test/`, four `platform:` entries in `.metadata`, nine linter rules, and `make ui-analyze` reporting "No issues found!".)*

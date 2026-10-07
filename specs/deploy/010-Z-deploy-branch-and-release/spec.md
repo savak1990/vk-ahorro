@@ -30,7 +30,7 @@ and core 030 requirement 6's `release.yml`. See
 **Risk:** Medium — a wrong values commit deploys nothing; a force-push to the wrong branch rewrites history. The branch name is a constant and `main` is protected.
 **Estimated cost:** ~1 day
 **Recommended model:** Opus for the workflow, Sonnet for the script.
-**Depends on:** [010-change-aware-checks](../../ci/010-D-change-aware-checks/spec.md), [060-gitops-and-platform-link](../../core/060-D-gitops-and-platform-link/spec.md), [105-web-delivery](../../core/105-A-web-delivery/spec.md)
+**Depends on:** [010-change-aware-checks](../../ci/010-D-change-aware-checks/spec.md), [060-gitops-and-platform-link](../../core/060-D-gitops-and-platform-link/spec.md), [105-web-delivery](../../core/105-D-web-delivery/spec.md)
 **Lifecycle class(es) touched:** Persistent (GHCR packages); Disposable (what Argo creates from the new tags).
 
 ## Scope
