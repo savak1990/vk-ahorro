@@ -251,8 +251,11 @@ jobs:
           # and leave the job green.
           PROJECT_NAME="$(make -s print-project)"
           export PROJECT_NAME
-          ./scripts/deploy-dev.sh "$VERSION"
-          status=$?
+          # `|| status=$?`, because the default shell is `bash -e`: a bare call
+          # would abort the step on any non-zero exit and the branches below
+          # would never run.
+          status=0
+          ./scripts/deploy-dev.sh "$VERSION" || status=$?
           if [ "$status" -eq 0 ]; then
             echo "### ahorro-dev is at \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
             exit 0

@@ -21,17 +21,38 @@ UNREACHABLE=2
 # runner's temp directory is wiped with the job.
 TARGET="${1:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ahorro-deploy.kubeconfig}"
 
+# Absent and forbidden are different failures and must not share a message.
+# The platform deletes this credential on teardown, so absent really does mean
+# the cluster is gone; forbidden means a grant is missing and rebuilding the
+# cluster would change nothing.
 param() {
-  local value
-  if ! value="$(aws ssm get-parameter --region "$REGION" --with-decryption \
+  local value err
+  if value="$(aws ssm get-parameter --region "$REGION" --with-decryption \
     --name "$PREFIX/$1" --query Parameter.Value --output text 2>/dev/null)"; then
-    echo "KUBECONFIG: no SSM parameter $PREFIX/$1." >&2
-    echo "KUBECONFIG: PROJECT_NAME=$PROJECT_NAME. The platform publishes this on every bring-up," >&2
-    echo "KUBECONFIG: and removes it on teardown, so a missing one means the cluster is gone." >&2
-    echo "KUBECONFIG: run 'make up' in vk-lab-platform, then retry." >&2
-    exit "$UNREACHABLE"
+    printf '%s' "$value"
+    return 0
   fi
-  printf '%s' "$value"
+
+  err="$(aws ssm get-parameter --region "$REGION" --with-decryption \
+    --name "$PREFIX/$1" --query Parameter.Value --output text 2>&1 >/dev/null || true)"
+
+  case "$err" in
+    *AccessDenied*|*not\ authorized*)
+      echo "KUBECONFIG: not allowed to read $PREFIX/$1." >&2
+      echo "KUBECONFIG: the parameter exists; the role is missing a grant. The token is a" >&2
+      echo "KUBECONFIG: SecureString, so reading it needs kms:Decrypt on alias/lab-secrets as" >&2
+      echo "KUBECONFIG: well as ssm:GetParameter. Fix ahorro-ci-role in vk-lab-platform and run" >&2
+      echo "KUBECONFIG: 'make account-up'. Rebuilding the cluster will not help." >&2
+      exit 1
+      ;;
+    *)
+      echo "KUBECONFIG: no SSM parameter $PREFIX/$1." >&2
+      echo "KUBECONFIG: PROJECT_NAME=$PROJECT_NAME. The platform publishes this on every" >&2
+      echo "KUBECONFIG: bring-up and removes it on teardown, so a missing one means the" >&2
+      echo "KUBECONFIG: cluster is gone. Run 'make up' in vk-lab-platform, then retry." >&2
+      exit "$UNREACHABLE"
+      ;;
+  esac
 }
 
 # One at a time: param's exit inside $( ) would only kill the subshell, and
