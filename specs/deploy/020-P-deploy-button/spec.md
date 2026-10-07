@@ -17,7 +17,7 @@ new and carries the release dispatch that `deploy/060` req 8 defines.
 **Risk:** Low — the button reuses 010's jobs; the only new surface is three boolean inputs and two labels.
 **Estimated cost:** ~0.5 day
 **Recommended model:** Sonnet.
-**Depends on:** [060-versioned-delivery](../060-P-versioned-delivery/spec.md) and [070-preview-environments](../070-P-preview-environments/spec.md), which replaced the superseded [010](../010-Z-deploy-branch-and-release/spec.md)
+**Depends on:** [060-versioned-delivery](../060-A-versioned-delivery/spec.md) and [070-preview-environments](../070-P-preview-environments/spec.md), which replaced the superseded [010](../010-Z-deploy-branch-and-release/spec.md)
 **Lifecycle class(es) touched:** Disposable.
 
 ## Scope

@@ -77,8 +77,11 @@ overlap between `lib/src/widgets/typography.dart` and
 
 - `grep -rn "A new Flutter project" flutter-ui` returns nothing.
 - `grep -rnP "[^\x00-\x7F]" flutter-ui/lib flutter-ui/test` returns nothing.
-- `grep -rn "//\|/\*" flutter-ui/lib flutter-ui/test --include='*.dart'`
-  returns nothing.
+- No comment restates what the line below it does. *(Was a `grep` for `//` and
+  `/*` returning nothing. That contradicts this repository's own house style,
+  which allows a short comment where it explains **why**; the target was
+  scaffolding noise, not every comment. 26 remain under `flutter-ui/lib` and
+  they are not defects.)*
 - `grep -c "platform:" flutter-ui/.metadata` returns 4 (root, android, ios, web).
 - `analysis_options.yaml` lists rules under `linter: rules:`.
 - `make ui-analyze` stays clean after the rules are enabled.

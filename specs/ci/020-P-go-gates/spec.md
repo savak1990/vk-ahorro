@@ -11,7 +11,7 @@ updated: "2026-09-26"
 **Risk:** Low — every gate is a Make target that runs on a laptop first; a noisy linter is turned off in the same file that turned it on.
 **Estimated cost:** ~0.5 day
 **Recommended model:** Sonnet.
-**Depends on:** [010-change-aware-checks](../010-P-change-aware-checks/spec.md), [020-go-hello-service](../../core/020-D-go-hello-service/spec.md)
+**Depends on:** [010-change-aware-checks](../010-A-change-aware-checks/spec.md), [020-go-hello-service](../../core/020-D-go-hello-service/spec.md)
 **Lifecycle class(es) touched:** None.
 
 ## Scope

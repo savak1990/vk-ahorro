@@ -1,16 +1,18 @@
 ---
 id: "DEPLOY-060"
-status: "DRAFT"
+status: "IN_REVIEW"
 updated: "2026-10-06"
 ---
 # 060 — Versioned delivery: the channels, `ahorro-dev`, and the release
 
-**Status note:** Draft, and nearly closed. Everything except the merge path
+**Status note:** In review. Everything except the merge path
 itself is implemented and verified live on the hetzner lab (2026-10-07): the
 version scheme, the release channel, the credential chain, and `ahorro-dev`
 serving both components over public TLS with the real user pool. What remains
 unrun is criteria 4, 5 and 9, which need a merge and a cluster rebuild. The
-status flips in the commit that records those, not before. Replaces [`deploy/010`](../010-Z-deploy-branch-and-release/spec.md),
+status flips in the commit that records those, not before.
+
+Replaces [`deploy/010`](../010-Z-deploy-branch-and-release/spec.md),
 which is superseded. Implements
 [ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md)
 and [ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md);
@@ -24,7 +26,7 @@ requirements 5, 6 and 8, core 105 requirements 2 and 8, and constitution §5.
 **Risk:** Medium — a wrong version pin leaves Argo reporting `Synced` over an old build, and a wrong RBAC grant lets the pipeline reach the released environment.
 **Estimated cost:** ~3 days, plus a pull request against `vk-lab-platform`.
 **Recommended model:** Opus.
-**Depends on:** `ci/010-P-change-aware-checks` (the `changes` job and `make repo-settings`), `core/060-A-gitops-and-platform-link`, and the platform spec that creates the `ahorro-deploy` ServiceAccount.
+**Depends on:** `ci/010-A-change-aware-checks` (the `changes` job and `make repo-settings`), `core/060-A-gitops-and-platform-link`, and the platform spec that creates the `ahorro-deploy` ServiceAccount.
 **Lifecycle class(es) touched:** Disposable (the two pipeline-owned namespaces). The SSM parameters the pipeline reads are the platform's persistent and cluster classes.
 
 ## Scope
@@ -55,13 +57,13 @@ platform-side ServiceAccount, RBAC and SSM publication, which are a spec in
 6b. An unreachable cluster MUST be reported loudly and leave the job **green**; any other failure MUST fail it. The lab is deliberately torn down when unused, so unreachable is the normal state, and a red run on every merge trains everyone to ignore the colour.
 6c. CI MUST invoke `scripts/deploy-dev.sh` directly, **never** `make deploy-dev`. GNU make collapses every recipe failure to exit 2, which is the very status 6a reserves for *unreachable* - going through make would report a broken deploy as a skip and leave the job green.
 6d. The workflow step MUST capture the status with `|| status=$?`, never a bare call. GitHub's default shell is `bash -eo pipefail`, so a bare call aborts the step on any non-zero exit and the branches of 6b never run - the skip is dead code and every failure is red. Proven against that exact shell.
-6f. The kubeconfig path MUST be passed to the builder, never read back from its stdout. The builder also writes `::add-mask::` there, and a command substitution captures that directive into the path instead of letting the runner act on it - which produced `file name too long` with the token inside the path.
 6e. A failure to **read** the credential MUST be distinguished from a failure to **reach** the cluster. `AccessDenied` means a missing grant and MUST be red; only an absent parameter or an unanswered endpoint may be the green skip of 6b. One message for both would send the operator to rebuild a healthy cluster.
+6f. The kubeconfig path MUST be passed to the builder, never read back from its stdout. The builder also writes `::add-mask::` there, and a command substitution captures that directive into the path instead of letting the runner act on it - which produced `file name too long` with the token inside the path.
 7. The pipeline MUST read the lab domain from `/<project>/cluster/ahorro-deploy/fqdn` and build `host`, `config.apiBaseUrl` and `corsAllowedOrigins` from it. *(Amended: an earlier draft said `/account/root_domain`. That parameter holds the account root, and the project's domain carries one more label; `ahorro-ci-role` can read neither the project fqdn parameter nor the subdomain it is composed from, so there is nothing to compose. The platform publishes a copy beside the deploy credential, which the role's existing wildcard already covers - vk-lab-platform spec `shared/049` req 4a.)* It MUST read the Cognito identifiers from `/<project>/persistent/ahorro-cognito/` and pass them, so `ahorro-dev` signs in against the real user pool. No hostname and no domain is committed (constitution §4).
 8. A release MUST be a `workflow_dispatch` on `deploy.yml` that tags the repository and publishes the clean `<version>` for **every** component. It MUST take only the bump level — patch, minor or major — never a version string, so the number is always derivable from the tag history.
 9. Promotion into `ahorro` MUST be a pull request against `vk-lab-platform` that bumps `ahorro.targetRevision`. It MUST be **one line**, because every component is at the same version. Nothing automatic MUST move it.
 10. Both child Applications and the platform pointer MUST set `selfHeal: true` (core 060 req 6, as amended). `prune: true` stays.
-11. Make targets MUST cover every pipeline action, so each runs from a laptop with the operator's own credentials: `deploy-dev`, `kubeconfig` and the `deploy/070` preview pair. Each recipe is one line and the logic goes to `scripts/`, which is also what lets CI call the script directly per 6c.
+11. Make targets MUST cover every pipeline action this spec owns, so each runs from a laptop with the operator's own credentials: `deploy-dev` and `kubeconfig`. Each recipe is one line and the logic goes to `scripts/`, which is also what lets CI call the script directly per 6c. *(The preview pair was listed here and belongs to `deploy/070`, which this spec's own Excludes paragraph scopes out - it could never have been satisfied here.)*
 
 ## Implementation hints
 
