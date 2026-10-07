@@ -207,6 +207,70 @@ jobs:
               >> "$GITHUB_STEP_SUMMARY"
           done
 
+  # Namespace ahorro-dev only. Namespace ahorro is Argo's, pinned to a
+  # released version, and the credential below is refused there by cluster
+  # RBAC rather than by this condition alone.
+  #
+  # A release skips this: it publishes the version a human then promotes, and
+  # promoting it is a reviewed pull request, not a side effect of the release.
+  deploy-dev:
+    needs: [version, images, charts]
+    if: needs.version.outputs.release != 'true'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      # The lab is torn down when it is not in use, so an unreachable cluster
+      # is the normal state rather than a failure. Exit 2 from the script
+      # means exactly that, and it is reported loudly and left green: a red
+      # run on every merge would train everyone to ignore the colour. Any
+      # other failure is a real one and fails the job.
+      - name: Deploy to ahorro-dev
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -uo pipefail
+          # The script, not `make deploy-dev`: make collapses every recipe
+          # failure to exit 2, which is the very code that means "unreachable"
+          # here. Going through make would report a broken deploy as a skip
+          # and leave the job green.
+          PROJECT_NAME="$(make -s print-project)"
+          export PROJECT_NAME
+          ./scripts/deploy-dev.sh "$VERSION"
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "### ahorro-dev is at \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$status" -eq 2 ]; then
+            {
+              echo "### ahorro-dev was not updated"
+              echo
+              echo "The cluster is not reachable, so this merge published"
+              echo "\`$VERSION\` but deployed nothing."
+              echo
+              echo "Run 'make up' in vk-lab-platform, then re-run this job."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::ahorro-dev was not updated: the cluster is not reachable. Run 'make up' in vk-lab-platform, then re-run this job."
+            exit 0
+          fi
+          exit "$status"
+
   # The tag is written only after every artifact exists, so a failed publish
   # never leaves a tag naming a version nobody can pull. contents: write is
   # for the tag and nothing else; no workflow commits to this repository.
