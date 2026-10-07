@@ -202,8 +202,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      # A pull request comment is written through the issues endpoint.
-      issues: write
+      # `gh pr comment` goes through the GraphQL addComment mutation, which
+      # wants pull-requests: write. `issues: write` covers only the REST
+      # issue-comment endpoint and fails here with
+      # "Resource not accessible by integration (addComment)".
+      pull-requests: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
