@@ -64,7 +64,7 @@ files, and one ADR.
 
 ## Testing / acceptance criteria
 
-- `make gitops-template` renders exactly one `Application` object; `helm template gitops` without `fqdn` fails.
+- `make gitops-template` renders **two** `Application` objects, `ahorro-api` and `ahorro-web`; `helm template gitops` without `fqdn` fails. *(Was "exactly one". 105 req 7 added the web Application, so one was never going to be right. Both halves verified 2026-10-07.)*
 - In `vk-lab-platform`: `make gitops-check`, `helm lint gitops`, and kubeconform pass with the two new files; the pull request's `pr-gate` check is green.
 - After the platform's `make full-up` (or `make up` on an existing bootstrap): `argocd app get vk-ahorro` is `Synced`/`Healthy`; `argocd app list` shows `ahorro-api` in project `vk-ahorro`; `kubectl -n ahorro get pods` shows one Running pod.
 - `curl https://api-ahorro.<fqdn>/healthz` → 200. The `web` hostname is verified by 105.

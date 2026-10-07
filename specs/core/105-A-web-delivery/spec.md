@@ -7,8 +7,11 @@ updated: "2026-09-26"
 
 **Status note:** In progress. The `ahorro-web` image, its chart and its Argo
 `Application` ship, and the Flutter client reads `config.json` at startup.
-The image and the chart are not yet on GHCR: the first `release.yml` run on
-`main` publishes them, and both packages must then be made public.
+Both are on GHCR and both packages are public: release `0.2.1` published the
+image and the chart, and `helm pull` of the chart succeeds from a machine with
+no GitHub login (verified 2026-10-07). The one criterion still unrun is the
+web pod in namespace `ahorro` reached over its public hostname; the equivalent
+is recorded for `ahorro-dev` in `deploy/060` criterion 6.
 
 Named `ahorro-web`, not `web`; see
 [ADR 0006](../../../docs/adr/0006-web-delivery-and-the-gitops-chart.md).

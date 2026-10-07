@@ -1,9 +1,20 @@
 ---
 id: "CI-010"
-status: "DRAFT"
+status: "IN_REVIEW"
 updated: "2026-09-26"
 ---
 # 010 — Change-aware checks and branch protection
+
+**Status note:** In review. Every requirement ships and is merged: the
+`changes` job, the nine-job graph, `actionlint` as its own job, `ci-ok` with
+`if: always()`, and `make repo-settings`. Requirement 5 is verified live —
+`gh api .../branches/main/protection --jq .required_status_checks.contexts`
+returns `["ci-ok"]`.
+
+Not `DONE`, because three acceptance criteria have never been run: the timed
+docs-only pull request, the filter-skip pull request, and the failing-test
+check. Each needs a throwaway pull request, and a status ahead of its own
+evidence is what the constitution forbids.
 
 **Status note:** Draft. First spec of the `ci/` group; every other `ci/` and
 `deploy/` spec adds jobs to the workflow this one shapes.

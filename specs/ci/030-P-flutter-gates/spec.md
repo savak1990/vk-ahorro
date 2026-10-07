@@ -11,7 +11,7 @@ updated: "2026-09-26"
 **Risk:** Medium — the iOS build needs a macOS runner and CocoaPods; the first run is where plugin version drift shows.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** [010-change-aware-checks](../010-P-change-aware-checks/spec.md), [070-flutter-shell-trim](../../core/070-D-flutter-shell-trim/spec.md), [100-flutter-platforms](../../core/100-P-flutter-platforms/spec.md)
+**Depends on:** [010-change-aware-checks](../010-A-change-aware-checks/spec.md), [070-flutter-shell-trim](../../core/070-D-flutter-shell-trim/spec.md), [100-flutter-platforms](../../core/100-P-flutter-platforms/spec.md)
 **Lifecycle class(es) touched:** None.
 
 ## Scope

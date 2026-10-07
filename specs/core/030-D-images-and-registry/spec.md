@@ -64,9 +64,9 @@ Helm chart packaging and push (040), the CD commit into `gitops/values.yaml`
 
 - `make image-build SVC=ahorro-api && docker run --rm -p 8080:8080 -e AUTH_DISABLED=true ghcr.io/savak1990/vk-ahorro/ahorro-api:<sha>` answers `curl localhost:8080/healthz` on an arm64 Mac.
 - `make images-push` then `docker buildx imagetools inspect ghcr.io/savak1990/vk-ahorro/ahorro-api:<sha>` lists `linux/amd64` and `linux/arm64`.
-- After a merge to `main`, `docker pull ghcr.io/savak1990/vk-ahorro/ahorro-api:main` resolves to the same digest as that run's SHA tag.
+- After a merge to `main`, `docker pull ghcr.io/savak1990/vk-ahorro/ahorro-api:<version>-main.<sha>` resolves to the same digest as that run's SHA tag. *(Was the moving `:main` tag, which ADR 0009 stopped publishing: GitOps pins an exact version and a moving tag left Argo reporting `Synced` over a stale image.)*
 - `docker pull` of that tag works from a machine with no GitHub login.
-- A merged pull request to `main` produces exactly one `release` run and one image push.
+- A merged pull request to `main` produces exactly one `deploy` run. It pushes an image only for a component whose code changed; an unchanged one is published by a manifest copy. *(Was "one `release` run and one image push". ADR 0009 renamed the workflow and made publication unconditional while the build stayed change-aware.)*
 - CI fails when a committed file contains the root domain (constitution §4). The
   check reads the domain from the platform's SSM parameter
   `/account/root_domain`, never from Git, over a GitHub OIDC role scoped to
