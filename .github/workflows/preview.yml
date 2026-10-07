@@ -202,6 +202,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      # A pull request comment is written through the issues endpoint.
+      issues: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -253,6 +255,40 @@ jobs:
             exit 0
           fi
           exit "$status"
+
+      # On the pull request, not only in the run summary: nobody goes looking
+      # in the Actions tab to find out whether a preview is up.
+      #
+      # The hostname label only. The full host embeds the lab domain, and a
+      # comment on a public repository is as public as a CI log, which
+      # constitution section 4 rules out. `make preview-url` composes the
+      # clickable link on a machine whose output is not public.
+      - name: Say so on the pull request
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.decide.outputs.version }}
+          PR: ${{ github.event.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          body="$(printf '%s\n' \
+            "**Preview deployed** at \`$VERSION\`." \
+            "" \
+            "| | |" \
+            "|---|---|" \
+            "| web | \`ahorro-pr-$PR\` |" \
+            "| api | \`api-ahorro-pr-$PR\` |" \
+            "" \
+            "Hostname labels only - the domain is never written to a public" \
+            "comment. Open it with:" \
+            "" \
+            '```' \
+            "make preview-url PR=$PR" \
+            '```' \
+            "" \
+            "Remove the \`ci:preview-web\` label to tear it down.")"
+          gh pr comment "$PR" --repo "$REPO" --body "$body"
 
   # Removing a preview must not depend on anything being published, so this
   # needs only `decide`. It must also succeed when there is nothing to remove:
