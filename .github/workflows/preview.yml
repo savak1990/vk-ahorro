@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   # One place decides what this event means, so no job below repeats the
-  # guard. Any label other than `preview` reaches "none" and nothing runs.
+  # guard. Any label other than `ci:preview-web` reaches "none" and nothing runs.
   decide:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -47,14 +47,15 @@ jobs:
         env:
           EVENT: ${{ github.event.action }}
           LABEL: ${{ github.event.label.name }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'preview') }}
+          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:preview-web') }}
           PR: ${{ github.event.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -uo pipefail
           action=none
           case "$EVENT" in
-            labeled)     [ "$LABEL" = preview ] && action=up ;;
-            unlabeled)   [ "$LABEL" = preview ] && action=down ;;
+            labeled)     [ "$LABEL" = ci:preview-web ] && action=up ;;
+            unlabeled)   [ "$LABEL" = ci:preview-web ] && action=down ;;
             synchronize) [ "$HAS_LABEL" = true ] && action=up ;;
             # Always, label or not: a close is the last chance to clean up, and
             # a teardown with nothing to remove succeeds anyway.
@@ -62,7 +63,7 @@ jobs:
           esac
           echo "action=$action" >> "$GITHUB_OUTPUT"
           if [ "$action" = up ]; then
-            version="$(./scripts/version.sh pr "$PR")"
+            version="$(./scripts/version.sh pr "$PR" "$HEAD_SHA")"
             echo "version=$version" >> "$GITHUB_OUTPUT"
             echo "### Preview $PR -> \`$version\`" >> "$GITHUB_STEP_SUMMARY"
           else

@@ -226,7 +226,7 @@ jobs:
       - name: Package every chart at the pull request version
         run: |
           set -euo pipefail
-          version="$(./scripts/version.sh pr "${{ github.event.pull_request.number }}")"
+          version="$(./scripts/version.sh pr "${{ github.event.number }}" "${{ github.event.pull_request.head.sha }}")"
           for dir in deploy/helm/*/; do
             make helm-package CHART="$(basename "${dir%/}")" VERSION="$version"
           done

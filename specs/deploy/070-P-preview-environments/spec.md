@@ -28,20 +28,20 @@ would need a GitHub token living in the cluster. Mobile builds.
 
 ## Requirements
 
-1. A **labeled** pull request MUST publish an image and a chart as `<version>-pr-<n>` for **every** component, from `preview.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). One version names the whole preview.
+1. A **labeled** pull request MUST publish an image and a chart as `<version>-pr-<n>.<short-sha>` for **every** component, from `preview.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). One version names the whole preview, and the commit is part of it (`deploy/060` req 2b) so a second push actually rolls the pods.
 1a. `ci.yml` MUST NOT publish anything and MUST NOT hold `packages: write`. *(Amended: requirement 1 originally published from `ci.yml` on every pull request. Three reasons it cannot. A fork's `GITHUB_TOKEN` is read-only, so the push would fail there, and today only the `repo` job fails on a fork, deliberately. Both image jobs and the `helm` job are gated on the `changes` filter, so a Go-only pull request packages no chart at all - "every component" would need all three gates reworked. And every pull request that nobody previews would leave four artifacts behind that cannot be deleted; see req 8.)*
 2. Deployment MUST live in a **new** workflow file, `.github/workflows/preview.yml`, and MUST NOT be a job in `ci.yml`. `ci.yml` relies on the default `pull_request` types, so a label event does not re-run it today; its required status checks are maintained by hand, and a context that never reports blocks every merge.
 3. `preview.yml` MUST trigger on `pull_request` types `[labeled, unlabeled, synchronize, closed]` and act only as follows:
 
    | Event | Condition | Action |
    |---|---|---|
-   | `labeled` | `github.event.label.name == 'preview'` | install |
-   | `synchronize` | the pull request carries `preview` | upgrade |
-   | `unlabeled` | `github.event.label.name == 'preview'` | uninstall and delete artifacts |
+   | `labeled` | `github.event.label.name == 'ci:preview-web'` | install |
+   | `synchronize` | the pull request carries `ci:preview-web` | upgrade |
+   | `unlabeled` | `github.event.label.name == 'ci:preview-web'` | uninstall and delete artifacts |
    | `closed` | always | the same |
 
    Any other label MUST do nothing at all.
-4. The label MUST be `preview`, created by `make repo-settings` (`ci/010` req 6). A comment trigger MUST NOT be used: `issue_comment` fires on every issue in the repository, runs the workflow file from the default branch rather than the pull request head, and carries no state, so a release nobody cleaned up becomes invisible.
+4. The label MUST be `ci:preview-web`, created by `make repo-settings` (`ci/010` req 6). A comment trigger MUST NOT be used: `issue_comment` fires on every issue in the repository, runs the workflow file from the default branch rather than the pull request head, and carries no state, so a release nobody cleaned up becomes invisible.
 5. Releases MUST share one namespace, `ahorro-pr`, and MUST be named `pr-<n>-api` and `pr-<n>-web`. `svc.fullname` is `{{- if eq .Release.Name (include "svc.name" .) }}` - **exact equality**, not `contains` - so these render as `pr-42-api-ahorro-api`. The helper MUST NOT be changed to `contains`: it would rename every live object in `ahorro`. *(Amended: the original text said "named per pull request" and cited `<release>-<chart>`, which does not survive two components sharing one number - both would have been `pr-42`.)*
 6. Hostnames MUST be `ahorro-pr-<n>.<fqdn>` — exactly one label below the domain. The platform's wildcard certificate and the external-dns domain filter are both single-label, so `pr-42.ahorro.<fqdn>` would have neither TLS nor DNS.
 7. A preview MUST use the real Cognito user pool, read from SSM as `deploy/060` req 7 describes. There is one pool and one app client per platform project by design, so a preview needs no new identity and no terraform change.
@@ -76,7 +76,7 @@ event types, which `github.event.pull_request.number` is not.
 ## Testing / acceptance criteria
 
 1. Opening a pull request that changes `flutter-ui/` **rebuilds** `ahorro-web` and skips the `ahorro-api` build, while publishing both at the same `-pr-<n>`. No namespace is created.
-2. Adding the `preview` label creates `ahorro-pr`, installs the release, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host.
+2. Adding the `ci:preview-web` label creates `ahorro-pr`, installs the release, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host.
 3. Signing in on that hostname with a real pool user succeeds.
 4. Adding any other label does nothing: no workflow run beyond `ci.yml`, and no change in the cluster.
 5. Pushing a commit upgrades the existing release; `helm -n ahorro-pr list` shows one release for that pull request, not two.

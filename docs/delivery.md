@@ -50,12 +50,12 @@ hand-edited.
 
 | Event | Version | Published |
 |---|---|---|
-| pull request | `0.5.1-pr-42` | image and chart, **every component** |
+| pull request | `0.5.1-pr-42.a1b2c3d` | image and chart, **every component** |
 | merge to `main` | `0.5.1-main.a1b2c3d` | image and chart, **every component** |
 | release | `0.5.1` | image and chart, **every component** |
 
 The image tag and the chart version are the same string. A chart installed at
-`0.5.1-pr-42` therefore pulls the image of the same name with no second flag,
+`0.5.1-pr-42.a1b2c3d` therefore pulls the image of the same name with no second flag,
 and one version identifies everything a deployment runs.
 
 Every image also carries its full commit SHA as a tag. The SHA is the audit
@@ -82,6 +82,26 @@ the two at different numbers, so no single number names what an environment
 runs, the platform pins two values instead of one, and something has to
 remember the unchanged component's current version.
 
+## 2.1a Every prerelease carries its commit
+
+Both prerelease channels embed the short commit, so **no tag is ever
+republished with different content**.
+
+Leaving it off a pull request build looks harmless - there is only one live
+preview per pull request, and the next push should replace it. It is not. The
+second push republishes `0.5.1-pr-42`, the rendered Deployment is
+byte-identical, Kubernetes creates no new ReplicaSet, and the preview keeps
+serving the previous build while the run reports success.
+
+That is the same defect ADR 0006 recorded for the moving `main` tag, one layer
+down. `imagePullPolicy: Always` does not rescue it either: a pull only happens
+when a pod is created, and no pod is created.
+
+The cost is one set of artifacts per push rather than per pull request. With
+no automated GHCR cleanup that accumulates, and it is still the right trade: a
+preview that silently serves stale code defeats the only reason previews
+exist.
+
 ## 2.2 The base is the next version, not the last
 
 A prerelease sorts **below** its release: `0.5.0-main.abc` is older than
@@ -93,7 +113,7 @@ The base is the next patch version, derived with `git describe --tags`:
 ```text
 release        0.5.0
 then merges    0.5.1-main.a1b2c3d
-then PR 42     0.5.1-pr-42
+then PR 42     0.5.1-pr-42.a1b2c3d
 then release   0.5.1, or 0.6.0 if the change earns a minor
 ```
 
@@ -127,16 +147,16 @@ Only a component whose inputs changed is **built**. A change under
 `ci.yml` runs the checks. Every component publishes an image and a chart as
 `-pr-<n>`.
 
-A deployment happens only when the pull request carries the `preview` label.
+A deployment happens only when the pull request carries the `ci:preview-web` label.
 That lives in its own workflow file, `preview.yml`, so a label event never
 restarts `ci.yml` — whose required status checks are maintained by hand, and
 one of which failing to report blocks every merge.
 
 | Event | Condition | Action |
 |---|---|---|
-| `labeled` | the label is `preview` | install into `ahorro-pr` |
-| `synchronize` | the pull request carries `preview` | upgrade that release |
-| `unlabeled` | the label is `preview` | uninstall, and delete the published versions |
+| `labeled` | the label is `ci:preview-web` | install into `ahorro-pr` |
+| `synchronize` | the pull request carries `ci:preview-web` | upgrade that release |
+| `unlabeled` | the label is `ci:preview-web` | uninstall, and delete the published versions |
 | `closed` | always | the same |
 
 The label is state, not an event: it answers "is this pull request deployed

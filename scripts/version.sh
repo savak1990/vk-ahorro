@@ -3,7 +3,7 @@
 # repository on every channel, and the image tag equals the chart version.
 #
 #   version.sh main <sha>      0.2.1-main.a1b2c3d
-#   version.sh pr <number>     0.2.1-pr-42
+#   version.sh pr <number> <sha>  0.2.1-pr-42.a1b2c3d
 #   version.sh release <level> 0.2.1 | 0.3.0 | 1.0.0   (patch|minor|major)
 #   version.sh base            0.2.1
 #
@@ -13,6 +13,7 @@ set -euo pipefail
 
 channel="${1:-}"
 arg="${2:-}"
+sha="${3:-}"
 
 last="$(git describe --tags --abbrev=0 2>/dev/null || true)"
 last="${last#v}"
@@ -57,13 +58,18 @@ case "$channel" in
     ;;
   pr)
     [ -n "$arg" ] || { echo "VERSION: pr needs a pull request number." >&2; exit 1; }
-    echo "$base-pr-$arg"
+    # The commit is part of the version, not decoration. Without it a second
+    # push to the same pull request republishes the same tag, the rendered
+    # Deployment is byte-identical, no new ReplicaSet is created, and the
+    # preview keeps serving the previous build while the run reports success.
+    [ -n "$sha" ] || { echo "VERSION: pr needs a commit sha." >&2; exit 1; }
+    echo "$base-pr-$arg.${sha:0:7}"
     ;;
   release)
     bump "${arg:-patch}"
     ;;
   *)
-    echo "VERSION: usage: version.sh {base|main <sha>|pr <n>|release <level>}" >&2
+    echo "VERSION: usage: version.sh {base|main <sha>|pr <n> <sha>|release <level>}" >&2
     exit 1
     ;;
 esac
