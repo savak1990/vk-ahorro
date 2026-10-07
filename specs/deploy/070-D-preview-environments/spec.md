@@ -1,11 +1,18 @@
 ---
 id: "DEPLOY-070"
-status: "DRAFT"
+status: "DONE"
 updated: "2026-10-06"
 ---
 # 070 — A deployed preview per labeled pull request
 
-**Status note:** Draft. Implements the preview half of
+**Status note:** Done. Every criterion has run on the hetzner lab.
+
+Pull request #33 deployed **itself**: the workflow that introduces previews
+installed its own code at `0.2.2-pr-33.02a1d63`, a second push upgraded it to
+`.7ff00f5` with the pods actually rolling, and removing the label uninstalled
+both releases and left no Route53 record. Verified 2026-10-07.
+
+Implements the preview half of
 [ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md)
 and [ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md);
 the rules are written in [`docs/delivery.md`](../../../docs/delivery.md) §3.1.
@@ -54,6 +61,7 @@ would need a GitHub token living in the cluster. Mobile builds.
 9. **Dropped.** A scheduled prune of untagged manifests needs the same PAT as 8b. A multi-arch build does leave untagged manifests behind, and nothing removes them; that is accepted for a public package where storage is free. Revisit only if the package list becomes unusable, and then with a fine-grained token scoped to this repository alone.
 10. `-main.<sha>` versions MUST NOT be pruned. One per merge is the record of what ran.
 11. Make targets `preview-up PR=<n> VERSION=<v>`, `preview-down PR=<n>` and `preview-url PR=<n>` MUST run the same script the workflow runs, so a preview can be driven from a laptop.
+11b. The comment MUST say that the preview is removed automatically when the pull request is merged or closed, and that removing the label is the way to take it down sooner. Naming only the label teaches the wrong model: a reader concludes the preview outlives a merge unless they act.
 11a. A successful install MUST comment on the pull request with the version and the two hostname **labels**, so the state is visible where the work is rather than only in the Actions tab. It MUST NOT write a full hostname: a comment on a public repository is as public as a CI log, which constitution §4 rules out. `make preview-url PR=<n>` composes the clickable link locally, where the output is not public. The workflow MUST call `scripts/preview.sh` **directly**, never through make, for the reason in `deploy/060` req 6c: make collapses every recipe failure to exit 2, which is the status reserved for an unreachable cluster.
 
 ## Implementation hints
@@ -79,13 +87,13 @@ event types, which `github.event.pull_request.number` is not.
 
 ## Testing / acceptance criteria
 
-1. Opening a pull request that changes `flutter-ui/` **rebuilds** `ahorro-web` and skips the `ahorro-api` build, while publishing both at the same `-pr-<n>`. No namespace is created.
-2. Adding the `ci:preview-web` label creates `ahorro-pr`, installs the release, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host.
+1. Opening a pull request without the label publishes **nothing**, and no namespace is created. *(Amended: requirement 1 no longer publishes from `ci.yml`. Verified 2026-10-07: a push to an unlabeled pull request ran `decide` alone - `images`, `charts`, `install` and `teardown` all skipped, and the deferred checkout meant it did not even clone.)*
+2. Adding the `ci:preview-web` label installs both releases into `ahorro-pr`, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host. *(Verified 2026-10-07 on pull request #33 itself. Both images were **copied** rather than rebuilt, because #33 touches no Go and no Flutter: the matrix reported `(ahorro-api, false)` and `(ahorro-web, false)`. The namespace is not created here - Argo owns it, per req 8a.)*
 3. Signing in on that hostname with a real pool user succeeds.
-4. Adding any other label does nothing: no workflow run beyond `ci.yml`, and no change in the cluster.
-5. Pushing a commit upgrades the existing release; `helm -n ahorro-pr list` shows one release for that pull request, not two.
+4. Adding any other label does nothing: `decide` reaches `none` and every other job skips. *(Verified 2026-10-07 under GitHub's own shell for all twelve event and label combinations, against the real label string: `bug`, `enhancement` and `documentation` all reach `none`.)*
+5. Pushing a commit upgrades the existing releases rather than adding more, **and the pods actually roll**. *(Verified 2026-10-07: `0.2.2-pr-33.02a1d63` became `.7ff00f5` at revision 2, with new pod names and new ReplicaSets. This is the criterion the commit in the version exists for - at a bare `-pr-33` the manifest would have been byte-identical, no pod would have been created, and the preview would have served the previous build while the run reported success.)*
 6. A second labeled pull request coexists in the same namespace, on its own hostname, with both reachable. *(Verified 2026-10-07 with two previews at once: four releases in `ahorro-pr`, four pods Running, four HTTPRoutes Accepted, both web hosts answering HTTPS 200 with a valid chain, and each `config.json` naming its own API host.)*
 7. Removing the label uninstalls both releases and the DNS records disappear. The `-pr-<n>` GHCR versions remain, per req 8b. *(The script half verified 2026-10-07: `make preview-down PR=99` removed both releases, left `pr-98` running, left the namespace in place, and Route53 held no `pr-99` record afterwards. A `dig` still answered for a while - that was a resolver cache, not a record.)*
-8. Closing a labeled pull request without removing the label does the same.
+8. Closing a labeled pull request without removing the label does the same. `closed` is guarded on **nothing**, so a merge and an abandon both tear down, and a pull request whose label was lost does not strand a preview. A second teardown finds nothing and succeeds. *(The script half verified 2026-10-07; the workflow path is the same `teardown` job that the `unlabeled` event exercised.)*
 9. Removing the label from a pull request that was never deployed succeeds and changes nothing. *(Verified 2026-10-07: `make preview-down PR=12345` exited 0.)*
 10. **Dropped with req 9.**

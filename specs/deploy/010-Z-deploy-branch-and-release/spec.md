@@ -7,7 +7,7 @@ updated: "2026-10-06"
 
 **Status note:** Superseded, never implemented. Replaced by
 [`deploy/060`](../060-D-versioned-delivery/spec.md) and
-[`deploy/070`](../070-P-preview-environments/spec.md), under
+[`deploy/070`](../070-D-preview-environments/spec.md), under
 [ADR 0009](../../../docs/adr/0009-three-environments-and-one-version-track.md)
 and
 [ADR 0010](../../../docs/adr/0010-the-pipeline-deploys-to-the-cluster.md).

@@ -41,7 +41,7 @@ deploys to `ahorro-dev`, and how a release becomes the version the platform
 pins.
 
 **Excludes:** pull-request previews and their teardown, which are
-[`deploy/070`](../070-P-preview-environments/spec.md). Android and iOS, which
+[`deploy/070`](../070-D-preview-environments/spec.md). Android and iOS, which
 are `deploy/030` and `deploy/040` and which need their own ruling on
 `flutter-ui/pubspec.yaml`, one version shared by three platforms. The
 platform-side ServiceAccount, RBAC and SSM publication, which are a spec in

@@ -290,7 +290,8 @@ jobs:
             "make preview-url PR=$PR" \
             '```' \
             "" \
-            "Remove the \`ci:preview-web\` label to tear it down.")"
+            "It goes away on its own when this pull request is merged or" \
+            "closed. Remove the \`ci:preview-web\` label to take it down sooner.")"
           gh pr comment "$PR" --repo "$REPO" --body "$body"
 
   # Removing a preview must not depend on anything being published, so this
