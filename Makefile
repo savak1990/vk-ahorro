@@ -250,7 +250,9 @@ ui-test:
 ui-build-web:
 	cd $(UI_DIR) && flutter build web
 
-## Build a debug APK against $ENV
+# This target has no serial to reverse against: it builds an artifact, it does
+# not pick a device. ENV=local therefore needs a reverse already in place.
+## Build a debug APK against $ENV. ENV=local needs an adb reverse on the device
 ui-build-android: ui-config
 	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
