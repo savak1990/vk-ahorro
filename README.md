@@ -360,13 +360,46 @@ spec adds.
 `ui-run-android` and `ui-run-ios` start the device first. To start a device
 without the Flutter client, use `make emulator-android` or `make emulator-ios`.
 
-Three variables steer these targets. Set a different value on the command line:
+Four variables steer these targets. Set a different value on the command line:
 
 | Variable | Default | Example |
 |---|---|---|
+| `DEVICE` | the platform default below | `make ui-run-android DEVICE=<adb-serial>` |
 | `AVD` | `pixel_phone` | `make ui-run-android AVD=pixel_tablet` |
 | `IOS_DEVICE` | `iPhone 18 Pro` | `make ui-run-ios IOS_DEVICE="iPhone 17"` |
 | `ENV` | `local` | `make ui-run-android ENV=dev` |
+
+`DEVICE` names the target on either platform: an AVD name, an `adb` serial, or
+an iOS device from `flutter devices`. `AVD` and `IOS_DEVICE` remain as the
+per-platform aliases.
+
+### Run on your own phone
+
+Attach the phone over USB, enable USB debugging, and read its serial from
+`adb devices`. Then:
+
+```sh
+make ui-run-android DEVICE=<adb-serial> ENV=dev
+```
+
+To use wifi instead, bootstrap it once over the cable:
+
+```sh
+adb -s <adb-serial> tcpip 5555
+adb connect <phone-ip>:5555
+```
+
+`adb connect` gives the phone a second serial of the form `IP:PORT`, which
+`DEVICE` takes unchanged. The phone keeps the wifi serial until it reboots.
+
+`ENV=local` works on a phone as well as on an emulator. `make ui-run-android`
+runs `adb reverse tcp:$PORT tcp:$PORT` first, which makes the device's own
+`localhost` reach this machine, so the app talks to `make go-run`. The reverse
+belongs to the device, not to one transport, so it covers the cable and wifi
+alike.
+
+A physical iPhone has no equivalent. `make ui-run-ios DEVICE=<id>` with
+`ENV=local` therefore stops and asks for a deployed `ENV`.
 
 ### Pick a backend with `ENV`
 

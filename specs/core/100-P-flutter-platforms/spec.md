@@ -17,9 +17,14 @@ exist. Requirement 6 is done.
 The two sign-in acceptance checks are done (2026-10-08), on the operator's own
 devices, together with 080's.
 
+Requirements 2a, 2b and 3a are implemented (2026-10-08). `DEVICE` names an
+emulator, an `adb` serial over USB or wifi, or an iOS device; Android reaches
+a local backend over `adb reverse` on every target; a physical iPhone with
+`ENV=local` stops and names a deployed `ENV`. The on-device sign-in criteria
+below are the operator's to run.
+
 Still open: `make web-serve-local`, which runs the `web` image that 105
-delivers; requirements 2a, 2b and 3a, which are new here and carry the real
-device; and one older gap found while writing them - requirement 3's
+delivers; and one older gap found while writing 2a - requirement 3's
 `flutter build ios --config-only --no-codesign` before `pod install` is in
 neither the target nor `scripts/ios-simulator.sh`. The simulator works anyway,
 because a previous build left `Generated.xcconfig` behind, so this bites on a
