@@ -61,12 +61,19 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
 3. Every release build target MUST fail unless `ENV` was named on the command
    line, and the message MUST list the four values of 080 req 4a. This applies
    to `ui-build-apk`, and to `ci/030` req 6's `ui-build-aab` and
-   `ui-build-ios`. `$(origin ENV)` distinguishes a command-line value from the
-   Makefile default, so the check is on **intent**, not on the value: a
-   release build pointed at `local` is legitimate over `adb reverse`, while a
-   release build that never said where it points is the `deploy/030` req 5
-   bug. A debug run keeps the `local` default, because the working local loop
-   must not regress.
+   `ui-build-ios`. `$(origin ENV)` distinguishes a command-line value
+   from the Makefile default, so the check catches a build that never said
+   where it points — the `deploy/030` req 5 bug. A debug run keeps the `local`
+   default, because the working local loop must not regress.
+
+3a. The intent check of req 3 is not enough on its own, and `local` MUST be
+   rejected **by value** for any artifact destined for a store:
+   `ui-build-aab` and `ui-build-ipa`. A store build pointed at
+   `http://localhost:8080` is never correct, whoever typed it. `ui-build-apk`
+   keeps the exemption, because sideloading onto a tethered phone over
+   `adb reverse` is a legitimate `ENV=local` case (100 req 2b). *(Added:
+   req 3 as first written would have let a Play upload through on an explicit
+   `ENV=local`, which is exactly the outcome it claims to prevent.)*
 
 4. `--build-name` MUST be the repository version from `scripts/version.sh`,
    and it MUST always be a clean `x.y.z` triple. This settles the ruling
@@ -82,10 +89,12 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
 
 5. A local build MUST keep the `+n` build number committed in
    `flutter-ui/pubspec.yaml`, with no mechanism to make it monotonic. Two
-   local builds being indistinguishable costs nothing: `adb install -r`
-   replaces the installed app whatever its `versionCode`. Only a store needs a
-   number that never repeats, and that is `github.run_number` in `deploy/030`
-   req 6.
+   local builds being indistinguishable costs nothing on either platform, for
+   two different reasons: on Android `adb install -r` replaces the installed
+   app whatever its `versionCode`, and on iOS a locally installed build never
+   meets App Store Connect, which is the only thing that enforces
+   uniqueness. Only a store needs a number that never repeats, and that is
+   `github.run_number` in `deploy/030` req 6.
 
 6. `flutter-ui/android/app/build.gradle` MUST read `android/key.properties`
    when the file exists and sign `release` with it; when it does not exist,
@@ -181,6 +190,9 @@ buys, and it is why the lazy option here is the one with the extra check.
   `make ui-build-apk` with no `ENV` exits non-zero, names the four values, and
   starts no build.
 - The same guard fires for `make ui-build-aab` and `make ui-build-ios`.
+- `make ui-build-aab ENV=local` exits non-zero although `ENV` was named, and
+  says a store artifact may not point at this machine. `make ui-build-apk
+  ENV=local` builds, because req 3a exempts it.
 - `make ui-install-android DEVICE=<serial>` installs that APK, and the app
   signs in against the platform's pool and answers "+" from `ahorro-dev`.
   This is the proof the whole spec exists for.
