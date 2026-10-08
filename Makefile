@@ -268,6 +268,7 @@ ui-run-android: ui-config
 	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(LOCAL_API)
 
 ## Run the Flutter app on the iOS $DEVICE against $ENV
+ui-run-ios: export ENV := $(ENV)
 ui-run-ios: ui-config
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" && cd $(UI_DIR) && flutter run -d "$(IOS_TARGET)" $(MOBILE_DEFINES) $(LOCAL_API)
 
