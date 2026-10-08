@@ -1,15 +1,22 @@
 ---
 id: "CORE-100"
 status: "DRAFT"
-updated: "2026-09-21"
+updated: "2026-10-08"
 ---
 # 100 — Flutter on Android, iOS, and web
 
-**Status note:** Partially delivered. Requirements 1, 2, 5 and 6 are done, and
-4 is done except `make web-serve-local`. Still open: the
-`--dart-define-from-file=config/$(ENV).json` argument and every sign-in
-acceptance check, which need 080; and `make web-serve-local`, which runs the
-`web` image that 105 delivers.
+**Status note:** Partially delivered. Requirements 1, 2 and 5 are done, and
+4 is done except `make web-serve-local`.
+
+The `--dart-define-from-file=config/$(ENV).json` argument landed with 080 on
+2026-10-08, and `ENV` now exists with the four values 080 req 4a names. That
+makes requirement 6 meetable: before it, `ENV` appeared in this spec and
+nowhere in the Makefile, so no target could list a variable that did not
+exist. Requirement 6 is done.
+
+Still open: the two sign-in acceptance checks, which need the operator's own
+devices; and `make web-serve-local`, which runs the `web` image that 105
+delivers.
 
 **Complexity:** Medium
 **Risk:** Medium — iOS signing and Android minSdk are the usual blockers; Amplify needs minSdk 24 and iOS 13+.
@@ -37,7 +44,7 @@ profiles (documented, not required), the cluster deployment (060).
 3. iOS: `make ui-run-ios` MUST run `flutter build ios --config-only --no-codesign` before `pod install`, because CocoaPods reads `ios/Flutter/Generated.xcconfig` and only a build writes it. The target runs on the booted simulator, or boots the one named by `IOS_DEVICE`. Signing team is left empty; the spec documents how to set `DEVELOPMENT_TEAM` for a real device.
 4. Web: `make ui-run-web` runs `flutter run -d chrome --web-port 3000` and expects `make go-run` on `:8080` (CORS origin `http://localhost:3000` allowed by default in `go-run`). `make ui-build-web` produces `flutter-ui/build/web`. `make web-serve-local` runs the `web` image on `:8081` with `flutter-ui/web/config.json` mounted.
 5. The platform-specific folders `macos/`, `linux/`, `windows/` MUST be deleted; this repository targets three platforms.
-6. Every target above MUST be listed in `make help` with its `ENV` variable.
+6. Every target above MUST be listed in `make help` with its `ENV` variable. *(Amended: `ui-run-web` and `ui-build-web` list no `ENV`, because `ENV` does not change web — a deployed API allows one CORS origin, its own web host, so the browser reaches a deployed backend by its own hostname. See 080 req 4b.)*
 
 ## Implementation hints
 
@@ -48,9 +55,10 @@ profiles (documented, not required), the cluster deployment (060).
 
 ## Testing / acceptance criteria
 
-- `make ui-run-android ENV=lab`: the app opens on the emulator, shows the Authenticator, signs in against the lab pool, shows three tabs and the "+" button.
-- `make ui-run-ios ENV=lab`: same on the simulator, with Cupertino tab bar and app-bar "+" action.
-- `make ui-run-web` with `make go-run`: same in Chrome with the navigation rail; "+" shows "Hello, anonymous".
+- `make ui-run-android ENV=dev`: the app opens on the emulator, shows the Authenticator, signs in against the platform's pool, shows three tabs and the "+" button. *(Amended: `ENV=lab` named the one deployed backend that existed; see 080 req 4a.)*
+- `make ui-run-ios ENV=dev`: same on the simulator, with Cupertino tab bar and app-bar "+" action.
+- `make help` lists `$ENV` on `ui-config`, `ui-run-android`, `ui-run-ios` and `ui-build-android`. *(Verified 2026-10-08.)*
+- `make ui-run-web` with `make go-run`: same in Chrome with the navigation rail; "+" shows "Hola, anonymous". `ENV` is not passed, because it does not change web.
 - `make ui-build-web && make web-serve-local`: `curl -I localhost:8081/` → 200, `curl localhost:8081/config.json` returns the local file, a deep link `localhost:8081/anything` returns `index.html`.
 - `flutter analyze` and `flutter test` still green after the id changes.
 - `git status` is clean after `make ui-build-web`. This confirms the ignore rules

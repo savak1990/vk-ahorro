@@ -26,7 +26,7 @@ rebuilt.
 | 055 | Cognito identifiers from SSM, `make token` | done |
 | 060 | GitOps chart and the platform pointer | done |
 | 070 | Flutter trimmed to the shell | done |
-| 080 | Flutter runtime config and the "+" → hello call | config and call done, `ui-config` planned |
+| 080 | Flutter runtime config and the "+" → hello call | built; waiting on a sign-in on three devices |
 | 090 | Local toolchain | planned |
 | 100 | Android, iOS, web | mostly done |
 | 120 | Imported app cleanup | done |
@@ -144,10 +144,20 @@ Check it on a device **before** you push - the client is the part a screenshot
 cannot verify:
 
 ```sh
-make ui-run-web          # Chrome on :3000
-make ui-run-android      # needs make emulator-android first
-make ui-run-ios          # needs make emulator-ios first
+make ui-run-web          # Chrome on :3000, against this machine
+make ui-run-android      # the emulator, against this machine
+make ui-run-ios          # the simulator, against this machine
 ```
+
+To check it against a **deployed** backend instead, name one with `ENV`:
+
+```sh
+make ui-run-android ENV=dev      # ahorro-dev, real sign-in
+make ui-run-android ENV=pr-33    # the preview for pull request 33
+make ui-run-ios ENV=dev          # the same on the simulator
+```
+
+`ENV` changes mobile only. See [Pick a backend with `ENV`](#pick-a-backend-with-env).
 
 ### Use case: you changed only scripts, docs or specs
 
@@ -323,7 +333,7 @@ spec adds.
 | Group | Targets | State |
 |---|---|---|
 | Go | `go-build` `go-test` `go-lint` `go-run` | exists |
-| Flutter run | `ui-run-web` `ui-run-android` `ui-run-ios` | exists |
+| Flutter run | `ui-run-web` `ui-run-android ENV=` `ui-run-ios ENV=` | exists |
 | Devices | `emulator-android` `emulator-ios` `emulator-stop` | exists |
 | Images | `image-build SVC=` `image-push SVC=` `images-push` | exists |
 | Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
@@ -332,10 +342,10 @@ spec adds.
 | Deploy | `deploy-dev VERSION=` `kubeconfig` | exists |
 | Previews | `preview-up PR= VERSION=` `preview-down PR=` `preview-url PR=` | exists |
 | Repository | `repo-settings` | exists |
-| Cognito | `cognito-config` `token` `ui-config` | exists |
+| Cognito | `cognito-config` `token` `ui-config ENV=` | exists |
 | GitOps | `gitops-lint` `gitops-template TARGET=` `gitops-check` | exists |
 | Local cluster | `forward-up` `forward-down` | exists |
-| Flutter build | `ui-get` `ui-analyze` `ui-test` `ui-build-web` `ui-build-android` | exists |
+| Flutter build | `ui-get` `ui-analyze` `ui-test` `ui-build-web` `ui-build-android ENV=` | exists |
 | Flutter config | `web-serve-local` | planned |
 
 ### Run the Flutter client on a local device
@@ -348,12 +358,58 @@ spec adds.
 `ui-run-android` and `ui-run-ios` start the device first. To start a device
 without the Flutter client, use `make emulator-android` or `make emulator-ios`.
 
-Two variables name the device. Set a different value on the command line:
+Three variables steer these targets. Set a different value on the command line:
 
 | Variable | Default | Example |
 |---|---|---|
 | `AVD` | `pixel_phone` | `make ui-run-android AVD=pixel_tablet` |
 | `IOS_DEVICE` | `iPhone 18 Pro` | `make ui-run-ios IOS_DEVICE="iPhone 17"` |
+| `ENV` | `local` | `make ui-run-android ENV=dev` |
+
+### Pick a backend with `ENV`
+
+`ENV` names which API the client on the device talks to.
+
+| `ENV` | The client talks to | Sign-in |
+|---|---|---|
+| `local` | `make go-run` on this machine | skipped |
+| `dev` | `ahorro-dev`, every merge to `main` | real |
+| `prod` | `ahorro`, the pinned release | real |
+| `pr-<n>` | the preview for that pull request | real |
+
+Two things follow from the table:
+
+- **`SKIP_AUTH` follows `ENV`.** It is `true` for `local` and `false` for every
+  deployed backend, so a device run against the lab shows the Authenticator
+  without another flag. `SKIP_AUTH=true` on the command line still wins.
+- **The targets generate the config first.** `ui-run-android`, `ui-run-ios`
+  and `ui-build-android` run `make ui-config` for you, which writes
+  `flutter-ui/config/$ENV.json` and passes it as `--dart-define-from-file`.
+  The values are compiled in, so changing `ENV` rebuilds.
+
+Every value but `local` needs the domain. It comes from the platform, which
+publishes it beside the deploy credential, so **the lab must be up** — or pass
+it yourself:
+
+```text
+make ui-run-android ENV=dev                   the lab is up
+FQDN=<fqdn> make ui-run-android ENV=dev       the lab is down
+```
+
+With the lab down and no `FQDN=`, the run stops **before the emulator starts**,
+on a `UI-CONFIG:` message naming both fixes. The emulator is not the problem.
+
+Two limits worth knowing:
+
+- **`ENV` changes mobile only.** A deployed API allows exactly one CORS
+  origin, its own web host, so a browser on `localhost:3000` cannot reach it.
+  To use the deployed client in a browser, open its hostname — the cluster
+  serves it already.
+- **`ENV=prod` points a debug build at the released namespace.** That is
+  ordinary read-only client traffic, but it is the namespace Argo owns, so
+  reach for `dev` unless you mean `prod`.
+
+### How the config files work
 
 On web the client reads `flutter-ui/web/config.json` at startup. That file is
 **generated, never committed**: the Cognito pool is one per platform project,
@@ -369,6 +425,23 @@ With no pool it writes blank Cognito keys and says so, and the client reports
 that none is configured rather than skipping sign-in. In the cluster the
 `ahorro-web` chart renders the same file from a ConfigMap, so one image serves
 every environment.
+
+On mobile there is no server to fetch from, so the same values are **compiled
+in** instead. `make ui-config` writes a second file for that, and the two
+carry the same values under **different key names**:
+
+| File | Read by | Keys look like |
+|---|---|---|
+| `flutter-ui/web/config.json` | the browser, over HTTP at startup | `apiBaseUrl` |
+| `flutter-ui/config/<env>.json` | `--dart-define-from-file`, at build time | `API_BASE_URL` |
+
+A `--dart-define` on the command line beats the same key in the file, in
+either order. That is why the local targets pass the host address explicitly —
+Android reaches this machine at `10.0.2.2`, iOS at `localhost` — and why a
+deployed `ENV` passes no address at all and lets the file win.
+
+Both files are generated and both are gitignored, so neither can carry the
+domain into Git. `make domain-check` greps tracked files only.
 
 Hostnames are `ahorro.<fqdn>` and `api-ahorro.<fqdn>`; the domain itself
 is never written in this repository.

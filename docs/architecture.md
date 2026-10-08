@@ -128,7 +128,7 @@ image tags and chart versions.
 | SSM `/<project>/persistent/ahorro-cognito/*` | pool id, client id, issuer, region, the test user and its password | the platform's `make persistent-up` | `make cognito-config`, `make token`, `make ui-config`, the platform's `argo-up.sh` |
 | `gitops/values.yaml` (Git) | image tags (SHA), chart versions, namespace; Cognito keys present but empty | CI (tags), operator (the rest) | Argo through the pointer Application |
 | `flutter-ui/web/config.json` (untracked) | API base URL, Cognito ids and region | `make ui-config`, from SSM for `$PROJECT_NAME` | the Chrome dev server at `make ui-run-web` |
-| `flutter-ui/config/<env>.json` (untracked) | API base URL, Cognito ids | `make ui-config ENV=lab FQDN=...` | mobile builds via `--dart-define-from-file` |
+| `flutter-ui/config/<env>.json` (untracked) | API base URL, Cognito ids and region, under define names | `make ui-config ENV=dev` | mobile builds via `--dart-define-from-file` |
 | Runtime | env vars (hello), `/config.json` ConfigMap (web) | Helm charts from Argo parameters | the processes |
 
 Public and committable: Cognito user pool id, client id, region. Never in
@@ -233,8 +233,8 @@ in `gitops/values.yaml` exist on GHCR.
 # 9. Local development
 
 - Go: `make go-run` starts `ahorro-api` on `:8080` with `AUTH_DISABLED=true` and CORS for `http://localhost:3000`.
-- Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the committed `flutter-ui/web/config.json` (localhost API, empty Cognito → the Authenticator is skipped only when auth is disabled server-side; otherwise the app shows a config error).
-- Mobile: `make ui-config ENV=lab FQDN=<fqdn>` writes `flutter-ui/config/lab.json` from the platform's SSM parameters; `make ui-run-android ENV=lab` and `make ui-run-ios ENV=lab` pass it as `--dart-define-from-file`.
+- Web: `make ui-run-web` runs Flutter in Chrome on `:3000` against the generated `flutter-ui/web/config.json` (localhost API, the project's Cognito keys; `SKIP_AUTH=false` signs in for real). That file always names the local API, whatever `ENV` says: a deployed API allows one CORS origin, its own web host, so the browser reaches a deployed backend by its own hostname instead.
+- Mobile: `make ui-config ENV=dev` writes `flutter-ui/config/dev.json` from the platform's SSM parameters; `make ui-run-android ENV=dev` and `make ui-run-ios ENV=dev` pass it as `--dart-define-from-file`, and generate it first. `ENV` is `local` (the default), `dev`, `prod` or `pr-<n>`. `FQDN=<fqdn>` resolves the domain without the lab running.
 - Images: `make image-build SVC=web && make web-serve-local` serves the production web image on `:8081`.
 - A kind cluster: `PROVIDER=local make full-up` in the platform runs both services; `make forward-up` here puts the client on `:8090` and the API on `:8091`. That target has no gateway route, no public hostname and no user pool, so sign-in is skipped and both halves report the stand-in user `e2e@vk-ahorro.invalid` (ADR 0007). Argo still fetches this repository from GitHub `main` there, so a local bring-up runs merged code.
 
