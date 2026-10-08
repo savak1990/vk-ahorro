@@ -11,7 +11,9 @@ class ApiLogger {
   static LogLevel get _logLevel {
     if (_cachedLogLevel != null) return _cachedLogLevel!;
 
-    const levelStr = String.fromEnvironment('LOG_LEVEL', defaultValue: 'warn');
+    // info, not warn: one line per call carrying the request id is what
+    // correlates a tap on the device with a line in the service log.
+    const levelStr = String.fromEnvironment('LOG_LEVEL', defaultValue: 'info');
     _cachedLogLevel = switch (levelStr.toLowerCase()) {
       'error' => LogLevel.error,
       'info' => LogLevel.info,
@@ -85,14 +87,16 @@ class ApiLogger {
     dynamic body,
     String? operation,
     Duration? duration,
+    String? requestId,
   }) {
     if (_shouldLog(LogLevel.info)) {
       final operationTag = operation != null ? '[$operation]' : '';
       final durationText = duration != null
           ? ' ${duration.inMilliseconds}ms'
           : '';
+      final idText = requestId != null ? ' request_id=$requestId' : '';
       debugPrint(
-        '$_tag $operationTag $method $url -> $statusCode$durationText',
+        '$_tag $operationTag $method $url -> $statusCode$durationText$idText',
       );
     }
 
@@ -134,13 +138,17 @@ class ApiLogger {
     required dynamic error,
     StackTrace? stackTrace,
     String? operation,
+    String? requestId,
   }) {
     if (!_shouldLog(LogLevel.error)) return;
 
     final timestamp = DateTime.now().toIso8601String();
     final operationTag = operation != null ? '[$operation]' : '';
+    // A call that never answers logs no response line, so the id has to be
+    // here too or a failed request cannot be correlated at all.
+    final idText = requestId != null ? ' request_id=$requestId' : '';
 
-    debugPrint('$_tag $operationTag ERROR [$method] - $timestamp');
+    debugPrint('$_tag $operationTag ERROR [$method] - $timestamp$idText');
     debugPrint('$_tag URL: $url');
     debugPrint('$_tag ERROR: $error');
 

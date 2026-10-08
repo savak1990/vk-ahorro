@@ -399,6 +399,24 @@ FQDN=<fqdn> make ui-run-android ENV=dev       the lab is down
 With the lab down and no `FQDN=`, the run stops **before the emulator starts**,
 on a `UI-CONFIG:` message naming both fixes. The emulator is not the problem.
 
+### Correlate a tap with the service log
+
+Every API call prints one line, with no extra flag:
+
+```text
+[ApiLogger]  GET https://api-ahorro-dev.<fqdn>/api/v1/hello -> 200 128ms request_id=7f3c...
+```
+
+The service logs JSON with the same id as a field, so one query joins the two:
+
+```logql
+{namespace="ahorro-dev", container="ahorro-api"} | json | request_id = "7f3c..."
+```
+
+The container label is `ahorro-api`, not `api`. Raise `LOG_LEVEL` to `debug`
+for bodies or `verbose` for headers; `info` is the default and `kDebugMode`
+gates all of it, so a release build prints nothing.
+
 Two limits worth knowing:
 
 - **`ENV` changes mobile only.** A deployed API allows exactly one CORS

@@ -27,7 +27,8 @@ class HelloService {
 
   Future<String> hello() async {
     final url = Uri.parse(AppConfig.helloUrl);
-    final headers = <String, String>{'X-Request-Id': generateOperationId()};
+    final requestId = generateOperationId();
+    final headers = <String, String>{'X-Request-Id': requestId};
     final token = await _idToken();
     if (token != null) headers['Authorization'] = 'Bearer $token';
 
@@ -38,6 +39,7 @@ class HelloService {
       url: '$url',
       statusCode: response.statusCode,
       body: response.body,
+      requestId: requestId,
     );
     if (response.statusCode != 200) throw HelloError(response.statusCode);
 
