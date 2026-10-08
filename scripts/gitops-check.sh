@@ -43,13 +43,37 @@ fi
 
 # `value` is optional in the Application CRD, so the API server drops
 # `value: ""` on write. Argo then compares a stored object without the field
-# against a manifest that has it and reports OutOfSync for ever, which
-# selfHeal: false never corrects. Omit the parameter instead.
+# against a manifest that has it and reports OutOfSync for ever, and selfHeal
+# cannot fix it: every re-sync writes the field and the API server drops it
+# again. Omit the parameter instead.
 for rendered in "$cloud" "$local_render"; do
   if grep -q '^ *value: ""$' "$rendered"; then
     echo "GITOPS-CHECK: $rendered passes an empty helm parameter:" >&2
     grep -B1 '^ *value: ""$' "$rendered" >&2
     echo "GITOPS-CHECK: omit the parameter instead - an empty value never round-trips." >&2
+    exit 1
+  fi
+done
+
+# Argo resolves a chart version with Masterminds/semver, and no constraint
+# matches a prerelease: "*" sees 0.2.1 and never 0.2.1-main.abc1234. A range
+# would therefore stop seeing new builds while Argo still reported Synced.
+for rendered in "$cloud" "$local_render"; do
+  if grep -nE '^ *targetRevision: "(\*|[~^<>=]| *$)' "$rendered" >/dev/null; then
+    echo "GITOPS-CHECK: $rendered pins a range rather than one exact version:" >&2
+    grep -nE '^ *targetRevision: "(\*|[~^<>=]| *$)' "$rendered" >&2
+    echo "GITOPS-CHECK: a range never matches a prerelease, so new builds stop arriving silently." >&2
+    exit 1
+  fi
+done
+
+# A moving tag leaves the rendered manifest unchanged, so Argo creates no new
+# pod and reports Synced over whatever the node already cached.
+for rendered in "$cloud" "$local_render"; do
+  if grep -nE '^ *value: "(main|latest|master)"$' "$rendered" >/dev/null; then
+    echo "GITOPS-CHECK: $rendered passes a moving image tag:" >&2
+    grep -nB1 -E '^ *value: "(main|latest|master)"$' "$rendered" >&2
+    echo "GITOPS-CHECK: pin the exact version the pipeline published." >&2
     exit 1
   fi
 done

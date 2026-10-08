@@ -1,0 +1,302 @@
+# Publishes one version of the whole repository.
+#
+#   push to main        0.2.1-main.<short-sha>
+#   workflow_dispatch   0.2.1 | 0.3.0 | 1.0.0, and the matching git tag
+#
+# Every component is published on every channel, whether or not it changed,
+# so one number names everything an environment runs. A component whose code
+# did not change is not rebuilt: its manifest is copied to the new tag, which
+# is a registry-side operation that uploads no layer.
+#
+# Every action is pinned to a full commit SHA; see ci.yml for why.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    # gitops/** is ignored because it holds the pins, not the code. Publishing
+    # a new version in answer to a pin change would mean the pin is already
+    # stale the moment it merges.
+    paths-ignore:
+      - "gitops/**"
+      - "docs/**"
+      - "specs/**"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: The release bump level
+        required: true
+        type: choice
+        options: [patch, minor, major]
+
+permissions: {}
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # One version for the whole run, and the decision of what to rebuild.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      release: ${{ steps.v.outputs.release }}
+      go: ${{ steps.filter.outputs.go }}
+      flutter: ${{ steps.filter.outputs.flutter }}
+    steps:
+      # The version is derived from the tag history, so fetch all of it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: v
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then
+            version="$(./scripts/version.sh release "$BUMP")"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            version="$(./scripts/version.sh main "${{ github.sha }}")"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### Version \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # A release rebuilds nothing: every component is copied from the image
+      # its own last change already published, which is the code at this
+      # commit. On a push, only what changed is rebuilt.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'push'
+        with:
+          filters: |
+            go:
+              - 'cmd/**'
+              - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'deploy/docker/ahorro-api.Dockerfile'
+            flutter:
+              - 'flutter-ui/**'
+              - 'deploy/docker/ahorro-web.Dockerfile'
+              - 'deploy/docker/ahorro-web.nginx.conf'
+              - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
+
+  images:
+    needs: version
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # One job per service, so a slow Flutter build never delays the Go image
+    # and a failure names the service that broke.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - svc: ahorro-api
+            changed: ${{ needs.version.outputs.go }}
+          - svc: ahorro-web
+            changed: ${{ needs.version.outputs.flutter }}
+    steps:
+      # The copy source is found through the log, so the history is needed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The docker-container driver is what makes a multi-platform build
+      # possible; the default builder cannot produce one.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # provenance: false keeps the pushed manifest a plain multi-platform
+      # index rather than an attestation index, which is what Argo and a plain
+      # docker pull expect.
+      - if: matrix.changed == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/docker/${{ matrix.svc }}.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.svc }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.svc }}:${{ needs.version.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.svc }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.svc }}
+
+      # The commit that last touched this component is the commit whose build
+      # pushed the image the component still runs, so its SHA tag is always
+      # the right source and always exists.
+      - if: matrix.changed != 'true'
+        name: Copy the unchanged image to the new version
+        env:
+          REPO: ghcr.io/${{ github.repository }}/${{ matrix.svc }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SVC: ${{ matrix.svc }}
+        run: |
+          set -euo pipefail
+          case "$SVC" in
+            ahorro-api) paths="cmd internal go.mod go.sum deploy/docker/ahorro-api.Dockerfile" ;;
+            ahorro-web) paths="flutter-ui deploy/docker/ahorro-web.Dockerfile deploy/docker/ahorro-web.nginx.conf deploy/docker/ahorro-web.Dockerfile.dockerignore" ;;
+            *) echo "no path set for $SVC" >&2; exit 1 ;;
+          esac
+          # shellcheck disable=SC2086
+          src="$(git log -1 --format=%H -- $paths)"
+          [ -n "$src" ] || { echo "no commit ever touched $SVC" >&2; exit 1; }
+          echo "copying $REPO:$src to $REPO:$VERSION"
+          docker buildx imagetools create -t "$REPO:$VERSION" "$REPO:$src"
+
+      - name: Report
+        env:
+          REPO: ghcr.io/${{ github.repository }}/${{ matrix.svc }}
+          VERSION: ${{ needs.version.outputs.version }}
+          BUILT: ${{ matrix.changed == 'true' && 'built' || 'copied' }}
+        run: |
+          {
+            echo "- \`$REPO:$VERSION\` ($BUILT)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # A separate job, so a chart failure does not hide a successful image push.
+  # Packaging is cheap, so every chart is published on every channel with no
+  # change detection at all.
+  charts:
+    needs: [version, images]
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - name: Package and push every chart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          echo "$GITHUB_TOKEN" | helm registry login ghcr.io \
+            --username '${{ github.actor }}' --password-stdin
+          for dir in deploy/helm/*/; do
+            chart="$(basename "${dir%/}")"
+            make helm-push CHART="$chart" VERSION="$VERSION"
+            echo "- \`oci://ghcr.io/${{ github.repository }}/charts/$chart:$VERSION\`" \
+              >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  # Namespace ahorro-dev only. Namespace ahorro is Argo's, pinned to a
+  # released version, and the credential below is refused there by cluster
+  # RBAC rather than by this condition alone.
+  #
+  # A release skips this: it publishes the version a human then promotes, and
+  # promoting it is a reviewed pull request, not a side effect of the release.
+  deploy-dev:
+    needs: [version, images, charts]
+    if: needs.version.outputs.release != 'true'
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      # The lab is torn down when it is not in use, so an unreachable cluster
+      # is the normal state rather than a failure. Exit 2 from the script
+      # means exactly that, and it is reported loudly and left green: a red
+      # run on every merge would train everyone to ignore the colour. Any
+      # other failure is a real one and fails the job.
+      - name: Deploy to ahorro-dev
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -uo pipefail
+          # The script, not `make deploy-dev`: make collapses every recipe
+          # failure to exit 2, which is the very code that means "unreachable"
+          # here. Going through make would report a broken deploy as a skip
+          # and leave the job green.
+          PROJECT_NAME="$(make -s print-project)"
+          export PROJECT_NAME
+          # `|| status=$?`, because the default shell is `bash -e`: a bare call
+          # would abort the step on any non-zero exit and the branches below
+          # would never run.
+          status=0
+          ./scripts/deploy-dev.sh "$VERSION" || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "### ahorro-dev is at \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$status" -eq 2 ]; then
+            {
+              echo "### ahorro-dev was not updated"
+              echo
+              echo "The cluster is not reachable, so this merge published"
+              echo "\`$VERSION\` but deployed nothing."
+              echo
+              echo "Run 'make up' in vk-lab-platform, then re-run this job."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::ahorro-dev was not updated: the cluster is not reachable. Run 'make up' in vk-lab-platform, then re-run this job."
+            exit 0
+          fi
+          exit "$status"
+
+  # The tag is written only after every artifact exists, so a failed publish
+  # never leaves a tag naming a version nobody can pull. contents: write is
+  # for the tag and nothing else; no workflow commits to this repository.
+  tag:
+    needs: [version, images, charts]
+    if: needs.version.outputs.release == 'true'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          {
+            echo "### Released \`v$VERSION\`"
+            echo "Pin it in \`gitops/values.yaml\`, then bump"
+            echo "\`ahorro.targetRevision\` in vk-lab-platform."
+          } >> "$GITHUB_STEP_SUMMARY"

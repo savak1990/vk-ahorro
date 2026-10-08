@@ -21,7 +21,8 @@ spec:
       # A parameter is omitted rather than passed empty. `value` is optional
       # in the CRD, so the API server drops `value: ""` on write, and Argo
       # then diffs the stored object against a manifest that still has it -
-      # permanent OutOfSync that selfHeal: false never corrects.
+      # permanent OutOfSync, and selfHeal cannot fix it: every re-sync writes the
+      # field and the API server drops it again.
       parameters:
         - name: image.tag
           value: {{ .Values.web.tag | quote }}
@@ -64,7 +65,7 @@ spec:
   syncPolicy:
     automated:
       prune: true
-      selfHeal: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

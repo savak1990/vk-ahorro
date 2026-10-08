@@ -44,8 +44,10 @@ crash.*.log
 terraform.tfvars
 terraform.tfvars.json
 
-# Local kubeconfigs
+# Local kubeconfigs. The deploy credential is written to $RUNNER_TEMP or
+# $TMPDIR, never here, but a hand-passed path could land in the tree.
 .kube/
+*.kubeconfig
 
 # Editor-local MCP config
 .cursor/

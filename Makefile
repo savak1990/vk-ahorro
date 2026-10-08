@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -12,8 +12,18 @@ BIN_DIR := $(CURDIR)/bin
 # and the service warns about it at startup.
 PORT ?= 8080
 AUTH_DISABLED ?= true
-SKIP_AUTH ?= true
+
+# Which backend the Flutter client talks to: local is this machine, and dev,
+# prod and pr-<n> are deployed namespaces whose host names come from the
+# platform's domain. These four are expanded in order, and SKIP_AUTH reads ENV.
+ENV ?= local
+SKIP_AUTH ?= $(if $(filter local,$(ENV)),true,false)
 UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH)
+MOBILE_DEFINES := $(UI_DEFINES) --dart-define-from-file=config/$(ENV).json
+# A --dart-define beats the same key in the define file whichever order they
+# arrive in, so this machine's address must be absent for a deployed backend.
+ANDROID_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://10.0.2.2:$(PORT))
+IOS_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
 
 # Image coordinates. The tag is always the full commit SHA; `latest` is never
 # built or pushed.
@@ -29,9 +39,14 @@ PLATFORMS := linux/amd64,linux/arm64
 # Chart coordinates. CHART names a directory under deploy/helm.
 CHART ?=
 CHART_DIR = deploy/helm/$(CHART)
-CHART_VERSION = $(shell sed -n 's/^version: *//p' $(CHART_DIR)/Chart.yaml)
 CHARTS_REGISTRY ?= oci://$(REGISTRY)/charts
 DIST_DIR := $(CURDIR)/dist
+
+# One version names the whole repository, derived from the git tag. The
+# Chart.yaml value is a placeholder that keeps `helm lint` quiet; the pipeline
+# always overrides it, so nothing has to remember a hand bump.
+VERSION ?= $(shell ./scripts/version.sh base)
+CHART_VERSION = $(VERSION)
 
 # A documented placeholder. The real hostname exists only at install time.
 TEMPLATE_HOST := api-ahorro.lab.example.com
@@ -87,6 +102,38 @@ specs-check:
 domain-check:
 	@./scripts/domain-guard.sh
 
+## Apply branch protection, the labels and the release environment on GitHub
+repo-settings:
+	@./scripts/repo-settings.sh
+
+## Print the version the next build publishes under
+version:
+	@echo $(VERSION)
+
+## Print the platform project this repository targets
+print-project:
+	@echo $(PROJECT_NAME)
+
+## Upgrade both releases in ahorro-dev. Usage: make deploy-dev VERSION=0.2.2-main.abc1234
+deploy-dev:
+	@./scripts/deploy-dev.sh $(VERSION)
+
+## Deploy one pull request to ahorro-pr. Usage: make preview-up PR=42 VERSION=0.2.3-pr-42
+preview-up:
+	@./scripts/preview.sh up $(PR) $(VERSION)
+
+## Remove one pull request from ahorro-pr. Usage: make preview-down PR=42
+preview-down:
+	@./scripts/preview.sh down $(PR)
+
+## Print a preview's clickable URL, which CI never logs. Usage: make preview-url PR=42
+preview-url:
+	@./scripts/preview.sh url $(PR)
+
+## Write a kubeconfig for the ahorro-dev deploy credential and print its path
+kubeconfig:
+	@./scripts/kubeconfig.sh
+
 ## Print the Cognito pool's public identifiers as JSON
 cognito-config:
 	@./scripts/cognito.sh config
@@ -95,9 +142,9 @@ cognito-config:
 token:
 	@./scripts/cognito.sh token
 
-## Write flutter-ui/web/config.json from $PROJECT_NAME's Cognito pool
+## Write both Flutter config files for $ENV from $PROJECT_NAME's Cognito pool
 ui-config:
-	@./scripts/ui-config.sh
+	@./scripts/ui-config.sh $(ENV)
 
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:
@@ -140,10 +187,10 @@ helm-template: require-chart
 	@helm template $(CHART) $(CHART_DIR) \
 	  --set host=$(TEMPLATE_HOST) --set image.tag=$(IMAGE_TAG)
 
-## Package one chart into dist/. Usage: make helm-package CHART=ahorro-api
+## Package one chart into dist/. Usage: make helm-package CHART=ahorro-api VERSION=0.2.1-pr-42
 helm-package: require-chart
 	@mkdir -p $(DIST_DIR)
-	helm package $(CHART_DIR) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
+	helm package $(CHART_DIR) --version $(VERSION) --app-version $(IMAGE_TAG) --destination $(DIST_DIR)
 
 ## Push one packaged chart to GHCR. Usage: make helm-push CHART=ahorro-api
 helm-push: helm-package
@@ -194,9 +241,9 @@ ui-test:
 ui-build-web:
 	cd $(UI_DIR) && flutter build web
 
-## Build a debug APK
-ui-build-android:
-	cd $(UI_DIR) && flutter build apk --debug
+## Build a debug APK against $ENV
+ui-build-android: ui-config
+	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(ANDROID_API)
 
 ## Start the Android emulator $AVD without waiting for it to boot
 emulator-android:
@@ -206,14 +253,14 @@ emulator-android:
 emulator-ios:
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" nowait
 
-## Run the Flutter app on the Android emulator $AVD, auth skipped, API on the host
-ui-run-android:
+## Run the Flutter app on the Android emulator $AVD against $ENV
+ui-run-android: ui-config
 	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(AVD)) && \
-	  cd $(UI_DIR) && flutter run -d $$serial $(UI_DEFINES) --dart-define=API_BASE_URL=http://10.0.2.2:$(PORT)
+	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(ANDROID_API)
 
-## Run the Flutter app on the iOS simulator $IOS_DEVICE, auth skipped, API on the host
-ui-run-ios:
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(UI_DEFINES) --dart-define=API_BASE_URL=http://localhost:$(PORT)
+## Run the Flutter app on the iOS simulator $IOS_DEVICE against $ENV
+ui-run-ios: ui-config
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(MOBILE_DEFINES) $(IOS_API)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool

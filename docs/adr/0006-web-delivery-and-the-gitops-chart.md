@@ -74,6 +74,16 @@ This is the shape platform ADR 0015 endorses over ApplicationSet.
 
 ### 4. Nothing is pinned, for now
 
+> **Closed by ADR 0009.** The interim ended as this decision said it would.
+> Both values are now exact versions, one version number names the whole
+> repository, and the contradiction with constitution §5 is resolved by
+> amending that clause rather than by pinning a SHA. `chart-version-check.sh`
+> goes with it: the version comes from a git tag, so there is no hand bump to
+> forget, which is what that script existed to catch. The wildcard had a
+> second defect
+> nobody knew of at the time: `"*"` never matches a prerelease, so it would
+> have stopped seeing new builds the moment the version scheme changed.
+
 `image.tag` is the moving `main` tag and `chartVersion` is the wildcard `"*"`.
 A fresh bring-up therefore always runs the newest build with no edit anywhere,
 which is what a disposable lab wants.
@@ -98,6 +108,12 @@ Revisit when the cluster stops being disposable, or the first time a rollback
 is needed.
 
 ### 5. Both child Applications set `selfHeal: false`
+
+> **Closed by ADR 0009.** Both children and the platform's pointer now set
+> `selfHeal: true`. The reason below was the only one, and it is gone: hand
+> work happens in `ahorro-dev` and `ahorro-pr`, which Argo does not watch.
+> The flip also restores core 060 requirement 3, which this decision deviated
+> from.
 
 The operator runs `helm install` by hand against this namespace and does not
 want it reverted. `selfHeal: false` means Argo reacts only to a change in the

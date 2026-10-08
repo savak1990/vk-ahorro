@@ -24,7 +24,7 @@ explicit skip flag ships instead.
 **Risk:** Low — a target that nothing depends on; a broken render there cannot reach a cloud cluster.
 **Estimated cost:** ~0.5 day · Runtime cost: none. kind runs on the operator's machine.
 **Recommended model:** Sonnet.
-**Depends on:** [060-gitops-and-platform-link](../060-A-gitops-and-platform-link/spec.md), [105-web-delivery](../105-A-web-delivery/spec.md)
+**Depends on:** [060-gitops-and-platform-link](../060-D-gitops-and-platform-link/spec.md), [105-web-delivery](../105-D-web-delivery/spec.md)
 **Lifecycle class(es) touched:** Disposable (every Kubernetes object the charts render).
 
 ## Scope
