@@ -26,8 +26,9 @@ UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH) --dart-define=LOG_LEVEL=$(LOG
 MOBILE_DEFINES := $(UI_DEFINES) --dart-define-from-file=config/$(ENV).json
 # A --dart-define beats the same key in the define file whichever order they
 # arrive in, so this machine's address must be absent for a deployed backend.
-ANDROID_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://10.0.2.2:$(PORT))
-IOS_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
+# adb reverse gives an emulator and a handset alike a loopback route back to
+# this machine, so every mobile target uses the address iOS already used.
+LOCAL_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
 
 # Image coordinates. The tag is always the full commit SHA; `latest` is never
 # built or pushed.
@@ -250,7 +251,7 @@ ui-build-web:
 
 ## Build a debug APK against $ENV
 ui-build-android: ui-config
-	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(ANDROID_API)
+	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
 ## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:
@@ -263,11 +264,12 @@ emulator-ios:
 ## Run the Flutter app on the Android $DEVICE, emulator or handset, against $ENV
 ui-run-android: ui-config
 	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && \
-	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(ANDROID_API)
+	  adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && \
+	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(LOCAL_API)
 
 ## Run the Flutter app on the iOS $DEVICE against $ENV
 ui-run-ios: ui-config
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" && cd $(UI_DIR) && flutter run -d "$(IOS_TARGET)" $(MOBILE_DEFINES) $(IOS_API)
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" && cd $(UI_DIR) && flutter run -d "$(IOS_TARGET)" $(MOBILE_DEFINES) $(LOCAL_API)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool
