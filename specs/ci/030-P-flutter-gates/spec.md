@@ -5,7 +5,11 @@ updated: "2026-09-26"
 ---
 # 030 — Flutter quality, architecture and build gates
 
-**Status note:** Draft.
+**Status note:** Draft. Requirement 1 is a hard prerequisite for every other
+requirement here and it is not met: `flutter-ui/pubspec.yaml` has
+`sdk: ^3.8.0` and **no `flutter:` key at all**, so
+`subosito/flutter-action` with `flutter-version-file` cannot resolve a
+version. Nothing else in this spec can be built first.
 
 **Complexity:** Medium
 **Risk:** Medium — the iOS build needs a macOS runner and CocoaPods; the first run is where plugin version drift shows.
@@ -33,8 +37,8 @@ integration test (040); the web image (core 105).
 3. `make ui-deps-check` runs `dart pub get --enforce-lockfile` and `dart run dependency_validator`: the lockfile matches the manifest and no dependency is unused or undeclared.
 4. `make ui-lint-imports` runs `import_lint` (Dart 3.10 `plugins:` system) with one rule: files under `lib/src/providers/`, `lib/src/services/`, `lib/src/config/` and `lib/src/constants/` MUST NOT import `lib/src/screens/` or `lib/src/widgets/`. Presentation depends on logic, never the reverse.
 5. `make ui-cover` runs `flutter test --coverage` and fails below 60% line coverage, computed from `coverage/lcov.info` `LF:`/`LH:` lines with `awk`; no new tool.
-6. `make ui-build-aab` runs `flutter build appbundle --release`; `make ui-build-ios` runs `flutter build ios --release --no-codesign`. Both accept `BUILD_NUMBER=` and pass it as `--build-number`; the default is the `+n` in `pubspec.yaml`. `ui-build-android` (debug APK, core 100) stays for local use.
-7. CI: the `ui` job runs `ui-get`, `ui-format-check`, `ui-analyze`, `ui-deps-check`, `ui-lint-imports`, `ui-test`, `ui-cover`. Two further jobs gated on the `flutter` filter: `build-android` on `ubuntu-latest` runs `ui-build-aab`; `build-ios` on `macos-latest` runs `ui-build-ios`. Each uploads its output as an artifact with `retention-days: 7`. Both join `ci-ok`.
+6. `make ui-build-aab` runs `flutter build appbundle --release`; `make ui-build-ios` runs `flutter build ios --release --no-codesign`. Both accept `BUILD_NUMBER=` and pass it as `--build-number`; the default is the `+n` in `pubspec.yaml`. `ui-build-android` (debug APK, core 100) stays for local use. Both MUST also carry the `ENV` guard and the version name of [015](../../deploy/015-P-local-release-builds/spec.md) reqs 3 and 4. *(Amended: without the guard these two targets inherit `ENV=local`, which is how `deploy/030` req 5 came to specify a store upload pointed at `http://localhost:8080`. 015 req 1 adds the release APK these two do not produce.)*
+7. CI: the `ui` job runs `ui-get`, `ui-format-check`, `ui-analyze`, `ui-deps-check`, `ui-lint-imports`, `ui-test`, `ui-cover`. Two further jobs gated on the `flutter` filter: `build-android` on `ubuntu-latest` runs `ui-build-aab`; `build-ios` on `macos-latest` runs `ui-build-ios`. Each uploads its output as an artifact with `retention-days: 7`. Both MUST join `ci-ok`'s `needs:` list, which is the single required context `make repo-settings` configures: a job that is not in that list reports its own result and blocks nothing. *(Amended: "join `ci-ok`" did not say where. The list is maintained by hand and a job left out of it is advisory, so a native build break would report red on the run page and still merge.)*
 8. Caches: the Flutter SDK and pub cache through the action's `cache: true`; Gradle through `gradle/actions/setup-gradle`; CocoaPods keyed on `ios/Podfile.lock`.
 
 ## Implementation hints

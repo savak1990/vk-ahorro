@@ -1,6 +1,6 @@
 ---
 id: "CORE-080"
-status: "IN_PROGRESS"
+status: "DONE"
 updated: "2026-10-08"
 ---
 # 080 — Flutter: runtime configuration, Cognito, and the hello call
@@ -9,7 +9,18 @@ updated: "2026-10-08"
 
 Requirements 4, 4a, 4b and 7 are delivered (2026-10-08). `scripts/ui-config.sh` takes `ENV` and writes both files; the two carry the same values under different key names, because web fetches camelCase JSON at startup and mobile reads define names baked in at build time. The mobile run and build targets pass `--dart-define-from-file=config/$(ENV).json`, and `SKIP_AUTH` now defaults to `false` for every deployed backend. Before this, the mobile targets passed `SKIP_AUTH` and `API_BASE_URL` alone, so the three Cognito defines were empty and `SKIP_AUTH=false` showed the "not configured" widget instead of the Authenticator: there was no path to real mobile sign-in at any flag setting.
 
-Open: the acceptance criteria that need a sign-in on web, Android and iOS. Only the operator can run those, on their own devices.
+Done (2026-10-08). The operator ran the sign-in criteria on all three
+platforms, which is the only evidence this spec could take: nobody but them
+has the devices. The web run is the one recorded in full here, because it
+happened in the same session - `make ui-run-web ENV=prod` in Chrome on `:3000`,
+a real Cognito sign-in, "+" answered by `ahorro`, one `request_id` line in the
+console with no extra flag, and the same id found in Loki with
+`{namespace="ahorro", container="ahorro-api"} | json | request_id = "<id>"`.
+The operator confirmed the Android and iOS runs separately.
+
+One trap worth keeping, found while writing that query: `request_id` is a JSON
+field, not a stream label. Naming it inside `{}` matches zero streams and
+returns no error, which reads as a missing log line rather than a wrong query.
 
 **Complexity:** Medium
 **Risk:** Medium — a wrong config path on web breaks the app silently; token handling must send the id token the Go service expects.

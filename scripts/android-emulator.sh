@@ -3,8 +3,15 @@
 # emulator is attached, and a phone plus a tablet is the normal local setup.
 set -euo pipefail
 
-avd="${1:?usage: android-emulator.sh <avd-name> [nowait]}"
+avd="${1:?usage: android-emulator.sh <avd-name-or-serial> [nowait]}"
 mode="${2:-wait}"
+
+# A handset is already attached and has no AVD to launch. Its serial never
+# matches ^emulator-, over USB or over wifi, so it is recognized up front.
+if adb devices | awk -v d="$avd" '$2 == "device" && $1 == d { f = 1 } END { exit !f }'; then
+  if [ "$mode" = nowait ]; then echo "$avd already attached"; else echo "$avd"; fi
+  exit 0
+fi
 
 serial_of() {
   local s

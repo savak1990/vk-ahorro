@@ -26,8 +26,9 @@ UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH) --dart-define=LOG_LEVEL=$(LOG
 MOBILE_DEFINES := $(UI_DEFINES) --dart-define-from-file=config/$(ENV).json
 # A --dart-define beats the same key in the define file whichever order they
 # arrive in, so this machine's address must be absent for a deployed backend.
-ANDROID_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://10.0.2.2:$(PORT))
-IOS_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
+# adb reverse gives an emulator and a handset alike a loopback route back to
+# this machine, so every mobile target uses the address iOS already used.
+LOCAL_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
 
 # Image coordinates. The tag is always the full commit SHA; `latest` is never
 # built or pushed.
@@ -60,11 +61,14 @@ TEMPLATE_HOST := api-ahorro.lab.example.com
 TARGET ?= aws
 GITOPS_FQDN = $(if $(filter local,$(TARGET)),,--set fqdn=example.invalid)
 
-# Flutter UI. AVD and IOS_DEVICE name the simulators a developer boots locally;
-# override either on the command line to use a different one.
+# Flutter UI. DEVICE names the target on either platform: an AVD name, an adb
+# serial over USB or wifi, or an iOS device from `flutter devices`. It has no
+# default of its own, because the two platform defaults below differ.
 UI_DIR := $(CURDIR)/flutter-ui
 AVD ?= pixel_phone
 IOS_DEVICE ?= iPhone 18 Pro
+ANDROID_DEVICE = $(if $(DEVICE),$(DEVICE),$(AVD))
+IOS_TARGET = $(if $(DEVICE),$(DEVICE),$(IOS_DEVICE))
 
 # The platform project whose persistent layer owns the Cognito pool. The pool
 # is per project, so nothing about it can be committed here. Exported because
@@ -147,6 +151,7 @@ token:
 	@./scripts/cognito.sh token
 
 ## Write both Flutter config files for $ENV from $PROJECT_NAME's Cognito pool
+ui-config: export PORT := $(PORT)
 ui-config:
 	@./scripts/ui-config.sh $(ENV)
 
@@ -245,26 +250,30 @@ ui-test:
 ui-build-web:
 	cd $(UI_DIR) && flutter build web
 
-## Build a debug APK against $ENV
+# This target has no serial to reverse against: it builds an artifact, it does
+# not pick a device. ENV=local therefore needs a reverse already in place.
+## Build a debug APK against $ENV. ENV=local needs an adb reverse on the device
 ui-build-android: ui-config
-	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(ANDROID_API)
+	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
-## Start the Android emulator $AVD without waiting for it to boot
+## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:
-	@$(CURDIR)/scripts/android-emulator.sh $(AVD) nowait
+	@$(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE) nowait
 
-## Start the iOS simulator $IOS_DEVICE without waiting for it to boot
+## Start the iOS $DEVICE without waiting for it to boot
 emulator-ios:
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" nowait
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" nowait
 
-## Run the Flutter app on the Android emulator $AVD against $ENV
+## Run the Flutter app on the Android $DEVICE, emulator or handset, against $ENV
 ui-run-android: ui-config
-	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(AVD)) && \
-	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(ANDROID_API)
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && \
+	  adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && \
+	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(LOCAL_API)
 
-## Run the Flutter app on the iOS simulator $IOS_DEVICE against $ENV
+## Run the Flutter app on the iOS $DEVICE against $ENV
+ui-run-ios: export ENV := $(ENV)
 ui-run-ios: ui-config
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(MOBILE_DEFINES) $(IOS_API)
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" && cd $(UI_DIR) && flutter run -d "$(IOS_TARGET)" $(MOBILE_DEFINES) $(LOCAL_API)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool

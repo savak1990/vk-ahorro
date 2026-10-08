@@ -13,7 +13,7 @@ The other half, against the real cluster and the real Cognito pool, is
 **Risk:** Medium — `flutter drive` on a headless browser is the flakiest job in the workflow; a retry budget of one is allowed, more hides a real defect.
 **Estimated cost:** ~1 day
 **Recommended model:** Sonnet.
-**Depends on:** [030-flutter-gates](../030-P-flutter-gates/spec.md), [080-flutter-config-and-hello](../../core/080-A-flutter-config-and-hello/spec.md)
+**Depends on:** [030-flutter-gates](../030-P-flutter-gates/spec.md), [080-flutter-config-and-hello](../../core/080-D-flutter-config-and-hello/spec.md)
 **Lifecycle class(es) touched:** None.
 
 ## Scope
