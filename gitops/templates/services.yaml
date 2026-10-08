@@ -48,8 +48,13 @@ spec:
 {{- else }}
         - name: host
           value: {{ printf "%s.%s" $svc.hostPrefix $root.Values.fqdn | quote }}
+        # localhost is deliberate. `make ui-run-web ENV=prod` serves the
+        # client from there, and without this the browser throws the answer
+        # away. Safe only while the API reads a bearer token and sets no
+        # Access-Control-Allow-Credentials: a cookie session would make this
+        # a CSRF hole, which TestCORSSetsNoCredentialsHeader guards.
         - name: corsAllowedOrigins
-          value: {{ printf "https://%s.%s" $root.Values.web.hostPrefix $root.Values.fqdn | quote }}
+          value: {{ printf "https://%s.%s,http://localhost:%v" $root.Values.web.hostPrefix $root.Values.fqdn $root.Values.devServerPort | quote }}
 {{- if $root.Values.cognito.issuer }}
         - name: cognito.issuer
           value: {{ $root.Values.cognito.issuer | quote }}

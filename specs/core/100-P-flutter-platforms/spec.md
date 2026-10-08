@@ -44,7 +44,7 @@ profiles (documented, not required), the cluster deployment (060).
 3. iOS: `make ui-run-ios` MUST run `flutter build ios --config-only --no-codesign` before `pod install`, because CocoaPods reads `ios/Flutter/Generated.xcconfig` and only a build writes it. The target runs on the booted simulator, or boots the one named by `IOS_DEVICE`. Signing team is left empty; the spec documents how to set `DEVELOPMENT_TEAM` for a real device.
 4. Web: `make ui-run-web` runs `flutter run -d chrome --web-port 3000` and expects `make go-run` on `:8080` (CORS origin `http://localhost:3000` allowed by default in `go-run`). `make ui-build-web` produces `flutter-ui/build/web`. `make web-serve-local` runs the `web` image on `:8081` with `flutter-ui/web/config.json` mounted.
 5. The platform-specific folders `macos/`, `linux/`, `windows/` MUST be deleted; this repository targets three platforms.
-6. Every target above MUST be listed in `make help` with its `ENV` variable. *(Amended: `ui-run-web` and `ui-build-web` list no `ENV`, because `ENV` does not change web — a deployed API allows one CORS origin, its own web host, so the browser reaches a deployed backend by its own hostname. See 080 req 4b.)*
+6. Every target above MUST be listed in `make help` with its `ENV` variable. `ui-build-web` is the exception: it produces a bundle the `web` chart configures at runtime, so it takes no backend. *(Amended twice: `ENV` did not exist when this was written, and a first pass exempted both web targets while `ENV` steered mobile alone. 080 req 4b now makes `ui-run-web ENV=<env>` work too.)*
 
 ## Implementation hints
 
@@ -58,7 +58,8 @@ profiles (documented, not required), the cluster deployment (060).
 - `make ui-run-android ENV=dev`: the app opens on the emulator, shows the Authenticator, signs in against the platform's pool, shows three tabs and the "+" button. *(Amended: `ENV=lab` named the one deployed backend that existed; see 080 req 4a.)*
 - `make ui-run-ios ENV=dev`: same on the simulator, with Cupertino tab bar and app-bar "+" action.
 - `make help` lists `$ENV` on `ui-config`, `ui-run-android`, `ui-run-ios` and `ui-build-android`. *(Verified 2026-10-08.)*
-- `make ui-run-web` with `make go-run`: same in Chrome with the navigation rail; "+" shows "Hola, anonymous". `ENV` is not passed, because it does not change web.
+- `make ui-run-web` with `make go-run`: same in Chrome with the navigation rail; "+" shows "Hola, anonymous".
+- `make ui-run-web ENV=dev`: the Authenticator in Chrome, sign-in against the platform's pool, and "+" answering from `ahorro-dev` with no CORS error.
 - `make ui-build-web && make web-serve-local`: `curl -I localhost:8081/` → 200, `curl localhost:8081/config.json` returns the local file, a deep link `localhost:8081/anything` returns `index.html`.
 - `flutter analyze` and `flutter test` still green after the id changes.
 - `git status` is clean after `make ui-build-web`. This confirms the ignore rules

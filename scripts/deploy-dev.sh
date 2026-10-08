@@ -15,6 +15,11 @@ REGION=eu-west-1
 NAMESPACE=ahorro-dev
 API_HOST_LABEL=api-ahorro-dev
 WEB_HOST_LABEL=ahorro-dev
+# `make ui-run-web ENV=dev` serves the client from here, so the API must name
+# it or the browser throws the answer away. The port matches --web-port in the
+# Makefile. Safe because this API reads a bearer token and sets no
+# Access-Control-Allow-Credentials, so no credential travels on its own.
+LOCAL_WEB_ORIGIN=http://localhost:3000
 CHARTS="oci://ghcr.io/savak1990/vk-ahorro/charts"
 
 VERSION="${1:-}"
@@ -74,7 +79,7 @@ helm upgrade --install ahorro-api "$CHARTS/ahorro-api" \
   --rollback-on-failure --timeout 5m \
   --set image.tag="$VERSION" \
   --set host="$api_host" \
-  --set corsAllowedOrigins="https://$web_host" \
+  --set corsAllowedOrigins="https://$web_host,$LOCAL_WEB_ORIGIN" \
   --set cognito.issuer="$issuer" \
   --set cognito.clientId="$client_id"
 

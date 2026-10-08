@@ -10,6 +10,13 @@ target: aws
 
 namespace: ahorro
 
+# Where `make ui-run-web` serves the Flutter client, which the API must accept
+# as a CORS origin or the browser throws every answer away. It matches
+# --web-port in the Makefile, and it is not the local target's 8090 below:
+# that one is a kubectl port-forward of a built image, this one is the dev
+# server a developer runs against any backend.
+devServerPort: 3000
+
 charts:
   # The bare registry form, not oci://. That is the form the platform's own
   # OCI Application already uses and the one proven to sync here.

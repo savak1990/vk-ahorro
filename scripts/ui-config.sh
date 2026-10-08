@@ -29,7 +29,8 @@ ssm() {
     --name "$1" --query Parameter.Value --output text 2>/dev/null
 }
 
-# The host label, and nothing else, comes from ENV. local is the one target
+# The host label, and nothing else, comes from ENV, and it steers both files:
+# the browser and the device talk to the same backend. local is the one target
 # with no public hostname: the dev server and the emulators reach a local
 # `make go-run`, and the Makefile names the host per platform.
 case "$ENV" in
@@ -75,11 +76,8 @@ else
   echo "UI-CONFIG: sign-in will report that no pool is configured." >&2
 fi
 
-# The browser is served from localhost:3000, and a deployed API allows its own
-# web host as the single CORS origin. So the dev server always talks to a local
-# `make go-run`, whatever ENV names.
 jq -n \
-  --arg api "http://localhost:8080" \
+  --arg api "$api_base" \
   --arg pool "$pool" \
   --arg client "$client" \
   --arg region "${region:-$REGION}" \
