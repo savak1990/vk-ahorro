@@ -18,9 +18,10 @@ AUTH_DISABLED ?= true
 # platform's domain. These four are expanded in order, and SKIP_AUTH reads ENV.
 ENV ?= local
 SKIP_AUTH ?= $(if $(filter local,$(ENV)),true,false)
-# verbose is the only level that prints request headers, and the X-Request-Id
-# travels in one. Matching it against the pod log is an acceptance criterion.
-LOG_LEVEL ?= warn
+# info prints one line per API call carrying the request id, which is what
+# correlates a tap on the device with a line in the service log. debug and
+# verbose add bodies and headers.
+LOG_LEVEL ?= info
 UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH) --dart-define=LOG_LEVEL=$(LOG_LEVEL)
 MOBILE_DEFINES := $(UI_DEFINES) --dart-define-from-file=config/$(ENV).json
 # A --dart-define beats the same key in the define file whichever order they
