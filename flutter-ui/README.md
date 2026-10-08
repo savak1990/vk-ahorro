@@ -34,4 +34,10 @@ make ui-run-ios      # an iPhone simulator
 
 `make ui-run-web` expects the API on `:8080`, which `make go-run` provides.
 
+`ENV` names the backend a mobile run talks to: `local` (the default), `dev`,
+`prod` or `pr-<n>`. `make ui-run-android ENV=dev` reaches the deployed
+`ahorro-dev` with real Cognito sign-in. The values are compiled in through
+`--dart-define-from-file`, so changing `ENV` rebuilds. The root README
+explains the two config files and their different key names.
+
 Spec 090 installs the toolchain these targets need.

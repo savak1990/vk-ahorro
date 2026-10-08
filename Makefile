@@ -12,8 +12,18 @@ BIN_DIR := $(CURDIR)/bin
 # and the service warns about it at startup.
 PORT ?= 8080
 AUTH_DISABLED ?= true
-SKIP_AUTH ?= true
+
+# Which backend the Flutter client talks to: local is this machine, and dev,
+# prod and pr-<n> are deployed namespaces whose host names come from the
+# platform's domain. These four are expanded in order, and SKIP_AUTH reads ENV.
+ENV ?= local
+SKIP_AUTH ?= $(if $(filter local,$(ENV)),true,false)
 UI_DEFINES := --dart-define=SKIP_AUTH=$(SKIP_AUTH)
+MOBILE_DEFINES := $(UI_DEFINES) --dart-define-from-file=config/$(ENV).json
+# A --dart-define beats the same key in the define file whichever order they
+# arrive in, so this machine's address must be absent for a deployed backend.
+ANDROID_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://10.0.2.2:$(PORT))
+IOS_API := $(if $(filter local,$(ENV)),--dart-define=API_BASE_URL=http://localhost:$(PORT))
 
 # Image coordinates. The tag is always the full commit SHA; `latest` is never
 # built or pushed.
@@ -132,9 +142,9 @@ cognito-config:
 token:
 	@./scripts/cognito.sh token
 
-## Write flutter-ui/web/config.json from $PROJECT_NAME's Cognito pool
+## Write both Flutter config files for $ENV from $PROJECT_NAME's Cognito pool
 ui-config:
-	@./scripts/ui-config.sh
+	@./scripts/ui-config.sh $(ENV)
 
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:
@@ -231,9 +241,9 @@ ui-test:
 ui-build-web:
 	cd $(UI_DIR) && flutter build web
 
-## Build a debug APK
-ui-build-android:
-	cd $(UI_DIR) && flutter build apk --debug
+## Build a debug APK against $ENV
+ui-build-android: ui-config
+	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(ANDROID_API)
 
 ## Start the Android emulator $AVD without waiting for it to boot
 emulator-android:
@@ -243,14 +253,14 @@ emulator-android:
 emulator-ios:
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" nowait
 
-## Run the Flutter app on the Android emulator $AVD, auth skipped, API on the host
-ui-run-android:
+## Run the Flutter app on the Android emulator $AVD against $ENV
+ui-run-android: ui-config
 	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(AVD)) && \
-	  cd $(UI_DIR) && flutter run -d $$serial $(UI_DEFINES) --dart-define=API_BASE_URL=http://10.0.2.2:$(PORT)
+	  cd $(UI_DIR) && flutter run -d $$serial $(MOBILE_DEFINES) $(ANDROID_API)
 
-## Run the Flutter app on the iOS simulator $IOS_DEVICE, auth skipped, API on the host
-ui-run-ios:
-	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(UI_DEFINES) --dart-define=API_BASE_URL=http://localhost:$(PORT)
+## Run the Flutter app on the iOS simulator $IOS_DEVICE against $ENV
+ui-run-ios: ui-config
+	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_DEVICE)" && cd $(UI_DIR) && flutter run -d "$(IOS_DEVICE)" $(MOBILE_DEFINES) $(IOS_API)
 
 # Port 3000 is the origin `make go-run` allows through CORS.
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool

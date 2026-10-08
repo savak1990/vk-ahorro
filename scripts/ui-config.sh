@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
-# Writes flutter-ui/web/config.json, which the Chrome dev server reads at
-# startup. Generated, never committed: there is one Cognito pool per platform
-# project, so the values are resolved from SSM for $PROJECT_NAME every time.
+# Usage: ui-config.sh [local|dev|prod|pr-<n>]
+#
+# Writes the two configuration files the Flutter client reads. They carry the
+# same values under different key names, because the platforms read them
+# differently:
+#
+#   flutter-ui/web/config.json    fetched over HTTP at startup, camelCase
+#   flutter-ui/config/<env>.json  --dart-define-from-file, define names
+#
+# Neither is committed: there is one Cognito pool per platform project, so a
+# committed copy is right for one project and wrong for every other.
 #
 # Without AWS access it writes blank Cognito keys instead of failing, so the
 # shell still runs offline - the app then reports that no pool is configured.
@@ -10,10 +18,47 @@ cd "$(dirname "$0")/.."
 
 : "${PROJECT_NAME:?run this through make, which exports PROJECT_NAME}"
 
-TARGET=flutter-ui/web/config.json
-# The API a local `make go-run` serves, not the cluster's: this file is read
-# only by the dev server.
-API_BASE_URL="${API_BASE_URL:-http://localhost:8080}"
+REGION=eu-west-1
+ENV="${1:-local}"
+
+WEB_TARGET=flutter-ui/web/config.json
+DEFINES_TARGET="flutter-ui/config/$ENV.json"
+
+ssm() {
+  aws ssm get-parameter --region "$REGION" \
+    --name "$1" --query Parameter.Value --output text 2>/dev/null
+}
+
+# The host label, and nothing else, comes from ENV. local is the one target
+# with no public hostname: the dev server and the emulators reach a local
+# `make go-run`, and the Makefile names the host per platform.
+case "$ENV" in
+  local) api_label="" ;;
+  dev)   api_label="api-ahorro-dev" ;;
+  prod)  api_label="api-ahorro" ;;
+  pr-*)  api_label="api-ahorro-$ENV" ;;
+  *)
+    echo "UI-CONFIG: ENV=$ENV is not a backend." >&2
+    echo "UI-CONFIG: use local, dev, prod or pr-<number>." >&2
+    exit 1
+    ;;
+esac
+
+if [ -z "$api_label" ]; then
+  api_base="http://localhost:8080"
+else
+  # The domain is published beside the disposable deploy credential, so `make
+  # down` takes it away. FQDN= regenerates a config with the lab off. The
+  # assignment is its own statement so set -e sees a failed read; inside a
+  # command substitution an exit would only end the subshell. Never echoed.
+  fqdn="${FQDN:-}"
+  if [ -z "$fqdn" ] && ! fqdn="$(ssm "/$PROJECT_NAME/cluster/ahorro-deploy/fqdn")"; then
+    echo "UI-CONFIG: no domain published for $PROJECT_NAME." >&2
+    echo "UI-CONFIG: run make up in vk-lab-platform, or pass FQDN=<fqdn>." >&2
+    exit 1
+  fi
+  api_base="https://$api_label.$fqdn"
+fi
 
 pool=""
 client=""
@@ -30,11 +75,14 @@ else
   echo "UI-CONFIG: sign-in will report that no pool is configured." >&2
 fi
 
+# The browser is served from localhost:3000, and a deployed API allows its own
+# web host as the single CORS origin. So the dev server always talks to a local
+# `make go-run`, whatever ENV names.
 jq -n \
-  --arg api "$API_BASE_URL" \
+  --arg api "http://localhost:8080" \
   --arg pool "$pool" \
   --arg client "$client" \
-  --arg region "${region:-eu-west-1}" \
+  --arg region "${region:-$REGION}" \
   '{
      apiBaseUrl: $api,
      cognitoUserPoolId: $pool,
@@ -43,6 +91,26 @@ jq -n \
      authDisabled: false,
      devUserEmail: "",
      devUserSub: ""
-   }' > "$TARGET"
+   }' > "$WEB_TARGET"
 
-echo "UI-CONFIG: wrote $TARGET"
+mkdir -p flutter-ui/config
+jq -n \
+  --arg api "$api_base" \
+  --arg pool "$pool" \
+  --arg client "$client" \
+  --arg region "${region:-$REGION}" \
+  '{
+     API_BASE_URL: $api,
+     COGNITO_USER_POOL_ID: $pool,
+     COGNITO_CLIENT_ID: $client,
+     COGNITO_REGION: $region
+   }' > "$DEFINES_TARGET"
+
+# The two files carry the same values under different names. A key missing
+# here becomes an empty define inside an APK, which the app reports as an
+# unconfigured pool hours later.
+jq -e 'has("API_BASE_URL") and has("COGNITO_USER_POOL_ID")
+       and has("COGNITO_CLIENT_ID") and has("COGNITO_REGION")' \
+  "$DEFINES_TARGET" > /dev/null
+
+echo "UI-CONFIG: wrote $WEB_TARGET and $DEFINES_TARGET for ENV=$ENV."

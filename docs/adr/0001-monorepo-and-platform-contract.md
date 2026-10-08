@@ -43,7 +43,8 @@ images and charts live; who creates Cognito.
    repository's charts on the platform's `platform-gateway`.
 5. **Runtime configuration, not build-time.** The web image reads
    `/config.json`; mobile builds read a `--dart-define-from-file` that Make
-   generates from Terraform outputs. The root domain never enters Git.
+   generates from the platform's SSM parameters. The root domain never enters
+   Git.
 
 ## Consequences
 
