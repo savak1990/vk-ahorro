@@ -3,7 +3,7 @@
 
 # The builder runs native and cross-compiles, so no emulator is needed for
 # the arm64 image on an amd64 runner.
-FROM --platform=$BUILDPLATFORM golang:1.26@sha256:6c2a5538f964f1c82f97ad14988bf05de100d922d159d0e398b54c7b0ca0c6c9 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS build
 WORKDIR /src
 
 COPY go.mod go.sum ./
