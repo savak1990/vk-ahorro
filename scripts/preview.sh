@@ -42,6 +42,11 @@ WEB_RELEASE="pr-$PR-web"
 # and a record while pr-42.ahorro.<fqdn> would get neither.
 API_HOST_LABEL="api-ahorro-pr-$PR"
 WEB_HOST_LABEL="ahorro-pr-$PR"
+# `make ui-run-web ENV=pr-<n>` serves the client from here, so the API must
+# name it or the browser throws the answer away. The port matches --web-port
+# in the Makefile. Safe because this API reads a bearer token and sets no
+# Access-Control-Allow-Credentials, so no credential travels on its own.
+LOCAL_WEB_ORIGIN=http://localhost:3000
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -122,7 +127,7 @@ helm upgrade --install "$API_RELEASE" "$CHARTS/ahorro-api" \
   --rollback-on-failure --timeout 5m \
   --set image.tag="$VERSION" \
   --set host="$api_host" \
-  --set corsAllowedOrigins="https://$web_host" \
+  --set corsAllowedOrigins="https://$web_host,$LOCAL_WEB_ORIGIN" \
   --set cognito.issuer="$issuer" \
   --set cognito.clientId="$client_id"
 

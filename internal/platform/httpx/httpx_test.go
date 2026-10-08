@@ -104,6 +104,44 @@ func TestCORSAllowedOrigin(t *testing.T) {
 	}
 }
 
+// Every deployed environment allows http://localhost:3000, so a developer can
+// run the Flutter client against it. That is safe only while no credential
+// travels on its own: this service reads a bearer token, and without this
+// header the browser sends no cookie cross-origin. Setting it would turn the
+// localhost grant into a CSRF hole, so it fails here instead.
+func TestCORSSetsNoCredentialsHeader(t *testing.T) {
+	h := httpx.CORS([]string{"http://localhost:3000"})(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+
+	for _, method := range []string{http.MethodGet, http.MethodOptions} {
+		req := httptest.NewRequest(method, "/api/v1/hello", nil)
+		req.Header.Set("Origin", "http://localhost:3000")
+		req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+
+		if got := rec.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+			t.Fatalf("%s: allow-credentials = %q, want empty", method, got)
+		}
+	}
+}
+
+// A wildcard would let any site read an authenticated answer, which is what
+// naming origins exists to prevent.
+func TestCORSNeverAllowsEveryOrigin(t *testing.T) {
+	h := httpx.CORS([]string{"http://localhost:3000"})(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got == "*" {
+		t.Fatal("allow-origin = *, which allows every site")
+	}
+}
+
 func TestCORSRejectsUnknownOrigin(t *testing.T) {
 	h := httpx.CORS([]string{"https://ahorro.example"})(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))

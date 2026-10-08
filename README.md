@@ -155,9 +155,11 @@ To check it against a **deployed** backend instead, name one with `ENV`:
 make ui-run-android ENV=dev      # ahorro-dev, real sign-in
 make ui-run-android ENV=pr-33    # the preview for pull request 33
 make ui-run-ios ENV=dev          # the same on the simulator
+make ui-run-web ENV=dev          # the same in Chrome, with hot reload
 ```
 
-`ENV` changes mobile only. See [Pick a backend with `ENV`](#pick-a-backend-with-env).
+All three platforms take `ENV` and behave the same way. See
+[Pick a backend with `ENV`](#pick-a-backend-with-env).
 
 ### Use case: you changed only scripts, docs or specs
 
@@ -333,7 +335,7 @@ spec adds.
 | Group | Targets | State |
 |---|---|---|
 | Go | `go-build` `go-test` `go-lint` `go-run` | exists |
-| Flutter run | `ui-run-web` `ui-run-android ENV=` `ui-run-ios ENV=` | exists |
+| Flutter run | `ui-run-web ENV=` `ui-run-android ENV=` `ui-run-ios ENV=` | exists |
 | Devices | `emulator-android` `emulator-ios` `emulator-stop` | exists |
 | Images | `image-build SVC=` `image-push SVC=` `images-push` | exists |
 | Helm | `helm-lint` `helm-template CHART=` `helm-package CHART=` `helm-push CHART=` | exists |
@@ -417,12 +419,15 @@ The container label is `ahorro-api`, not `api`. Raise `LOG_LEVEL` to `debug`
 for bodies or `verbose` for headers; `info` is the default and `kDebugMode`
 gates all of it, so a release build prints nothing.
 
-Two limits worth knowing:
+Two things worth knowing:
 
-- **`ENV` changes mobile only.** A deployed API allows exactly one CORS
-  origin, its own web host, so a browser on `localhost:3000` cannot reach it.
-  To use the deployed client in a browser, open its hostname — the cluster
-  serves it already.
+- **Web works because every deployed API names `http://localhost:3000`** as a
+  CORS origin beside its own web host. Without it the browser throws every
+  answer away. It is safe here and nowhere by default: this API reads a
+  bearer token, the token sits in per-origin `localStorage` that another
+  origin cannot read, and `httpx.CORS` sets no
+  `Access-Control-Allow-Credentials`, so no cookie travels cross-origin.
+  `TestCORSSetsNoCredentialsHeader` fails the day that stops being true.
 - **`ENV=prod` points a debug build at the released namespace.** That is
   ordinary read-only client traffic, but it is the namespace Argo owns, so
   reach for `dev` unless you mean `prod`.
