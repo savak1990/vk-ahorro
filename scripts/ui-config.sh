@@ -46,7 +46,7 @@ case "$ENV" in
 esac
 
 if [ -z "$api_label" ]; then
-  api_base="http://localhost:8080"
+  api_base="http://localhost:${PORT:-8080}"
 else
   # The domain is published beside the disposable deploy credential, so `make
   # down` takes it away. FQDN= regenerates a config with the lab off. The

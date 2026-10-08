@@ -151,6 +151,7 @@ token:
 	@./scripts/cognito.sh token
 
 ## Write both Flutter config files for $ENV from $PROJECT_NAME's Cognito pool
+ui-config: export PORT := $(PORT)
 ui-config:
 	@./scripts/ui-config.sh $(ENV)
 
