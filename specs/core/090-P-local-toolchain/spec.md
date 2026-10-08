@@ -25,7 +25,7 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 ## Requirements
 
 1. Homebrew MUST install: `flutter` (cask), `openjdk@17`, `android-commandlinetools` (cask), `cocoapods`, `go`, `golangci-lint`, `helm`, `kubectl`, `kubeconform`, `yamllint`, `argocd`, `jq`. Docker, gh, yq are already present and stay as installed.
-2. Android SDK packages via `sdkmanager`: `platform-tools`, `platforms;android-35`, `build-tools;35.0.0`, `emulator`, `system-images;android-35;google_apis;arm64-v8a`; one AVD named `ahorro` created with `avdmanager`. `ANDROID_HOME` and `JAVA_HOME` MUST be exported from the shell profile. Licences accepted with `flutter doctor --android-licenses`.
+2. Android SDK packages via `sdkmanager`: `platform-tools`, `platforms;android-35`, `build-tools;35.0.0`, `emulator`, `system-images;android-35;google_apis;arm64-v8a`; one AVD created with `avdmanager`, named to match the Makefile default (`pixel_phone`). `ANDROID_HOME` and `JAVA_HOME` MUST be exported from the shell profile. Licences accepted with `flutter doctor --android-licenses`. *(Amended: this named the AVD `ahorro`, as did 100's hint. The committed default is `pixel_phone`, and naming an AVD nobody created makes the first run fail. 100 req 2a replaces the `AVD` variable with `DEVICE`, so this spec names the default rather than a literal.)*
 3. iOS: `sudo xcodebuild -license accept`, `xcodebuild -runFirstLaunch`, the current iOS simulator runtime installed (`xcodebuild -downloadPlatform iOS`).
 4. `make tools-check` MUST print the version of every tool above and exit non-zero when one is missing. `make tools-install` MUST run the Homebrew and `sdkmanager` steps and be safe to re-run.
 5. `flutter doctor -v` MUST show no red items for Flutter, Android toolchain, Xcode, CocoaPods. Chrome and IDE plugins are optional.
@@ -42,6 +42,6 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 
 - `make tools-check` exits 0 and lists every tool with a version.
 - `flutter doctor -v` shows `[✓]` for Flutter, Android toolchain, Xcode, CocoaPods.
-- `emulator -list-avds` shows `ahorro`; `xcrun simctl list runtimes` shows an iOS runtime.
+- `emulator -list-avds` shows the Makefile's default AVD; `xcrun simctl list runtimes` shows an iOS runtime.
 - `cd flutter-ui && flutter pub get` succeeds.
 - `go version`, `helm version`, `kubectl version --client`, `kubeconform -v`, `argocd version --client` all print.
