@@ -1,4 +1,4 @@
-.PHONY: require-env require-deployed-env help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: require-env require-deployed-env ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -69,6 +69,7 @@ AVD ?= pixel_phone
 IOS_DEVICE ?= iPhone 18 Pro
 ANDROID_DEVICE = $(if $(DEVICE),$(DEVICE),$(AVD))
 IOS_TARGET = $(if $(DEVICE),$(DEVICE),$(IOS_DEVICE))
+APP_ID := com.vkdev1.ahorro
 
 # The platform project whose persistent layer owns the Cognito pool. The pool
 # is per project, so nothing about it can be committed here. Exported because
@@ -79,7 +80,7 @@ export PROJECT_NAME ?= vk-hetzner-lab
 help:
 	@awk 'BEGIN { FS = ":" } \
 	     /^## / { doc = substr($$0, 4); next } \
-	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-18s %s\n", $$1, doc; doc = "" } } \
+	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-22s %s\n", $$1, doc; doc = "" } } \
 	     { doc = "" }' $(MAKEFILE_LIST)
 
 ## Build every Go binary into bin/
@@ -290,6 +291,13 @@ ui-run-ios: ui-config
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool
 ui-run-web: ui-config
 	cd $(UI_DIR) && flutter run -d chrome --web-port 3000 $(UI_DEFINES)
+
+# Android identifies an app by its id and its signing key together, so a build
+# signed with a different key cannot replace an installed one. Uninstalling is
+# the only way across, and it takes the app's data with it.
+## Remove the app from $DEVICE. Needed whenever the signing key changes
+ui-uninstall-android:
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && if adb -s $$serial shell pm list packages | grep -q "^package:$(APP_ID)$$"; then adb -s $$serial uninstall $(APP_ID); else echo "$(APP_ID) is not installed on $$serial"; fi
 
 ## Shut down every running Android emulator and iOS simulator
 emulator-stop:
