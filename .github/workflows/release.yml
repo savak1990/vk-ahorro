@@ -64,7 +64,12 @@ jobs:
     # No change flags: a release rebuilds nothing. Every component is copied
     # from the image its own last change already published, which is the code
     # at this commit.
+    #
+    # inherit passes nothing beyond the workflow token: this repository holds
+    # no repository-level secrets, and the four signing secrets are scoped to
+    # Environments, which a job without an `environment:` cannot reach.
     uses: ./.github/workflows/publish.yml
+    secrets: inherit
     with:
       version: ${{ needs.version.outputs.version }}
 

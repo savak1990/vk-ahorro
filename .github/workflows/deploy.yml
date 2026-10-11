@@ -76,7 +76,11 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # inherit passes nothing beyond the workflow token: this repository holds
+    # no repository-level secrets, and the four signing secrets are scoped to
+    # Environments, which a job without an `environment:` cannot reach.
     uses: ./.github/workflows/publish.yml
+    secrets: inherit
     with:
       version: ${{ needs.version.outputs.version }}
       go: ${{ needs.version.outputs.go }}
