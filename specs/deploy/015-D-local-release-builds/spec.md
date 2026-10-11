@@ -286,6 +286,6 @@ buys, and it is why the lazy option here is the one with the extra check.
   `flutter-ui/android/` is reported by `git check-ignore -v` in all three
   places, each naming the rule that covers it.
 - `make ui-test` and `make ui-analyze` stay green. Neither takes a release
-  build, so the `ui` job in CI, which has no AWS access, is unaffected.
+  build, so the `flutter-checks` job in CI, which has no AWS access, is unaffected.
 - `git status` is clean after every target here, which is what `core/100`'s
   last criterion asserts for the web build.
