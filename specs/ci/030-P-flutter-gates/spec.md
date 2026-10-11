@@ -18,7 +18,7 @@ The rest is deferred deliberately, and named here rather than dropped:
 |---|---|
 | reqs 2-5: format check, deps check, import lint, coverage floor | quality gates, not release work, and the 60% floor may need tests written before it can be turned on |
 | req 6's `make ui-build-ios` and req 7's `build-ios` job | both wait on `deploy/040` req 0, which establishes whether the committed Apple team is paid or free |
-| req 8: Gradle and CocoaPods caches | the job works without them. Revisit if it approaches the 15 minute criterion |
+| req 8: Gradle and CocoaPods caches | measured at 4m52s without them, against a 15 minute criterion, so they buy nothing yet. Revisit when the job approaches it |
 | req 1's `make tools-check` clause | that target does not exist; it is `core/090` req 4, and nothing guards the three Flutter version literals from drifting apart |
 
 **Complexity:** Medium
@@ -69,5 +69,5 @@ integration test (040); the web image (core 105).
 - Every target in requirement 7 exits 0 on `main`.
 - Adding `import '../screens/main_screen.dart'` to `lib/src/services/api_logger.dart` makes `make ui-lint-imports` fail.
 - Editing `pubspec.yaml` without updating `pubspec.lock` makes `make ui-deps-check` fail.
-- A pull request touching only `flutter-ui/lib/` runs `ui`, `build-android`, `build-ios` and skips `go`; both build artifacts are downloadable from the run.
-- The `flutter-checks` job finishes in under 5 minutes and each build job in under 15 minutes with warm caches.
+- A pull request touching only `flutter-ui/lib/` runs `flutter-checks`, `build-android`, `build-ios` and skips `go`; both build artifacts are downloadable from the run. *(The Android half verified 2026-10-11: `build-android` ran and uploaded `app-release-aab`, 60.8MB, expiring in seven days.)*
+- The `flutter-checks` job finishes in under 5 minutes and each build job in under 15 minutes with warm caches. *(Verified 2026-10-11, and with **cold** caches: `flutter-checks` 55s, `build-android` 4m52s. Req 8's caching is deferred, so this is the slowest either will be.)*
