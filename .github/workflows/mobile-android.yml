@@ -80,12 +80,29 @@ jobs:
       - run: make ui-build-apk ENV=${{ inputs.env }} VERSION=${{ inputs.version }} BUILD_NUMBER=${{ steps.code.outputs.n }}
       - run: make ui-build-aab ENV=${{ inputs.env }} VERSION=${{ inputs.version }} BUILD_NUMBER=${{ steps.code.outputs.n }}
 
+      # Flutter calls both files app-release, on every backend and every
+      # version. The artifact name carries the difference, and that name is
+      # lost the moment somebody extracts the zip or forwards the file to a
+      # tester - which is the whole point of a sideload build. Naming the
+      # files themselves is what survives leaving the run page.
+      #
+      # mv, not cp: 124MB, and nothing reads the build tree afterwards.
+      # Collecting them in one directory also flattens the artifact, because
+      # upload-artifact otherwise keeps the common prefix of the two paths.
+      - id: name
+        env:
+          BASE: ahorro-${{ inputs.env }}-${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          mv flutter-ui/build/app/outputs/flutter-apk/app-release.apk "artifacts/$BASE.apk"
+          mv flutter-ui/build/app/outputs/bundle/release/app-release.aab "artifacts/$BASE.aab"
+          ls -l artifacts
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ahorro-android-${{ inputs.env }}-${{ inputs.version }}
-          path: |
-            flutter-ui/build/app/outputs/flutter-apk/app-release.apk
-            flutter-ui/build/app/outputs/bundle/release/app-release.aab
+          path: artifacts/
           retention-days: ${{ inputs.retention_days }}
           # The default warns and passes, which would report a green job that
           # published nothing.
@@ -105,5 +122,10 @@ jobs:
         run: |
           {
             echo "### Android \`$VERSION\` (+$CODE) against \`$ENVIRONMENT\`"
-            echo "APK and AAB are on this run, signed with the upload key."
+            echo
+            echo "Signed with the upload key. To put it on a device:"
+            echo
+            echo '```'
+            echo "make ui-install-ci ENV=$ENVIRONMENT VERSION=$VERSION DEVICE=<serial>"
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

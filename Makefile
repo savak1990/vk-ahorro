@@ -1,4 +1,4 @@
-.PHONY: require-env require-deployed-env android-keystore ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -291,6 +291,18 @@ ui-build-aab: require-deployed-env ui-config
 ## Install the release APK onto $DEVICE and forward $PORT back to this machine
 ui-install-android: require-env
 	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && { adb -s $$serial install -r $(APK) || { echo "if this says the signatures do not match, run: make ui-uninstall-android DEVICE=$$serial" >&2; exit 1; }; }
+
+# No ui-config and no reverse: nothing is compiled here, and a CI artifact is
+# never ENV=local, so there is no local server for the phone to reach back to.
+# $VERSION defaults to the repository version, which is not what any artifact
+# is called, so an unset VERSION must mean "newest" rather than that value.
+## Install a CI-built APK for $ENV onto $DEVICE. $VERSION picks one, else newest
+ui-install-ci: require-deployed-env
+	@./scripts/install-ci-apk.sh install $(ENV) $(ANDROID_DEVICE) $(if $(filter command line environment,$(origin VERSION)),$(VERSION))
+
+## List the CI-built mobile artifacts that have not expired
+ui-list-ci:
+	@./scripts/install-ci-apk.sh list
 
 ## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:
