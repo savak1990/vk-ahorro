@@ -57,20 +57,26 @@ gh api -X PATCH "repos/$REPO" \
   --silent
 echo "REPO-SETTINGS: squash-only, branch deleted on merge"
 
-# preview drives the pull-request preview workflow; the two release labels
-# decide which mobile build a dispatch produces.
+# preview drives the pull-request preview workflow. There is no release label:
+# a mobile artifact is built on every channel the way an image is, so nothing
+# decides per pull request whether one exists.
 add_label() {
   gh label create "$1" --repo "$REPO" --color "$2" --description "$3" --force >/dev/null
   echo "REPO-SETTINGS: label $1"
 }
 add_label ci:preview-web 0e8a16 "Deploy this pull request to the ahorro-pr namespace"
-add_label ci:release-android 5319e7 "Publish an Android build from the release dispatch"
-add_label ci:release-ios 5319e7 "Publish an iOS build from the release dispatch"
 
-# The Environment holds the mobile signing secrets, which are added by hand
-# once and named in the deploy specs. Creating it here is what makes
-# `environment: release` in a workflow resolve at all.
-gh api -X PUT "repos/$REPO/environments/release" --silent
-echo "REPO-SETTINGS: release environment"
+# Both Environments hold the same four signing secrets, published by
+# `make android-keystore`. Creating them here is what makes `environment:` in
+# a workflow resolve at all.
+#
+# They are separate because `release` publishes to a store and is where a
+# reviewer gate belongs, while `mobile-dev` runs on every merge - a gate there
+# would stall main. The key is the same, so a phone never needs an uninstall
+# between a merge build and a release build.
+for env in release mobile-dev; do
+  gh api -X PUT "repos/$REPO/environments/$env" --silent
+  echo "REPO-SETTINGS: $env environment"
+done
 
 echo "REPO-SETTINGS: done."

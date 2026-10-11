@@ -171,9 +171,16 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
    because it has nothing at all, and the one thing worth automating here is
    exactly the refusal.)*
 
-8a. The same target MUST publish the key to the `release` Environment, so the
-   operator never handles the secret twice and CI signs with the key that
-   exists rather than one copied by hand. It MUST set only the names
+8a. The same target MUST publish the key to **both** signing Environments,
+   `release` and `mobile-dev`, so the operator never handles the secret twice
+   and CI signs with the key that exists rather than one copied by hand.
+   *(Amended 2026-10-11: this named `release` alone, written when it was the
+   only one. [020](../020-P-mobile-release-channels/spec.md) req 5 adds
+   `mobile-dev` for the merge channel, because a reviewer gate on a
+   store-publishing Environment would otherwise stall every merge. The key is
+   the same in both, which is the point: a device never needs an uninstall
+   moving between a merge build and a release build. The "already set" skip is
+   therefore per Environment, not global.)* It MUST set only the names
    `deploy/030` req 3 lists, MUST skip any that is already set, and MUST pass
    each value on stdin rather than in an argument. It MUST read the passphrase
    back out of `key.properties` rather than from the prompt, so a run that

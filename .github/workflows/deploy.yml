@@ -64,9 +64,12 @@ jobs:
               - 'internal/**'
               - 'go.mod'
               - 'go.sum'
+              - 'Makefile'
               - 'deploy/docker/ahorro-api.Dockerfile'
             flutter:
               - 'flutter-ui/**'
+              - 'Makefile'
+              - 'scripts/android-keystore-restore.sh'
               - 'deploy/docker/ahorro-web.Dockerfile'
               - 'deploy/docker/ahorro-web.nginx.conf'
               - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
@@ -85,6 +88,24 @@ jobs:
       version: ${{ needs.version.outputs.version }}
       go: ${{ needs.version.outputs.go }}
       flutter: ${{ needs.version.outputs.flutter }}
+
+  # An installable build of this merge, for a phone. It points at ahorro-dev,
+  # which deploy-dev has just upgraded to the same version, and it is signed
+  # with the real upload key so it replaces whatever is on the device rather
+  # than failing on a signature mismatch.
+  artifacts-android:
+    needs: version
+    if: needs.version.outputs.flutter == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mobile-android.yml
+    secrets: inherit
+    with:
+      env: dev
+      environment: mobile-dev
+      version: ${{ needs.version.outputs.version }}
+      retention_days: 30
 
   # Namespace ahorro-dev only. Namespace ahorro is Argo's, pinned to a
   # released version, and the credential below is refused there by cluster

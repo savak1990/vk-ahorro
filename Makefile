@@ -269,7 +269,7 @@ ui-build-web:
 ui-build-android: ui-config
 	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
-## Create the Android upload key and publish it to the release Environment
+## Create the Android upload key and publish it to both signing Environments
 android-keystore:
 	@./scripts/android-keystore.sh
 
@@ -277,7 +277,7 @@ android-keystore:
 # and only a store needs a number that never repeats.
 ## Build a release APK against $ENV, signed with the upload key when it exists
 ui-build-apk: require-env ui-config
-	cd $(UI_DIR) && flutter build apk --release --build-name=$(VERSION) $(MOBILE_DEFINES) $(LOCAL_API)
+	cd $(UI_DIR) && flutter build apk --release --build-name=$(VERSION) $(if $(BUILD_NUMBER),--build-number=$(BUILD_NUMBER)) $(MOBILE_DEFINES) $(LOCAL_API)
 
 # No LOCAL_API: it expands to nothing for a deployed ENV anyway, and leaving
 # it out says this target cannot mean local. BUILD_NUMBER is what a store

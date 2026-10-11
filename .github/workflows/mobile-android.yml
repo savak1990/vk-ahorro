@@ -1,0 +1,109 @@
+# Builds signed Android artifacts for one backend. Called by deploy.yml on a
+# merge, pointed at dev, and by release.yml on a dispatch, pointed at prod.
+#
+# Unlike ci.yml's build-android, this one reaches SSM: it holds an AWS role, so
+# ui-config resolves the real host instead of a placeholder. That is what makes
+# its output installable rather than only proof that the code compiles.
+#
+# Every action is pinned to a full commit SHA; see ci.yml for why.
+name: mobile-android
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        description: The backend the artifact is compiled against
+        required: true
+        type: string
+      environment:
+        description: The Environment holding the four signing secrets
+        required: true
+        type: string
+      version:
+        description: The version name both artifacts carry
+        required: true
+        type: string
+      retention_days:
+        description: How long the artifact stays downloadable
+        required: true
+        type: number
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # The version code is counted from the history, so fetch all of it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: eu-west-1
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          cache: true
+
+      - name: Restore the upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./scripts/android-keystore-restore.sh
+
+      # The commit count, not github.run_number: that counter is per workflow
+      # file, so deploy.yml and release.yml would each keep their own and a
+      # release could carry a lower versionCode than a merge build already on
+      # the device. Android refuses that install as a downgrade.
+      - id: code
+        run: echo "n=$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+
+      # VERSION is passed in, never computed here. Makefile's default runs
+      # version.sh, which needs the tag history, and on a release only the
+      # caller knows the bump.
+      #
+      # The second format costs seconds: a --dart-define change invalidates the
+      # Dart kernel and the AOT snapshot, but Gradle keeps the native
+      # libraries, the resources and the packaging.
+      - run: make ui-build-apk ENV=${{ inputs.env }} VERSION=${{ inputs.version }} BUILD_NUMBER=${{ steps.code.outputs.n }}
+      - run: make ui-build-aab ENV=${{ inputs.env }} VERSION=${{ inputs.version }} BUILD_NUMBER=${{ steps.code.outputs.n }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ahorro-android-${{ inputs.env }}-${{ inputs.version }}
+          path: |
+            flutter-ui/build/app/outputs/flutter-apk/app-release.apk
+            flutter-ui/build/app/outputs/bundle/release/app-release.aab
+          retention-days: ${{ inputs.retention_days }}
+          # The default warns and passes, which would report a green job that
+          # published nothing.
+          if-no-files-found: error
+
+      # The runner is destroyed after the job and the upload paths above name
+      # two files explicitly, so neither can carry the key out. This is for the
+      # step somebody adds later with a wider path.
+      - if: always()
+        run: rm -f flutter-ui/android/upload-keystore.jks flutter-ui/android/key.properties
+
+      - name: Report
+        env:
+          ENVIRONMENT: ${{ inputs.env }}
+          VERSION: ${{ inputs.version }}
+          CODE: ${{ steps.code.outputs.n }}
+        run: |
+          {
+            echo "### Android \`$VERSION\` (+$CODE) against \`$ENVIRONMENT\`"
+            echo "APK and AAB are on this run, signed with the upload key."
+          } >> "$GITHUB_STEP_SUMMARY"

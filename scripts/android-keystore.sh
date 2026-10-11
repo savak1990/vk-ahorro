@@ -8,7 +8,11 @@ cd "$(dirname "$0")/../flutter-ui/android"
 
 ks=upload-keystore.jks
 props=key.properties
-env_name=release
+# Two Environments hold the same four secrets, so one key signs both channels
+# and a phone never needs an uninstall between a merge build and a release
+# build. `release` publishes to a store and is where a reviewer gate belongs;
+# `mobile-dev` runs on every merge, so a gate there would stall main.
+env_names="release mobile-dev"
 
 # macOS ships keytool as a stub that exits with "Unable to locate a Java
 # Runtime" when no JDK is installed. Gradle uses the one Android Studio
@@ -72,17 +76,20 @@ fi
 pw="$(sed -n 's/^storePassword=//p' "$props")"
 key_alias="$(sed -n 's/^keyAlias=//p' "$props")"
 
-have="$(gh secret list --env "$env_name" --json name --jq '.[].name' 2>/dev/null || true)"
-
 # The value arrives on stdin, never in argv, where the process table would
-# show it to every other user on this machine.
+# show it to every other user on this machine. It is held in a variable rather
+# than piped in, because the loop would consume a pipe on its first iteration.
 set_secret() {
-  if grep -qx "$1" <<<"$have"; then
-    echo "ANDROID-KEYSTORE: $1 already set."
-  else
-    printf '%s' "$2" | gh secret set "$1" --env "$env_name"
-    echo "ANDROID-KEYSTORE: $1 published."
-  fi
+  local name="$1" value="$2" env_name have
+  for env_name in $env_names; do
+    have="$(gh secret list --env "$env_name" --json name --jq '.[].name' 2>/dev/null || true)"
+    if grep -qx "$name" <<<"$have"; then
+      echo "ANDROID-KEYSTORE: $name already set on $env_name."
+    else
+      printf '%s' "$value" | gh secret set "$name" --env "$env_name"
+      echo "ANDROID-KEYSTORE: $name published to $env_name."
+    fi
+  done
 }
 
 set_secret ANDROID_KEYSTORE_BASE64 "$(base64 < "$ks" | tr -d '\n')"
@@ -90,4 +97,4 @@ set_secret ANDROID_KEYSTORE_PASSWORD "$pw"
 set_secret ANDROID_KEY_ALIAS "$key_alias"
 set_secret ANDROID_KEY_PASSWORD "$pw"
 
-echo "ANDROID-KEYSTORE: neither file is in Git. This machine and the $env_name Environment hold the only copies."
+echo "ANDROID-KEYSTORE: neither file is in Git. This machine and the $env_names Environments hold the only copies."

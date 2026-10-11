@@ -12,7 +12,7 @@ yet; enrollment comes first and can take days.
 **Risk:** Medium — code signing on a runner is the classic failure point; manual signing with a committed export options file is the most predictable form.
 **Estimated cost:** ~1 day plus enrollment time · Cost: $99 per year.
 **Recommended model:** Sonnet.
-**Depends on:** [020-deploy-button](../020-P-deploy-button/spec.md), [030-flutter-gates](../../ci/030-P-flutter-gates/spec.md), [100-flutter-platforms](../../core/100-P-flutter-platforms/spec.md)
+**Depends on:** [020-mobile-release-channels](../020-P-mobile-release-channels/spec.md), [030-flutter-gates](../../ci/030-P-flutter-gates/spec.md), [100-flutter-platforms](../../core/100-P-flutter-platforms/spec.md)
 **Lifecycle class(es) touched:** None here. The App Store Connect record is external state.
 
 ## Scope
