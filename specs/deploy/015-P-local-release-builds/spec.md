@@ -5,10 +5,27 @@ updated: "2026-10-08"
 ---
 # 015 — Local release builds: a signed, installable mobile artifact
 
-**Status note:** Draft, and new. Nothing here needs a store account, a
-service account or any money, which is why it is numbered in front of the
-deploy button (020) and the two store specs (030, 040) rather than inside
-them. `specs/README.md` makes the number the order of work.
+**Status note:** Implemented 2026-10-11, and still Draft because three
+acceptance criteria belong to the operator and have not run.
+
+Done and measured: requirements 1 through 8b. `aapt2 dump badging` reports
+`versionName=0.2.2`, matching `scripts/version.sh base`, and `versionCode=1`
+from pubspec. `apksigner verify --print-certs` names `CN=Android Debug` with
+no keystore and `CN=Ahorro` with one, and both branches build. A second
+`make android-keystore` leaves the keystore alone. `git check-ignore` covers
+a `.jks` at three depths. The signed APK installs on an emulator, and the
+signing collision of req 2b was reproduced: the install failed, the target
+named `ui-uninstall-android`, and the install then succeeded.
+
+Open, and the operator's to run: the real upload key does not exist yet, so
+req 8a's secret publication has **never been exercised** - the harness
+refuses secret-store writes, which is why. The on-device install against
+`ahorro-dev` has not run either. Both close on the next operator pass.
+
+Nothing here needs a store account, a service account or any money, which is
+why it is numbered in front of the deploy button (020) and the two store
+specs (030, 040) rather than inside them. `specs/README.md` makes the number
+the order of work.
 
 It exists because four parts of "build a release and put it on my phone" had
 no owning requirement anywhere:
@@ -132,17 +149,39 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
    `flutter-ui/` is **not** ignored. `make domain-check` would not catch it
    either: it looks for the root domain, not for a private key.
 
-8. `make android-keystore` MUST run `keytool`, write `key.properties`, and
-   **exit 1 when either file already exists**. The guard is the point, not the
-   convenience: see the hints below for what overwriting costs. It MUST read
-   the passphrase from a prompt rather than an argument, so no password
-   reaches a command line, a shell history or the process table. The keystore
-   and its passphrase live in a password manager and never in Git
+8. `make android-keystore` MUST run `keytool` and write `key.properties`, and
+   it MUST NEVER overwrite either file. When both already exist it MUST say so
+   and continue; when exactly one exists it MUST exit 1 rather than guess. It
+   MUST read the passphrase from a prompt rather than an argument, so no
+   password reaches a command line, a shell history or the process table. The
+   keystore and its passphrase live in a password manager as well
    (`deploy/030` req 1). *(Settled: this was an open decision between 8b above
    and 8a, creating the key by hand from `deploy/030` req 1's runbook. 8a was
    rejected - it has nothing that can overwrite a keystore by accident only
    because it has nothing at all, and the one thing worth automating here is
    exactly the refusal.)*
+
+8a. The same target MUST publish the key to the `release` Environment, so the
+   operator never handles the secret twice and CI signs with the key that
+   exists rather than one copied by hand. It MUST set only the names
+   `deploy/030` req 3 lists, MUST skip any that is already set, and MUST pass
+   each value on stdin rather than in an argument. It MUST read the passphrase
+   back out of `key.properties` rather than from the prompt, so a run that
+   only publishes works for a keystore an earlier run created. When `gh` is
+   not authenticated it MUST exit 1 **after** the local files are safely
+   written, naming the target to re-run. *(Added: `deploy/030` req 3 names the
+   four secrets but nothing put them there, which left the one manual step
+   that most invites a mistake - a hand-made base64 of the wrong file.)*
+
+8b. `make android-keystore` MUST find a JDK rather than require one on PATH.
+   macOS ships `keytool` as a stub that exits with "Unable to locate a Java
+   Runtime", and `core/090` req 1's `openjdk@17` is not installed on the
+   operator's machine: Gradle builds work because it uses the JDK Android
+   Studio bundles. The target MUST try `JAVA_HOME`, then
+   `/usr/libexec/java_home`, then that bundled JDK, and MUST name
+   `brew install openjdk@17` when none answers. *(Added: without this the
+   first thing the operator sees is a Java error from a target that has
+   nothing to do with Java.)*
 
 ## Implementation hints
 

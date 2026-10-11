@@ -269,7 +269,7 @@ ui-build-web:
 ui-build-android: ui-config
 	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
-## Create the Android upload key once; refuses if one already exists
+## Create the Android upload key and publish it to the release Environment
 android-keystore:
 	@./scripts/android-keystore.sh
 
