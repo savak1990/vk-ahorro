@@ -1,0 +1,95 @@
+# Cuts a release: publishes the clean <version> for every component and tags
+# the repository. Deploys nothing - the released version reaches namespace
+# ahorro when a human pins it in gitops/values.yaml, which is a reviewed pull
+# request rather than a side effect of pressing this button.
+#
+#   workflow_dispatch   0.2.1 | 0.3.0 | 1.0.0, and the matching git tag
+#
+# The merge channel lives in deploy.yml, which publishes -main.<sha> and
+# upgrades ahorro-dev. The two were one file gated against itself; see
+# docs/adr/0011.
+#
+# Every action is pinned to a full commit SHA; see ci.yml for why.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: The release bump level
+        required: true
+        type: choice
+        options: [patch, minor, major]
+
+permissions: {}
+
+# The same group as deploy.yml, deliberately: a release and a merge both push
+# to GHCR under one version scheme, so they queue rather than race.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # One version for the whole run. A release rebuilds nothing: every component
+  # is copied from the image its own last change already published, which is
+  # the code at this commit.
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      # The version is derived from the tag history, so fetch all of it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: v
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          set -euo pipefail
+          version="$(./scripts/version.sh release "$BUMP")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### Version \`$version\`" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    needs: version
+    permissions:
+      contents: read
+      packages: write
+    # No change flags: a release rebuilds nothing. Every component is copied
+    # from the image its own last change already published, which is the code
+    # at this commit.
+    uses: ./.github/workflows/publish.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  # The tag is written only after every artifact exists, so a failed publish
+  # never leaves a tag naming a version nobody can pull. contents: write is
+  # for the tag and nothing else; no workflow commits to this repository.
+  tag:
+    needs: [version, publish]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          {
+            echo "### Released \`v$VERSION\`"
+            echo "Pin it in \`gitops/values.yaml\`, then bump"
+            echo "\`ahorro.targetRevision\` in vk-lab-platform."
+          } >> "$GITHUB_STEP_SUMMARY"

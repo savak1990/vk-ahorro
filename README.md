@@ -271,19 +271,40 @@ blocks every merge for ever.
 fails on a pull request from a fork. That is deliberate - a run that cannot
 verify the domain must not report green.
 
-### `deploy.yml` - runs on a merge to `main`, and by hand for a release
+### `deploy.yml` - runs on a merge to `main`
 
-| Job | Does | Does not run when |
-|---|---|---|
-| `version` | derives the version from the tag history, reads the diff | never skips |
-| `images` | **builds** a changed component, **copies** an unchanged one | never skips; it branches inside |
-| `charts` | packages and pushes both charts at the one version | never skips |
-| `deploy-dev` | installs both releases into `ahorro-dev` | a **release** dispatch - a release publishes, it does not deploy |
-| `tag` | tags the repository `v<version>` | a **merge** - only a release tags |
+| Job | Does |
+|---|---|
+| `version` | derives `<next>-main.<sha>` from the tag history, reads the diff |
+| `publish` | calls `publish.yml` |
+| `deploy-dev` | installs both releases into `ahorro-dev` |
 
 **The whole workflow does not run** when a merge touches only `gitops/`,
 `docs/` or `specs/`. Nothing is published, because nothing that ships
 changed.
+
+### `release.yml` - the **Run workflow** button, by hand
+
+| Job | Does |
+|---|---|
+| `version` | bumps the last tag by the level you pick: patch, minor or major |
+| `publish` | calls `publish.yml`, which copies every component and builds none |
+| `tag` | tags the repository `v<version>`, only after `publish` succeeded |
+
+A release publishes; it does not deploy. The released version reaches
+namespace `ahorro` when you pin it in `gitops/values.yaml` and bump
+`ahorro.targetRevision` in `vk-lab-platform` - two edits by hand, on purpose.
+
+### `publish.yml` - called by both, never run on its own
+
+| Job | Does |
+|---|---|
+| `images` | **builds** a changed component, **copies** an unchanged one |
+| `charts` | packages and pushes every chart at the one version |
+
+These were one file until ADR 0011, with `deploy-dev` and `tag` gated against
+each other on a single output. Splitting them means a job's file is its
+channel, so no job carries a condition that decides whether it belongs here.
 
 `deploy-dev` ends **green with a notice** when the cluster is unreachable, and
 **red** when it is reachable and the deploy fails. The lab is off most of the
