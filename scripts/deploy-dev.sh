@@ -72,14 +72,15 @@ web_host="$WEB_HOST_LABEL.$fqdn"
 echo "DEPLOY-DEV: upgrading $NAMESPACE to $VERSION."
 
 # --rollback-on-failure (--atomic before Helm 4.3) restores the previous
-# release rather than leaving the namespace half updated.
+# release rather than leaving the namespace half updated. The comma in
+# corsAllowedOrigins is escaped because --set splits on it; it is one scalar.
 helm upgrade --install ahorro-api "$CHARTS/ahorro-api" \
   --version "$VERSION" \
   --namespace "$NAMESPACE" \
   --rollback-on-failure --timeout 5m \
   --set image.tag="$VERSION" \
   --set host="$api_host" \
-  --set corsAllowedOrigins="https://$web_host,$LOCAL_WEB_ORIGIN" \
+  --set corsAllowedOrigins="https://$web_host\,$LOCAL_WEB_ORIGIN" \
   --set cognito.issuer="$issuer" \
   --set cognito.clientId="$client_id"
 
