@@ -60,3 +60,10 @@ terraform.tfvars.json
 # Generated per-project web config (make ui-config). The pool is per
 # platform project, so a committed copy is right for exactly one of them.
 flutter-ui/web/config.json
+
+# Android signing. A keystore and its passwords never enter Git. These live
+# here rather than only in flutter-ui/android/.gitignore, whose patterns are
+# relative to that directory and so miss a key written anywhere else.
+**/key.properties
+**/*.keystore
+**/*.jks

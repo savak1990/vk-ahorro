@@ -4,6 +4,14 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Written by `make android-keystore` and never committed. Absent on CI and on
+// a fresh clone, which is why the release type falls back to the debug key.
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "com.vkdev1.ahorro"
     compileSdk = flutter.compileSdkVersion
@@ -26,10 +34,22 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            upload {
+                keyAlias = keystoreProperties["keyAlias"]
+                keyPassword = keystoreProperties["keyPassword"]
+                storeFile = file(keystoreProperties["storeFile"])
+                storePassword = keystoreProperties["storePassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Debug keys, so `flutter run --release` works. Release signing is not set up.
-            signingConfig = signingConfigs.debug
+            // Without a keystore the debug key keeps `flutter run --release`
+            // and the pull-request build working.
+            signingConfig = keystorePropertiesFile.exists() ? signingConfigs.upload : signingConfigs.debug
         }
     }
 }

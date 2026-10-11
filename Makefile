@@ -1,4 +1,4 @@
-.PHONY: require-env require-deployed-env ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: require-env require-deployed-env android-keystore ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -70,6 +70,7 @@ IOS_DEVICE ?= iPhone 18 Pro
 ANDROID_DEVICE = $(if $(DEVICE),$(DEVICE),$(AVD))
 IOS_TARGET = $(if $(DEVICE),$(DEVICE),$(IOS_DEVICE))
 APP_ID := com.vkdev1.ahorro
+APK := $(UI_DIR)/build/app/outputs/flutter-apk/app-release.apk
 
 # The platform project whose persistent layer owns the Cognito pool. The pool
 # is per project, so nothing about it can be committed here. Exported because
@@ -267,6 +268,22 @@ ui-build-web:
 ## Build a debug APK against $ENV. ENV=local needs an adb reverse on the device
 ui-build-android: ui-config
 	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
+
+## Create the Android upload key once; refuses if one already exists
+android-keystore:
+	@./scripts/android-keystore.sh
+
+# No --build-number: adb install -r replaces the app whatever its versionCode,
+# and only a store needs a number that never repeats.
+## Build a release APK against $ENV, signed with the upload key when it exists
+ui-build-apk: require-env ui-config
+	cd $(UI_DIR) && flutter build apk --release --build-name=$(VERSION) $(MOBILE_DEFINES) $(LOCAL_API)
+
+# The reverse lives here and not on the build: ENV=local is a legitimate way to
+# sideload against `make go-run`, and this is the target that knows the device.
+## Install the release APK onto $DEVICE and forward $PORT back to this machine
+ui-install-android: require-env
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && { adb -s $$serial install -r $(APK) || { echo "if this says the signatures do not match, run: make ui-uninstall-android DEVICE=$$serial" >&2; exit 1; }; }
 
 ## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:
