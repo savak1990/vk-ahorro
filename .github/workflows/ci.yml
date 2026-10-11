@@ -37,6 +37,9 @@ jobs:
         id: filter
         with:
           filters: |
+            # The Makefile is in both: every job below runs make targets, so a
+            # change to one is a change to what the job does. Without it an
+            # edit to ui-build-aab skips the job that runs ui-build-aab.
             go:
               - 'cmd/**'
               - 'internal/**'
@@ -44,11 +47,13 @@ jobs:
               - 'go.sum'
               - '.golangci.yml'
               - 'deploy/docker/ahorro-api.Dockerfile'
+              - 'Makefile'
             flutter:
               - 'flutter-ui/**'
               - 'deploy/docker/ahorro-web.Dockerfile'
               - 'deploy/docker/ahorro-web.nginx.conf'
               - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
+              - 'Makefile'
             helm:
               - 'deploy/helm/**'
             gitops:

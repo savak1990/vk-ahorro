@@ -35,7 +35,9 @@ anything that runs after a merge (`deploy/`).
 ## Requirements
 
 1. `ci.yml` MUST keep a single `pull_request` trigger with no workflow-level `paths` or `paths-ignore`. A skipped workflow leaves a required check pending forever; a job skipped by `if:` reports success.
-2. A first job `changes` MUST run `dorny/paths-filter` v4.0.3, pinned to commit `ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d` (core 030 req 8), with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/ahorro-api.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/ahorro-web.Dockerfile`, `deploy/docker/ahorro-web.nginx.conf`, `deploy/docker/ahorro-web.Dockerfile.dockerignore`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
+2. A first job `changes` MUST run `dorny/paths-filter` v4.0.3, pinned to commit `ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d` (core 030 req 8), with exactly these filters: `go` = `cmd/**`, `internal/**`, `go.mod`, `go.sum`, `.golangci.yml`, `deploy/docker/ahorro-api.Dockerfile`; `flutter` = `flutter-ui/**`, `deploy/docker/ahorro-web.Dockerfile`, `deploy/docker/ahorro-web.nginx.conf`, `deploy/docker/ahorro-web.Dockerfile.dockerignore`; `helm` = `deploy/helm/**`; `gitops` = `gitops/**`; `workflows` = `.github/**`. `go` and `flutter` MUST both also list `Makefile`. Every other job carries `needs: changes` and an `if:` on one or more outputs:
+
+   *(Amended 2026-10-11: `Makefile` was in no filter, and every job runs make targets, so a change to what a job does did not trigger that job. Found by the change that added `make ui-build-aab` and the `build-android` job that runs it: reverting an unrelated file left the pull request touching only `Makefile`, `.github/` and `specs/`, so `ui`, `image-web` and `build-android` all skipped and `ci-ok` reported green over a Flutter version that had never been built. A skipped job reports success, which is what makes this silent.)*
 
    | Job | Runs when |
    |---|---|
