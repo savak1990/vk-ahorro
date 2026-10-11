@@ -188,8 +188,10 @@ rather than a mixture. That is worth the two seconds a manifest copy costs.
 
 ## 3.3 Release
 
-The release action tags the repository and publishes the clean version for
-every component. `gitops/values.yaml` pins that one version. A pull request
+`release.yml`, the **Run workflow** button, tags the repository and publishes
+the clean version for every component. It shares `publish.yml` with the merge
+channel and deploys nothing; see ADR 0011.
+`gitops/values.yaml` pins that one version. A pull request
 in `vk-lab-platform` then bumps `ahorro.targetRevision` — **one line**,
 because both components are at the same number — and Argo moves `ahorro` on
 its next sync.

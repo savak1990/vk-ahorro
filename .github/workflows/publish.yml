@@ -1,0 +1,154 @@
+# Publishes one version of every component to GHCR: the images and the charts.
+#
+# Called by deploy.yml on a merge and by release.yml on a dispatch. It holds
+# what the two channels do identically, so the difference between them is only
+# what each caller adds: deploy.yml deploys to ahorro-dev, release.yml tags.
+#
+# Every component is published whether or not it changed, so one number names
+# everything an environment runs. A component whose code did not change is not
+# rebuilt: its manifest is copied to the new tag, which is a registry-side
+# operation that uploads no layer.
+#
+# Every action is pinned to a full commit SHA; see ci.yml for why.
+name: publish
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The version every image and chart is published under
+        required: true
+        type: string
+      # Strings rather than booleans, because a matrix value is compared as a
+      # string. They default to not-rebuilt: a release copies every component
+      # and passes neither.
+      go:
+        description: Whether the Go sources changed, so the api image is rebuilt
+        required: false
+        default: 'false'
+        type: string
+      flutter:
+        description: Whether the Flutter sources changed, so the web image is rebuilt
+        required: false
+        default: 'false'
+        type: string
+
+permissions: {}
+
+jobs:
+  images:
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # One job per service, so a slow Flutter build never delays the Go image
+    # and a failure names the service that broke.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - svc: ahorro-api
+            changed: ${{ inputs.go }}
+          - svc: ahorro-web
+            changed: ${{ inputs.flutter }}
+    steps:
+      # The copy source is found through the log, so the history is needed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The docker-container driver is what makes a multi-platform build
+      # possible; the default builder cannot produce one.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # provenance: false keeps the pushed manifest a plain multi-platform
+      # index rather than an attestation index, which is what Argo and a plain
+      # docker pull expect.
+      - if: matrix.changed == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/docker/${{ matrix.svc }}.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.svc }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/${{ matrix.svc }}:${{ inputs.version }}
+          cache-from: type=gha,scope=${{ matrix.svc }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.svc }}
+
+      # The commit that last touched this component is the commit whose build
+      # pushed the image the component still runs, so its SHA tag is always
+      # the right source and always exists.
+      - if: matrix.changed != 'true'
+        name: Copy the unchanged image to the new version
+        env:
+          REPO: ghcr.io/${{ github.repository }}/${{ matrix.svc }}
+          VERSION: ${{ inputs.version }}
+          SVC: ${{ matrix.svc }}
+        run: |
+          set -euo pipefail
+          case "$SVC" in
+            ahorro-api) paths="cmd internal go.mod go.sum deploy/docker/ahorro-api.Dockerfile" ;;
+            ahorro-web) paths="flutter-ui deploy/docker/ahorro-web.Dockerfile deploy/docker/ahorro-web.nginx.conf deploy/docker/ahorro-web.Dockerfile.dockerignore" ;;
+            *) echo "no path set for $SVC" >&2; exit 1 ;;
+          esac
+          # shellcheck disable=SC2086
+          src="$(git log -1 --format=%H -- $paths)"
+          [ -n "$src" ] || { echo "no commit ever touched $SVC" >&2; exit 1; }
+          echo "copying $REPO:$src to $REPO:$VERSION"
+          docker buildx imagetools create -t "$REPO:$VERSION" "$REPO:$src"
+
+      - name: Report
+        env:
+          REPO: ghcr.io/${{ github.repository }}/${{ matrix.svc }}
+          VERSION: ${{ inputs.version }}
+          BUILT: ${{ matrix.changed == 'true' && 'built' || 'copied' }}
+        run: |
+          {
+            echo "- \`$REPO:$VERSION\` ($BUILT)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # A separate job, so a chart failure does not hide a successful image push.
+  # Packaging is cheap, so every chart is published on every channel with no
+  # change detection at all.
+  charts:
+    needs: images
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.0
+
+      - name: Package and push every chart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          echo "$GITHUB_TOKEN" | helm registry login ghcr.io \
+            --username '${{ github.actor }}' --password-stdin
+          for dir in deploy/helm/*/; do
+            chart="$(basename "${dir%/}")"
+            make helm-push CHART="$chart" VERSION="$VERSION"
+            echo "- \`oci://ghcr.io/${{ github.repository }}/charts/$chart:$VERSION\`" \
+              >> "$GITHUB_STEP_SUMMARY"
+          done
