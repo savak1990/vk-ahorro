@@ -73,11 +73,29 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
 
+  # Unconditional, like every other component: one number names everything an
+  # environment runs, and a release that published images and charts but no
+  # phone artifact would break that.
+  release-android:
+    needs: version
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mobile-android.yml
+    secrets: inherit
+    with:
+      env: prod
+      environment: release
+      version: ${{ needs.version.outputs.version }}
+      # The ceiling. This is what a store upload takes, so it has to outlive
+      # the decision to publish it.
+      retention_days: 90
+
   # The tag is written only after every artifact exists, so a failed publish
   # never leaves a tag naming a version nobody can pull. contents: write is
   # for the tag and nothing else; no workflow commits to this repository.
   tag:
-    needs: [version, publish]
+    needs: [version, publish, release-android]
     permissions:
       contents: write
     runs-on: ubuntu-latest

@@ -1,0 +1,90 @@
+---
+id: "DEPLOY-020"
+status: "DRAFT"
+updated: "2026-10-11"
+---
+# 020 — Mobile artifacts on every channel
+
+**Status note:** Draft. The Android half is delivered (2026-10-11); the iOS
+half waits on [`deploy/040`](../040-P-ios-testflight/spec.md) req 0.
+
+**This spec changed shape twice, and the second time its premise went.** It was
+"the deploy button and the release labels": a `workflow_dispatch` with
+checkboxes, plus two labels deciding whether a merge produced a mobile build.
+ADR 0009 removed the `web` box. Then ADR 0011 split `deploy.yml` into a merge
+workflow and a release workflow, and the remaining question answered itself.
+
+`deploy.yml`'s header states the invariant the whole delivery scheme rests on:
+*"Every component is published on every channel, whether or not it changed, so
+one number names everything an environment runs."* Android is a component. A
+release that published images and charts but no phone artifact would make
+`0.2.2` name the web build and nothing installable. So there is **no trigger
+surface at all** — no checkbox, no label, no gate. A merge builds dev
+artifacts; a release builds prod artifacts; both happen because the channel
+happened. Four requirements below are superseded by that one sentence, and the
+folder was renamed from `020-P-deploy-button` to match.
+
+**Complexity:** Small
+**Risk:** Low — the reusable workflow is the only new surface, and the signing
+path is exercised by `deploy/015` locally.
+**Estimated cost:** ~0.5 day
+**Recommended model:** Sonnet.
+**Depends on:** [060-versioned-delivery](../060-D-versioned-delivery/spec.md), [070-preview-environments](../070-D-preview-environments/spec.md) and [015-local-release-builds](../015-D-local-release-builds/spec.md)
+**Lifecycle class(es) touched:** Disposable.
+
+## Scope
+
+How a mobile artifact reaches each channel: which workflow builds it, against
+which backend, signed with which key, kept for how long. One reusable workflow
+serves both channels so the two paths cannot drift.
+
+Excludes: what happens to the artifact afterwards — the Play upload is
+[030](../030-P-android-play-internal/spec.md), TestFlight is
+[040](../040-P-ios-testflight/spec.md). Also excludes the pull-request build of
+[`ci/030`](../../ci/030-P-flutter-gates/spec.md), which proves compilation only.
+
+## Requirements
+
+1. ~~This spec owns the two mobile `workflow_dispatch` inputs.~~ **Superseded.** There are no mobile dispatch inputs. A release builds a mobile artifact because it is a release, the same way it publishes an image for a component whose code did not change. *(Amended three times, and finally removed. ADR 0009 dropped the `web` box; `deploy/060` req 8 delivered the release half as `bump`; and treating mobile as a component removed the remaining two. An input here would let a release publish a version with no phone artifact behind it, which the invariant in the status note forbids.)*
+
+1a. ~~`bump` is `required: true`, so a dispatch that wants only an Android tester build cannot be expressed.~~ **Moot.** There is no mobile-only dispatch: every dispatch is a release and every release builds mobile. The requirement also rested on a wrong reading of the code — `release` is computed from `github.event_name`, never from `bump` — so relaxing `bump` would not have produced the shape it wanted. *(Verified against `deploy.yml` on 2026-10-11, before ADR 0011 moved the job to `release.yml`.)*
+
+2. A release MUST publish the clean `<version>` for every component and MUST NOT deploy anything. Promotion into `ahorro` stays a pull request against `vk-lab-platform` (`deploy/060` req 9). The mobile analogue of that pin is the Play track: the release produces the artifact, and promoting it is a separate human act (030).
+
+3. ~~`android` runs when the merged pull request carried `ci:release-android`.~~ **Superseded, for two independent reasons.** The labels cannot work for a dispatch at all: `gh api repos/{owner}/{repo}/commits/{sha}/pulls` on a commit on `main` returns whichever pull request merged last, so a release would build Android or not by accident. And once mobile is unconditional, nothing needs them. Both labels MUST be removed from `scripts/repo-settings.sh`; `ci:preview-web` stays.
+
+3a. ~~**Open decision: what triggers a mobile build on a merge.**~~ **Answered.** Every merge that touches the `flutter` filter builds a dev-pointed artifact, and no trigger decides it. The open decision assumed a merge build would cost a store upload and a build number that can never be reused. It does not: a merge build is an artifact on the run page that nobody uploads. The cost of the label model — a tester build for every typo — was real for *publishing* and is simply absent for *building*.
+
+4. The mobile jobs MUST be reusable workflows called with `workflow_call`, so both channels run identical code. `mobile-android.yml` is delivered. `mobile-ios.yml` waits on `deploy/040` req 0 and MUST join the same way when it lands: unconditional, one call per channel, no input deciding whether it runs.
+
+5. A mobile job MUST declare an `environment:`, because that is the only scope the four signing secrets live in. It MUST NOT be the same Environment on both channels. **`release`** is the store-publishing boundary and is where a protection rule belongs; **`mobile-dev`** carries the merge channel, because a required reviewer on `release` — the obvious thing to add to a store gate — would otherwise stall every merge to `main`. *(Amended: this said both jobs declare `environment: release`, written when there was no merge-channel job to stall. Both Environments hold the **same** key, so a phone never needs an uninstall moving between a merge build and a release build.)*
+
+6. `make repo-settings` MUST create both Environments. `make android-keystore` (`deploy/015` req 8a) MUST publish all four secrets to both. Neither creates a release label any more.
+
+7. ~~A dispatch that selects no work MUST fail fast.~~ **Cannot arise.** A dispatch always publishes every component and always tags, so there is no empty selection. *(Amended twice and then removed: it counted three boxes, then two, and now none exist.)*
+
+8. Both channels MUST build **APK and AAB**. The second format costs seconds — Gradle keeps the native libraries, the resources and the packaging, and only the Dart kernel and the AOT snapshot re-run — so building one format and regretting it is the more expensive choice. What is done with either artifact is decided after it exists, not by the trigger. *(Added 2026-10-11 at the operator's request.)*
+
+9. The merge channel MUST point at `dev` and keep its artifact **30 days**; the release channel MUST point at `prod` and keep its artifact **90 days**, the repository ceiling. A release artifact has to outlive the decision to publish it.
+
+10. The mobile job MUST hold an AWS role and read its backend configuration from SSM, not from an `FQDN` override. That is the whole difference from `ci/030` req 7a's pull-request build: this artifact names a host that resolves, so it is installable, and that is the only reason it is worth keeping for 30 days. A fork never reaches this workflow — it runs on `push` to `main` and on dispatch, neither of which a fork can trigger.
+
+11. The version name MUST be the repository version passed in by the caller, never computed inside the mobile workflow. `Makefile`'s `VERSION ?=` default runs `version.sh base`, which needs the tag history and **exits 1** without it; on a release it would also compute the wrong number, because only the caller knows the bump. A merge artifact therefore carries `0.2.2-main.<sha>`, which is legal: Android's `versionName` is free text.
+
+12. The release tag MUST NOT be pushed until the mobile artifact exists. `tag` lists `release-android` in its `needs:`, extending the rule already stated above that job — *"the tag is written only after every artifact exists, so a failed publish never leaves a tag naming a version nobody can pull"* — to cover the phone. A broken Android build blocks the release tag.
+
+## Implementation hints
+
+- A reusable workflow inherits no `permissions`; each caller grants `contents: read` and `id-token: write`, and the called workflow declares its own.
+- `secrets: inherit` is narrow here rather than broad: `gh secret list` is empty, so the repository holds no repository-level secrets, and Environment secrets reach only a job that names that Environment.
+- `scripts/android-keystore-restore.sh` is the CI mirror of `android-keystore.sh`. `umask 177` goes **before** the first write, or the keystore is created world-readable and chmod is too late.
+- `apksigner verify --print-certs` is the check. `jarsigner` reads v1 JAR signatures only and reports a correctly signed release APK as `jar is unsigned`.
+
+## Testing / acceptance criteria
+
+- `scripts/android-keystore-restore.sh` with a throwaway keystore writes both files mode 600, and the APK built after it is signed by the throwaway certificate rather than `CN=Android Debug`. *(Verified 2026-10-11: `V2 Signer: certificate DN: CN=throwaway, …`.)*
+- `make ui-build-apk VERSION=9.9.9 BUILD_NUMBER=4242` produces an APK that `aapt2 dump badging` reports as `versionCode='4242' versionName='9.9.9'`. *(Verified 2026-10-11. Before this spec, `ui-build-apk` ignored `BUILD_NUMBER` entirely and only `ui-build-aab` passed it.)*
+- A merge touching `flutter-ui/` produces a run with `artifacts-android`, uploading `ahorro-android-dev-<version>` containing both an APK and an AAB.
+- That APK installs over the build already on the device with **no uninstall**, which is the proof the key matched, and the running app reports the dev host.
+- A `workflow_dispatch` asks for a bump level and nothing else, runs `release-android`, and `tag` does not start until it finishes.
+- The prod artifact's `versionCode` is higher than the dev artifact's from an earlier merge, so a release installs over a merge build rather than being refused as a downgrade.
