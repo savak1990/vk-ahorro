@@ -73,6 +73,8 @@ Excludes: what happens to the artifact afterwards — the Play upload is
 
 12. The release tag MUST NOT be pushed until the mobile artifact exists. `tag` lists `release-android` in its `needs:`, extending the rule already stated above that job — *"the tag is written only after every artifact exists, so a failed publish never leaves a tag naming a version nobody can pull"* — to cover the phone. A broken Android build blocks the release tag.
 
+13. There MUST be one command that puts a channel's newest artifact on a device without building anything: `make ui-install-ci ENV=<dev|prod> DEVICE=<serial>`. It carries `require-deployed-env`, because no channel produces a `local` artifact. It MUST NOT run `ui-config` and MUST NOT set up an `adb reverse`: nothing is compiled, and a CI artifact never points at this machine. It MUST name the version it installed, because the APK inside the artifact is called `app-release.apk` on every channel and nothing else identifies the build. *(Added 2026-10-11. Without it the flow was: open the run page, find the artifact, download, unzip, locate the APK, `adb install -r` by hand. The artifact also keeps the build tree, so the APK is under `flutter-apk/` and the version is on the top-level directory, not the APK's parent.)*
+
 ## Implementation hints
 
 - A reusable workflow inherits no `permissions`; each caller grants `contents: read` and `id-token: write`, and the called workflow declares its own.
@@ -84,7 +86,8 @@ Excludes: what happens to the artifact afterwards — the Play upload is
 
 - `scripts/android-keystore-restore.sh` with a throwaway keystore writes both files mode 600, and the APK built after it is signed by the throwaway certificate rather than `CN=Android Debug`. *(Verified 2026-10-11: `V2 Signer: certificate DN: CN=throwaway, …`.)*
 - `make ui-build-apk VERSION=9.9.9 BUILD_NUMBER=4242` produces an APK that `aapt2 dump badging` reports as `versionCode='4242' versionName='9.9.9'`. *(Verified 2026-10-11. Before this spec, `ui-build-apk` ignored `BUILD_NUMBER` entirely and only `ui-build-aab` passed it.)*
-- A merge touching `flutter-ui/` produces a run with `artifacts-android`, uploading `ahorro-android-dev-<version>` containing both an APK and an AAB.
+- A merge touching `flutter-ui/` produces a run with `artifacts-android`, uploading `ahorro-android-dev-<version>` containing both an APK and an AAB. *(Verified 2026-10-11 on the merge of this spec's own pull request: `ahorro-android-dev-0.2.2-main.8e7138f`, 93MB, expiring in 30 days. The APK inside reports `V2 Signer: certificate DN: CN=Ahorro, O=Ahorro, C=ES` — the real upload key, not `CN=Android Debug` — with `versionCode='233'` and `versionName='0.2.2-main.8e7138f'`.)*
+- `make ui-install-ci ENV=dev` downloads that artifact and installs it, naming the version. It fails with a readable message when no artifact for that `ENV` exists or the newest has expired.
 - That APK installs over the build already on the device with **no uninstall**, which is the proof the key matched, and the running app reports the dev host.
 - A `workflow_dispatch` asks for a bump level and nothing else, runs `release-android`, and `tag` does not start until it finishes.
 - The prod artifact's `versionCode` is higher than the dev artifact's from an earlier merge, so a release installs over a merge build rather than being refused as a downgrade.
