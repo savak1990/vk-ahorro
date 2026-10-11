@@ -1,4 +1,4 @@
-.PHONY: help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: require-env require-deployed-env android-keystore ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -69,6 +69,8 @@ AVD ?= pixel_phone
 IOS_DEVICE ?= iPhone 18 Pro
 ANDROID_DEVICE = $(if $(DEVICE),$(DEVICE),$(AVD))
 IOS_TARGET = $(if $(DEVICE),$(DEVICE),$(IOS_DEVICE))
+APP_ID := com.vkdev1.ahorro
+APK := $(UI_DIR)/build/app/outputs/flutter-apk/app-release.apk
 
 # The platform project whose persistent layer owns the Cognito pool. The pool
 # is per project, so nothing about it can be committed here. Exported because
@@ -79,7 +81,7 @@ export PROJECT_NAME ?= vk-hetzner-lab
 help:
 	@awk 'BEGIN { FS = ":" } \
 	     /^## / { doc = substr($$0, 4); next } \
-	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-18s %s\n", $$1, doc; doc = "" } } \
+	     /^[a-z][a-z0-9-]*:/ { if (doc != "") { printf "  %-22s %s\n", $$1, doc; doc = "" } } \
 	     { doc = "" }' $(MAKEFILE_LIST)
 
 ## Build every Go binary into bin/
@@ -158,6 +160,17 @@ ui-config:
 ## Create the multi-arch buildx builder if it is missing
 buildx-init:
 	@docker buildx inspect $(BUILDER) >/dev/null 2>&1 || docker buildx create --name $(BUILDER) --driver docker-container
+
+# $(origin ENV) is `file` for the default at the top and `command line` or
+# `environment` when a human said where this build points. A release built
+# against the default silently targets this machine.
+## Fail unless ENV was named rather than defaulted
+require-env:
+	@test "$(origin ENV)" = "command line" -o "$(origin ENV)" = environment || { echo "name the backend: ENV=local|dev|prod|pr-<number>, for example: make ui-build-apk ENV=dev" >&2; exit 1; }
+
+## Fail unless ENV names a deployed backend, for artifacts bound for a store
+require-deployed-env: require-env
+	@test "$(ENV)" != local || { echo "ENV=local points a store artifact at this machine. Use dev, prod or pr-<number>." >&2; exit 1; }
 
 ## Fail unless SVC names an existing Dockerfile
 require-svc:
@@ -256,6 +269,22 @@ ui-build-web:
 ui-build-android: ui-config
 	cd $(UI_DIR) && flutter build apk --debug $(MOBILE_DEFINES) $(LOCAL_API)
 
+## Create the Android upload key and publish it to the release Environment
+android-keystore:
+	@./scripts/android-keystore.sh
+
+# No --build-number: adb install -r replaces the app whatever its versionCode,
+# and only a store needs a number that never repeats.
+## Build a release APK against $ENV, signed with the upload key when it exists
+ui-build-apk: require-env ui-config
+	cd $(UI_DIR) && flutter build apk --release --build-name=$(VERSION) $(MOBILE_DEFINES) $(LOCAL_API)
+
+# The reverse lives here and not on the build: ENV=local is a legitimate way to
+# sideload against `make go-run`, and this is the target that knows the device.
+## Install the release APK onto $DEVICE and forward $PORT back to this machine
+ui-install-android: require-env
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && { adb -s $$serial install -r $(APK) || { echo "if this says the signatures do not match, run: make ui-uninstall-android DEVICE=$$serial" >&2; exit 1; }; }
+
 ## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:
 	@$(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE) nowait
@@ -279,6 +308,13 @@ ui-run-ios: ui-config
 ## Run in Chrome on :3000. SKIP_AUTH=false signs in against $PROJECT_NAME's pool
 ui-run-web: ui-config
 	cd $(UI_DIR) && flutter run -d chrome --web-port 3000 $(UI_DEFINES)
+
+# Android identifies an app by its id and its signing key together, so a build
+# signed with a different key cannot replace an installed one. Uninstalling is
+# the only way across, and it takes the app's data with it.
+## Remove the app from $DEVICE. Needed whenever the signing key changes
+ui-uninstall-android:
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && if adb -s $$serial shell pm list packages | grep -q "^package:$(APP_ID)$$"; then adb -s $$serial uninstall $(APP_ID); else echo "$(APP_ID) is not installed on $$serial"; fi
 
 ## Shut down every running Android emulator and iOS simulator
 emulator-stop:

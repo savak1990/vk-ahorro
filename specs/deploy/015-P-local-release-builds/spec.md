@@ -5,10 +5,27 @@ updated: "2026-10-08"
 ---
 # 015 — Local release builds: a signed, installable mobile artifact
 
-**Status note:** Draft, and new. Nothing here needs a store account, a
-service account or any money, which is why it is numbered in front of the
-deploy button (020) and the two store specs (030, 040) rather than inside
-them. `specs/README.md` makes the number the order of work.
+**Status note:** Implemented 2026-10-11, and still Draft because three
+acceptance criteria belong to the operator and have not run.
+
+Done and measured: requirements 1 through 8b. `aapt2 dump badging` reports
+`versionName=0.2.2`, matching `scripts/version.sh base`, and `versionCode=1`
+from pubspec. `apksigner verify --print-certs` names `CN=Android Debug` with
+no keystore and `CN=Ahorro` with one, and both branches build. A second
+`make android-keystore` leaves the keystore alone. `git check-ignore` covers
+a `.jks` at three depths. The signed APK installs on an emulator, and the
+signing collision of req 2b was reproduced: the install failed, the target
+named `ui-uninstall-android`, and the install then succeeded.
+
+Open, and the operator's to run: the real upload key does not exist yet, so
+req 8a's secret publication has **never been exercised** - the harness
+refuses secret-store writes, which is why. The on-device install against
+`ahorro-dev` has not run either. Both close on the next operator pass.
+
+Nothing here needs a store account, a service account or any money, which is
+why it is numbered in front of the deploy button (020) and the two store
+specs (030, 040) rather than inside them. `specs/README.md` makes the number
+the order of work.
 
 It exists because four parts of "build a release and put it on my phone" had
 no owning requirement anywhere:
@@ -57,6 +74,27 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
    workstation: no upload, no registry, no release asset. Where a **CI** build
    puts its artifact is deliberately left open, and `ci/030` req 7's
    seven-day workflow artifact is the only thing that currently answers it.
+
+2a. `make ui-install-android` MUST also run `adb reverse tcp:$(PORT)
+   tcp:$(PORT)`, as `ui-run-android` does (100 req 2b). Requirement 3a below
+   exempts `ui-build-apk` from the `local` rejection because sideloading onto a
+   tethered phone is a legitimate `ENV=local` case - but `ui-build-apk` builds
+   an artifact and selects no device, so it has no serial to forward. This
+   target has `DEVICE`, so it is the one that can make the exemption point at
+   something reachable. *(Added: without this the exemption named a path that
+   reaches nothing, which is the failure 100 req 2b exists to remove.)*
+
+2b. `make ui-uninstall-android` MUST remove `APP_ID` from `DEVICE`, and MUST
+   exit 0 when the app is not installed. Android identifies an app by its id
+   and its signing key together, so an APK signed with one key cannot replace
+   an app signed with another: the install fails with
+   `INSTALL_FAILED_UPDATE_INCOMPATIBLE` and uninstalling is the only way
+   across. That happens twice on this track - when a release APK signed with
+   the upload key meets the debug-signed app `flutter run` left behind, and
+   again between a throwaway key and the real one. `ui-install-android` MUST
+   name this target when the install fails. *(Added: `adb uninstall` on an
+   absent package reports `DELETE_FAILED_INTERNAL_ERROR` and exits 1, which
+   reads as a defect rather than as "already gone".)*
 
 3. Every release build target MUST fail unless `ENV` was named on the command
    line, and the message MUST list the four values of 080 req 4a. This applies
@@ -111,21 +149,39 @@ Excludes: the store uploads and their accounts (030, 040); the CI triggers
    `flutter-ui/` is **not** ignored. `make domain-check` would not catch it
    either: it looks for the root domain, not for a private key.
 
-8. How the keystore and `key.properties` are created is **an open decision**,
-   recorded here rather than settled. The operator asked to understand the
-   signing model first. The two candidates:
+8. `make android-keystore` MUST run `keytool` and write `key.properties`, and
+   it MUST NEVER overwrite either file. When both already exist it MUST say so
+   and continue; when exactly one exists it MUST exit 1 rather than guess. It
+   MUST read the passphrase from a prompt rather than an argument, so no
+   password reaches a command line, a shell history or the process table. The
+   keystore and its passphrase live in a password manager as well
+   (`deploy/030` req 1). *(Settled: this was an open decision between 8b above
+   and 8a, creating the key by hand from `deploy/030` req 1's runbook. 8a was
+   rejected - it has nothing that can overwrite a keystore by accident only
+   because it has nothing at all, and the one thing worth automating here is
+   exactly the refusal.)*
 
-   8a. By hand, per `deploy/030` req 1's runbook: one `keytool` command,
-   copied from the spec, run once. Nothing to maintain and nothing that can
-   overwrite a keystore by accident.
+8a. The same target MUST publish the key to the `release` Environment, so the
+   operator never handles the secret twice and CI signs with the key that
+   exists rather than one copied by hand. It MUST set only the names
+   `deploy/030` req 3 lists, MUST skip any that is already set, and MUST pass
+   each value on stdin rather than in an argument. It MUST read the passphrase
+   back out of `key.properties` rather than from the prompt, so a run that
+   only publishes works for a keystore an earlier run created. When `gh` is
+   not authenticated it MUST exit 1 **after** the local files are safely
+   written, naming the target to re-run. *(Added: `deploy/030` req 3 names the
+   four secrets but nothing put them there, which left the one manual step
+   that most invites a mistake - a hand-made base64 of the wrong file.)*
 
-   8b. `make android-keystore`, which runs `keytool`, writes
-   `key.properties`, and MUST exit 1 when either file already exists. The
-   guard is the point, not the convenience — see the hints below for what
-   overwriting costs.
-
-   Whichever is chosen, the keystore and its passwords live in a password
-   manager and never in Git (`deploy/030` req 1).
+8b. `make android-keystore` MUST find a JDK rather than require one on PATH.
+   macOS ships `keytool` as a stub that exits with "Unable to locate a Java
+   Runtime", and `core/090` req 1's `openjdk@17` is not installed on the
+   operator's machine: Gradle builds work because it uses the JDK Android
+   Studio bundles. The target MUST try `JAVA_HOME`, then
+   `/usr/libexec/java_home`, then that bundled JDK, and MUST name
+   `brew install openjdk@17` when none answers. *(Added: without this the
+   first thing the operator sees is a Java error from a target that has
+   nothing to do with Java.)*
 
 ## Implementation hints
 
@@ -181,8 +237,18 @@ buys, and it is why the lazy option here is the one with the extra check.
   recipe-level `$(if ...)` fires at expansion, so the build never starts.
 - One recipe line per target; the logic goes to `scripts/`, which is also
   what lets a workflow call the script directly (`deploy/060` req 11).
-- `jarsigner -verify -verbose -certs` names the signer of a built artifact,
-  which is how requirement 6's two branches are told apart.
+- `apksigner verify --print-certs` names the signer of a built artifact, which
+  is how requirement 6's two branches are told apart. **Not `jarsigner`**: it
+  understands v1 JAR signing alone, and an APK built here carries APK
+  Signature Scheme v2 and v3, so `jarsigner -verify` reports a correctly
+  signed release APK as `jar is unsigned`.
+- `apksigner` and `aapt2` both live in `$ANDROID_HOME/build-tools/<version>/`
+  and neither is on PATH from the `android-commandlinetools` cask. `apkanalyzer`
+  is on PATH but cannot find the SDK and fails with "Cannot locate latest build
+  tools", so it is not the way in either. Both tools need a JDK, and this
+  machine has none outside the one Android Studio bundles at
+  `/Applications/Android Studio.app/Contents/jbr/Contents/Home` - `core/090`
+  req 1's `openjdk@17` is not installed.
 
 ## Testing / acceptance criteria
 
@@ -196,11 +262,16 @@ buys, and it is why the lazy option here is the one with the extra check.
 - `make ui-install-android DEVICE=<serial>` installs that APK, and the app
   signs in against the platform's pool and answers "+" from `ahorro-dev`.
   This is the proof the whole spec exists for.
-- `aapt dump badging` on the built APK reports a `versionName` equal to
-  `./scripts/version.sh base`, and that string contains no `-` and no `+`.
-- `jarsigner -verify -verbose -certs` on the APK names the upload key when
+- `aapt2 dump badging` on the built APK reports a `versionName` equal to
+  `./scripts/version.sh base`, and that string contains no `-` and no `+`. It
+  also reports the `versionCode` pubspec carries, which is requirement 5.
+  *(Amended: this named `aapt`, which no longer ships. `aapt2` replaces it and
+  lives in `$ANDROID_HOME/build-tools/<version>/`, on no PATH here.)*
+- `apksigner verify --print-certs` on the APK names the upload key when
   `android/key.properties` is present, and the Android debug key when it is
-  absent. Both cases MUST build.
+  absent. Both cases MUST build. *(Amended: this named `jarsigner`, which
+  reads v1 JAR signatures alone and reports a correctly signed release APK as
+  `jar is unsigned`. Measured on the first release build this spec produced.)*
 - A `.jks` file written to the repository root, to `flutter-ui/` and to
   `flutter-ui/android/` is reported by `git check-ignore -v` in all three
   places, each naming the rule that covers it.
