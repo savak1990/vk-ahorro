@@ -1,4 +1,4 @@
-.PHONY: require-env require-deployed-env android-keystore ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: require-env require-deployed-env android-keystore ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -278,6 +278,13 @@ android-keystore:
 ## Build a release APK against $ENV, signed with the upload key when it exists
 ui-build-apk: require-env ui-config
 	cd $(UI_DIR) && flutter build apk --release --build-name=$(VERSION) $(MOBILE_DEFINES) $(LOCAL_API)
+
+# No LOCAL_API: it expands to nothing for a deployed ENV anyway, and leaving
+# it out says this target cannot mean local. BUILD_NUMBER is what a store
+# needs and a laptop does not; omitted, pubspec's +n stands.
+## Build a release app bundle for Play against $ENV
+ui-build-aab: require-deployed-env ui-config
+	cd $(UI_DIR) && flutter build appbundle --release --build-name=$(VERSION) $(if $(BUILD_NUMBER),--build-number=$(BUILD_NUMBER)) $(MOBILE_DEFINES)
 
 # The reverse lives here and not on the build: ENV=local is a legitimate way to
 # sideload against `make go-run`, and this is the target that knows the device.

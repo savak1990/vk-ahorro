@@ -1,14 +1,14 @@
 ---
 id: "DEPLOY-015"
-status: "DRAFT"
-updated: "2026-10-08"
+status: "DONE"
+updated: "2026-10-11"
 ---
 # 015 — Local release builds: a signed, installable mobile artifact
 
-**Status note:** Implemented 2026-10-11, and still Draft because three
-acceptance criteria belong to the operator and have not run.
+**Status note:** Done, 2026-10-11. Every requirement is implemented. One
+acceptance criterion was not run, and is named at the end of this note.
 
-Done and measured: requirements 1 through 8b. `aapt2 dump badging` reports
+Measured here: requirements 1 through 8b. `aapt2 dump badging` reports
 `versionName=0.2.2`, matching `scripts/version.sh base`, and `versionCode=1`
 from pubspec. `apksigner verify --print-certs` names `CN=Android Debug` with
 no keystore and `CN=Ahorro` with one, and both branches build. A second
@@ -17,10 +17,20 @@ a `.jks` at three depths. The signed APK installs on an emulator, and the
 signing collision of req 2b was reproduced: the install failed, the target
 named `ui-uninstall-android`, and the install then succeeded.
 
-Open, and the operator's to run: the real upload key does not exist yet, so
-req 8a's secret publication has **never been exercised** - the harness
-refuses secret-store writes, which is why. The on-device install against
-`ahorro-dev` has not run either. Both close on the next operator pass.
+Run by the operator since: `make android-keystore` created the real upload
+key and published all four secrets to the `release` Environment, and a second
+run changed nothing. That closes req 8a, which could not be exercised here
+because the harness refuses secret-store writes.
+
+**One acceptance criterion was never run, and this spec is closed anyway, by
+the operator's decision.** The release APK has not been built and installed
+on a physical phone, so nothing proves end to end that it signs in and is
+answered by `ahorro-dev`. What that criterion would add over what has been
+measured is the device, and only the device: the same APK, built by the same
+target from the same key, installs and runs on an emulator. The risk accepted
+is therefore narrow and known - a handset-only failure would show up the
+first time the operator installs one, and `ui-uninstall-android` already
+exists for the one way that install is known to fail.
 
 Nothing here needs a store account, a service account or any money, which is
 why it is numbered in front of the deploy button (020) and the two store
@@ -276,6 +286,6 @@ buys, and it is why the lazy option here is the one with the extra check.
   `flutter-ui/android/` is reported by `git check-ignore -v` in all three
   places, each naming the rule that covers it.
 - `make ui-test` and `make ui-analyze` stay green. Neither takes a release
-  build, so the `ui` job in CI, which has no AWS access, is unaffected.
+  build, so the `flutter-checks` job in CI, which has no AWS access, is unaffected.
 - `git status` is clean after every target here, which is what `core/100`'s
   last criterion asserts for the web build.

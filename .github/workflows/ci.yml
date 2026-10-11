@@ -37,6 +37,9 @@ jobs:
         id: filter
         with:
           filters: |
+            # The Makefile is in both: every job below runs make targets, so a
+            # change to one is a change to what the job does. Without it an
+            # edit to ui-build-aab skips the job that runs ui-build-aab.
             go:
               - 'cmd/**'
               - 'internal/**'
@@ -44,11 +47,13 @@ jobs:
               - 'go.sum'
               - '.golangci.yml'
               - 'deploy/docker/ahorro-api.Dockerfile'
+              - 'Makefile'
             flutter:
               - 'flutter-ui/**'
               - 'deploy/docker/ahorro-web.Dockerfile'
               - 'deploy/docker/ahorro-web.nginx.conf'
               - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
+              - 'Makefile'
             helm:
               - 'deploy/helm/**'
             gitops:
@@ -146,7 +151,7 @@ jobs:
           cache-from: type=gha,scope=ahorro-web
           cache-to: type=gha,mode=max,scope=ahorro-web
 
-  ui:
+  flutter-checks:
     needs: changes
     if: needs.changes.outputs.flutter == 'true'
     runs-on: ubuntu-latest
@@ -154,16 +159,19 @@ jobs:
     permissions:
       contents: read
     concurrency:
-      group: ci-ui-${{ github.event.pull_request.number || github.ref }}
+      group: ci-flutter-checks-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      # Pinned, not `channel: stable`, which drifted onto whatever shipped that
+      # week. 3.44.0 is the newest Flutter cirruslabs publishes an image for,
+      # and ahorro-web.Dockerfile builds from it, so all three must match.
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
-          channel: stable
+          flutter-version: 3.44.0
           cache: true
 
       - run: make ui-get
@@ -171,6 +179,44 @@ jobs:
       - run: make ui-analyze
 
       - run: make ui-test
+
+  # Proves native compilation, Gradle resolution and plugin compatibility. It
+  # proves nothing about signing or configuration: the bundle is debug-signed
+  # because key.properties never reaches CI, and example.invalid stands in for
+  # the domain because a fork pull request gets no AWS token.
+  build-android:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-build-android-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Same version as flutter-checks and ahorro-web.Dockerfile. All three move together.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: 3.44.0
+          cache: true
+
+      - run: make ui-build-aab ENV=prod
+        env:
+          FQDN: example.invalid
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-release-aab
+          path: flutter-ui/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 7
+          # The default warns and passes, so a wrong path would upload
+          # nothing and still report green.
+          if-no-files-found: error
 
   helm:
     needs: changes
@@ -346,7 +392,8 @@ jobs:
       - go
       - image-api
       - image-web
-      - ui
+      - flutter-checks
+      - build-android
       - helm
       - gitops
       - workflows
