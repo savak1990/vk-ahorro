@@ -294,9 +294,15 @@ ui-install-android: require-env
 
 # No ui-config and no reverse: nothing is compiled here, and a CI artifact is
 # never ENV=local, so there is no local server for the phone to reach back to.
-## Install the newest CI-built APK for $ENV onto $DEVICE, no local build
+# $VERSION defaults to the repository version, which is not what any artifact
+# is called, so an unset VERSION must mean "newest" rather than that value.
+## Install a CI-built APK for $ENV onto $DEVICE. $VERSION picks one, else newest
 ui-install-ci: require-deployed-env
-	@./scripts/install-ci-apk.sh $(ENV) $(ANDROID_DEVICE)
+	@./scripts/install-ci-apk.sh install $(ENV) $(ANDROID_DEVICE) $(if $(filter command line environment,$(origin VERSION)),$(VERSION))
+
+## List the CI-built mobile artifacts that have not expired
+ui-list-ci:
+	@./scripts/install-ci-apk.sh list
 
 ## Start the Android $DEVICE, an emulator or a handset, without waiting
 emulator-android:

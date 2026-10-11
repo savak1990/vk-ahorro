@@ -455,6 +455,98 @@ FQDN=<fqdn> make ui-run-android ENV=dev       the lab is down
 With the lab down and no `FQDN=`, the run stops **before the emulator starts**,
 on a `UI-CONFIG:` message naming both fixes. The emulator is not the problem.
 
+### Get a build onto a device
+
+Four ways, and the first question is always whether you are compiling.
+
+| You want | Compile? | Command |
+|---|---|---|
+| iterate on code you are writing | yes, debug | `make ui-run-android ENV=dev DEVICE=<serial>` |
+| a release build of your working tree | yes, release | `make ui-build-apk ENV=dev` then `make ui-install-android ENV=dev DEVICE=<serial>` |
+| the newest thing CI built | no | `make ui-install-ci ENV=dev DEVICE=<serial>` |
+| one particular build CI made | no | `make ui-install-ci ENV=dev VERSION=<version> DEVICE=<serial>` |
+
+`DEVICE` is an adb serial from `adb devices`, a wifi serial of the form
+`IP:PORT`, or an AVD name. Left out, it falls back to the `pixel_phone`
+emulator.
+
+**Running versus installing.** `ui-run-android` compiles a debug build, installs
+it and stays attached for hot reload and logs. The other three leave a release
+build on the device and exit; you launch it from the home screen. A debug build
+is slower and larger, so what you demo should come from one of the other three.
+
+#### From CI, which is the usual case
+
+```sh
+make ui-list-ci                                  # what exists right now
+make ui-install-ci ENV=dev                       # newest dev build
+make ui-install-ci ENV=prod                      # newest release build
+make ui-install-ci ENV=dev VERSION=0.2.2-main.8e7138f   # that exact one
+```
+
+`ui-list-ci` prints every artifact that has not expired, with the date it was
+built. `VERSION` is the part of the artifact name after the backend, so
+`ahorro-android-dev-0.2.2-main.8e7138f` is reached with
+`ENV=dev VERSION=0.2.2-main.8e7138f`. Omit `VERSION` and the newest wins.
+
+Nothing is compiled and nothing needs the lab's domain: the artifact was built
+with the real configuration baked in.
+
+Where the two backends come from:
+
+| `ENV` | Built by | On | Kept |
+|---|---|---|---|
+| `dev` | `deploy.yml` → `artifacts-android` | every merge touching the `flutter` filter | 30 days |
+| `prod` | `release.yml` → `release-android` | every release dispatch | 90 days |
+
+There is no `local` and no `pr-<n>` artifact, so `ui-install-ci` refuses both.
+
+Each artifact holds an APK and an AAB, named for the backend and the version:
+
+```text
+ahorro-android-dev-0.2.2-main.8e7138f/
+├── ahorro-dev-0.2.2-main.8e7138f.apk     sideload this
+└── ahorro-dev-0.2.2-main.8e7138f.aab     this is what Play takes
+```
+
+**The pull-request build is not one of these.** `ci.yml`'s `build-android`
+compiles against `FQDN=example.invalid` with no AWS role and the debug key. It
+proves the code builds. Installing it gives you an app that can reach no
+backend.
+
+#### Building it yourself
+
+```sh
+make ui-build-apk ENV=dev          # release APK of your working tree
+make ui-install-android ENV=dev DEVICE=<serial>
+```
+
+Switching `ENV` and rebuilding is cheap — around 40s against a cold build of
+several minutes, because Gradle keeps the native libraries and only the Dart
+snapshot re-runs. The backend is compiled in, so one APK serves exactly one
+backend and there is no runtime switch.
+
+`ui-install-android` also sets up the `adb reverse`, which is why it is the one
+that supports `ENV=local`. `ui-install-ci` does neither: nothing is compiled,
+and no CI artifact points at your machine.
+
+#### Why you never need to uninstall
+
+Android identifies an app by `(applicationId, signing key)`, so a differently
+signed build cannot replace an installed one. Every release build here is
+signed with the **same** upload key — your local one, CI's merge builds and
+CI's release builds alike, because `make android-keystore` publishes that key
+to both signing Environments. So dev and prod builds replace each other freely.
+
+Two cases still need `make ui-uninstall-android DEVICE=<serial>`:
+
+- **`INSTALL_FAILED_UPDATE_INCOMPATIBLE`** — the installed app is a debug build
+  from `ui-run-android`, or predates the upload key.
+- **a version downgrade** — `versionCode` is the commit count, so installing an
+  older CI build over a newer one is refused.
+
+An uninstall wipes the app's data, so you sign in to Cognito again afterwards.
+
 ### Correlate a tap with the service log
 
 Every API call prints one line, with no extra flag:
