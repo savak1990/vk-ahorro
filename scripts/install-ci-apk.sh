@@ -26,22 +26,41 @@ repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 artifacts() {
   gh api --paginate "repos/$repo/actions/artifacts?per_page=100" \
     --jq ".artifacts[]
-          | select(.name | startswith(\"ahorro-android-${1:+$1-}\"))
+          | select(.name | startswith(\"ahorro-android-$1-\"))
           | select(.expired == false)
           | \"\(.created_at) \(.name)\"" |
     sort -r | awk '!seen[$2]++'
 }
 
+# The bare version, because that is what VERSION= takes and what the images
+# and charts of the same build are tagged with.
 list_artifacts() {
-  artifacts "${1:-}" | awk 'NR <= 20 { printf "  %s   built %s\n", $2, substr($1, 1, 10) }'
+  echo "INSTALL-CI: ENV=$1, newest first, 20 at most:"
+  artifacts "$1" | awk -v p="ahorro-android-$1-" '
+    NR <= 20 { printf "  %-24s built %s\n", substr($2, length(p) + 1), substr($1, 1, 10) }
+    END { if (!NR) print "  (none)" }'
 }
 
 case "${1:-}" in
   list)
-    echo "INSTALL-CI: the newest ${2:+$2 }artifacts you can install today, 20 at most:"
-    list_artifacts "${2:-}"
-    echo
-    echo "INSTALL-CI: make ui-install-ci ENV=<dev|prod> [VERSION=<the part after the env>]"
+    if [ -n "${2:-}" ]; then
+      list_artifacts "$2"
+    else
+      list_artifacts dev
+      echo
+      list_artifacts prod
+    fi
+    cat <<EOF
+
+INSTALL-CI: install one on a device:
+  make ui-install-ci ENV=<env> VERSION=<version> DEVICE=<serial>
+
+INSTALL-CI: look inside one, phone or web:
+  gh api "repos/$repo/actions/artifacts?name=ahorro-android-<env>-<version>" --jq '.artifacts[] | {name, size_in_bytes, created_at, expires_at, run: .workflow_run.id}'
+  gh run download --repo $repo --name ahorro-android-<env>-<version> --dir <dir>
+  helm show chart oci://ghcr.io/$repo/charts/ahorro-web --version <version>
+  docker buildx imagetools inspect ghcr.io/$repo/ahorro-web:<version>
+EOF
     exit 0
     ;;
   install) ;;
@@ -78,7 +97,6 @@ if [ -z "$name" ]; then
   echo "INSTALL-CI: no such artifact. A dev build comes from a merge; a prod" >&2
   echo "INSTALL-CI: build comes from a release. They expire after 30 and 90 days." >&2
   echo >&2
-  echo "INSTALL-CI: available now for $env:" >&2
   list_artifacts "$env" >&2
   exit 1
 fi

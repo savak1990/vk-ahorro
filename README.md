@@ -485,10 +485,12 @@ make ui-install-ci ENV=prod                      # newest release build
 make ui-install-ci ENV=dev VERSION=0.2.2-main.8e7138f   # that exact one
 ```
 
-`ui-list-ci` prints the 20 newest artifacts that have not expired, with the
-date each was built; `ENV=dev` or `ENV=prod` narrows it to that channel. `VERSION` is the part of the artifact name after the backend, so
-`ahorro-android-dev-0.2.2-main.8e7138f` is reached with
-`ENV=dev VERSION=0.2.2-main.8e7138f`. Omit `VERSION` and the newest wins.
+`ui-list-ci` prints one group per channel, dev then prod, each holding the 20
+newest builds that have not expired; `ENV=dev` or `ENV=prod` prints that group
+alone. A line is the bare version, which is what `VERSION=` takes and what the
+images and charts of the same build are tagged with, so the list reads for the
+web as well. It ends with the commands that look inside one build. Omit
+`VERSION` on the install and the newest wins.
 
 Nothing is compiled and nothing needs the lab's domain: the artifact was built
 with the real configuration baked in.

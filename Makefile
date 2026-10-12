@@ -304,7 +304,7 @@ ui-install-android: require-env
 ui-install-ci: require-deployed-env
 	@./scripts/install-ci-apk.sh install $(ENV) $(ANDROID_DEVICE) $(if $(filter command line environment,$(origin VERSION)),$(VERSION))
 
-## List the 20 newest CI-built mobile artifacts. ENV=dev or ENV=prod narrows it to one channel
+## List the CI-built versions per channel, 20 newest each. ENV=dev or ENV=prod prints one channel
 ui-list-ci:
 	@./scripts/install-ci-apk.sh list $(filter-out local,$(ENV))
 
