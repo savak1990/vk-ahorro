@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: install-ci-apk.sh list
+# Usage: install-ci-apk.sh list [env]
 #        install-ci-apk.sh install <env> <device> [version]
 #
 # Installs an APK that CI already built. Nothing is compiled here: the artifact
@@ -20,27 +20,32 @@ fi
 
 repo="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 
-# An expired artifact is still listed by the API, so the filter is what keeps
-# this list to things that can actually be downloaded.
-list_artifacts() {
-  gh api "repos/$repo/actions/artifacts?per_page=100" \
-    --jq '.artifacts[]
-          | select(.name | startswith("ahorro-android-"))
+# Every page, because one page is the newest 100 artifacts of any kind and the
+# pull-request builds push the mobile ones off it. Expired ones are still
+# listed by the API, so the filter keeps this to what can be downloaded.
+artifacts() {
+  gh api --paginate "repos/$repo/actions/artifacts?per_page=100" \
+    --jq ".artifacts[]
+          | select(.name | startswith(\"ahorro-android-${1:+$1-}\"))
           | select(.expired == false)
-          | "  \(.name)   built \(.created_at[0:10])"' |
-    sort -u
+          | \"\(.created_at) \(.name)\"" |
+    sort -r | awk '!seen[$2]++'
+}
+
+list_artifacts() {
+  artifacts "${1:-}" | awk 'NR <= 20 { printf "  %s   built %s\n", $2, substr($1, 1, 10) }'
 }
 
 case "${1:-}" in
   list)
-    echo "INSTALL-CI: artifacts you can install today:"
-    list_artifacts
+    echo "INSTALL-CI: the newest ${2:+$2 }artifacts you can install today, 20 at most:"
+    list_artifacts "${2:-}"
     echo
     echo "INSTALL-CI: make ui-install-ci ENV=<dev|prod> [VERSION=<the part after the env>]"
     exit 0
     ;;
   install) ;;
-  *) echo "INSTALL-CI: usage: install-ci-apk.sh list | install <env> <device> [version]" >&2; exit 1 ;;
+  *) echo "INSTALL-CI: usage: install-ci-apk.sh list [env] | install <env> <device> [version]" >&2; exit 1 ;;
 esac
 
 env="${2:-}"
@@ -61,11 +66,7 @@ if [ -n "$version" ]; then
   name="ahorro-android-$env-$version"
 else
   echo "INSTALL-CI: finding the newest $env build."
-  name="$(gh api "repos/$repo/actions/artifacts?per_page=100" \
-    --jq "[.artifacts[]
-           | select(.name | startswith(\"ahorro-android-$env-\"))
-           | select(.expired == false)]
-          | sort_by(.created_at) | last | .name // empty")"
+  name="$(artifacts "$env" | awk 'NR == 1 { print $2 }')"
 fi
 
 if [ -n "$name" ]; then
@@ -74,12 +75,11 @@ if [ -n "$name" ]; then
 fi
 
 if [ -z "$name" ]; then
-  echo "INSTALL-CI: no such artifact. A dev build comes from a merge that" >&2
-  echo "INSTALL-CI: touched the flutter filter; a prod build comes from a" >&2
-  echo "INSTALL-CI: release. They expire after 30 and 90 days." >&2
+  echo "INSTALL-CI: no such artifact. A dev build comes from a merge; a prod" >&2
+  echo "INSTALL-CI: build comes from a release. They expire after 30 and 90 days." >&2
   echo >&2
-  echo "INSTALL-CI: available now:" >&2
-  list_artifacts >&2
+  echo "INSTALL-CI: available now for $env:" >&2
+  list_artifacts "$env" >&2
   exit 1
 fi
 
