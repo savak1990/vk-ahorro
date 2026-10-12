@@ -25,6 +25,19 @@ way to mint one on a runner.
 The pull-request build of [`ci/030`](../../ci/030-P-flutter-gates/spec.md) is
 delivered anyway, because `--no-codesign` needs no team.
 
+**What blocks it now is not the money.** The Apple ID signed into this machine
+cannot enroll: the identity check offers one document type, a driver's license,
+in both the macOS and the iPhone flow, and that account holds none. A second
+account can, so the membership moves there. See
+[ADR 0013](../../../docs/adr/0013-the-apple-membership-lives-on-a-second-account.md).
+
+One thing has to happen before the second account can be used, and it takes a
+week of doing nothing. An app identifier is globally unique across Apple, so
+`com.vkdev1.ahorro` cannot be registered twice, and the free Personal Team
+already holds it. That registration is tied to the seven-day profile and lapses
+about a week after the last signed build. Only a signed build renews it, so the
+simulator, `make ui-build-ios` and `build-ios` in CI leave the clock running.
+
 **Complexity:** Medium
 **Risk:** Medium — code signing on a runner is the classic failure point; manual signing with a committed export options file is the most predictable form.
 **Estimated cost:** ~1 day plus enrollment time · Cost: $99 per year.
@@ -44,11 +57,13 @@ submission, Xcode Cloud.
 
 ## Requirements
 
-0. Before any money moves, establish what `DEVELOPMENT_TEAM = 47Y43AMN4K` in `ios/Runner.xcodeproj` actually is. A free personal team yields a committed team id exactly as a paid one does, so the id proves nothing about the membership. Xcode > Settings > Accounts names the team type, and `developer.apple.com/account` shows whether a Developer Program membership is active. A personal team installs on the operator's own iPhone with a seven-day profile and cannot reach TestFlight, so this answer decides whether this spec costs nothing or $99, and `core/100` req 3a is reachable either way. *(Added: `core/100` req 3 claimed the signing team is left empty; it is not, and nobody had checked which kind it is.)* *(Answered 2026-10-12: free Personal Team. The id in the project was the previous author's and is now `7YZNW7LF73`.)*
+0. Before any money moves, establish what `DEVELOPMENT_TEAM = 47Y43AMN4K` in `ios/Runner.xcodeproj` actually is. A free personal team yields a committed team id exactly as a paid one does, so the id proves nothing about the membership. Xcode > Settings > Accounts names the team type, and `developer.apple.com/account` shows whether a Developer Program membership is active. A personal team installs on the operator's own iPhone with a seven-day profile and cannot reach TestFlight, so this answer decides whether this spec costs nothing or $99, and `core/100` req 3a is reachable either way. *(Added: `core/100` req 3 claimed the signing team is left empty; it is not, and nobody had checked which kind it is.)* *(Answered 2026-10-12: free Personal Team. The id in the project was the previous author's and is now `7YZNW7LF73`. It changes once more, to the enrolling account's team, per ADR 0013.)*
+
+0a. Two things MUST be true before requirement 1 starts, and neither is code. The enrolling account MUST be the one that can pass Apple's identity check, which is not the account signed into this machine (ADR 0013). And `com.vkdev1.ahorro` MUST be free of the Personal Team that holds it: no signed build under that team for about a week, which means no `make ui-run-ios DEVICE=<udid>`, or an Apple Developer Support request to release it. A registration still held makes requirement 1's app record fail with "Failed Registering Bundle Identifier", which is what it did on 2026-10-12. *(Added: the enrollment was assumed to be the first step and is not.)*
 
 1. Runbook, once, by hand: enroll as an individual (legal name, two-factor Apple ID); create the app record for `com.vkdev1.ahorro` in App Store Connect; create an App Store Connect API key with the App Manager role and download the `.p8` once; create an Apple Distribution certificate and export it as `.p12` with a password; create an App Store provisioning profile for the bundle id; create an internal tester group and add the testers as App Store Connect users.
 2. `release` Environment secrets, by name: `APPSTORE_ISSUER_ID`, `APPSTORE_API_KEY_ID`, `APPSTORE_API_PRIVATE_KEY` (the `.p8` text), `IOS_DIST_CERT_BASE64`, `IOS_DIST_CERT_PASSWORD`, `IOS_PROFILE_BASE64`.
-3. `flutter-ui/ios/ExportOptions.plist` MUST be committed with `method: app-store-connect`, `signingStyle: manual`, `teamID`, and the profile name for the bundle id. The team id is already in the Xcode project and is a public identifier; core 100 req 3's "team is left empty" is amended by this spec. *(Amended: the id in the project was the previous author's. It is `7YZNW7LF73` from 2026-10-12, and a paid membership issues its own team id, which replaces it again at enrollment.)*
+3. `flutter-ui/ios/ExportOptions.plist` MUST be committed with `method: app-store-connect`, `signingStyle: manual`, `teamID`, and the profile name for the bundle id. The team id is already in the Xcode project and is a public identifier; core 100 req 3's "team is left empty" is amended by this spec. *(Amended: the id in the project was the previous author's. It is `7YZNW7LF73` from 2026-10-12, and a paid membership issues its own team id, which replaces it again at enrollment. That team belongs to the second account, per ADR 0013.)*
 4. `make ui-build-ipa` runs `flutter build ipa --release --export-options-plist=ios/ExportOptions.plist` and accepts `BUILD_NUMBER=`.
 5. `mobile-ios.yml` on `macos-latest` MUST: import the certificate into a temporary keychain with `apple-actions/import-codesign-certs` (SHA-pinned); install the profile under `~/Library/MobileDevice/Provisioning Profiles/`; run `make ui-build-ipa BUILD_NUMBER=${{ github.run_number }} ENV=prod`; upload with `apple-actions/upload-testflight-build` (SHA-pinned, default App Store Connect API backend) using the three `APPSTORE_*` secrets; remove the keychain and the profile in an `always()` step.
 6. The build number rule is 030 req 6: `github.run_number` of `deploy.yml`, passed in as an input, shared by both stores, so one run yields one number on both. The rename hazard is the same.
