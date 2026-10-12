@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Applies the repository settings this project depends on: branch protection,
-# the labels two workflows trigger on, and the release Environment. A setting
+# the Environments the workflows name, and no ci labels. A setting
 # clicked in the web UI is not reproducible; this is.
 #
 # Idempotent. Run it as often as you like.
@@ -57,14 +57,15 @@ gh api -X PATCH "repos/$REPO" \
   --silent
 echo "REPO-SETTINGS: squash-only, branch deleted on merge"
 
-# preview drives the pull-request preview workflow. There is no release label:
-# a mobile artifact is built on every channel the way an image is, so nothing
-# decides per pull request whether one exists.
-add_label() {
-  gh label create "$1" --repo "$REPO" --color "$2" --description "$3" --force >/dev/null
-  echo "REPO-SETTINGS: label $1"
-}
-add_label ci:preview-web 0e8a16 "Deploy this pull request to the ahorro-pr namespace"
+for label in ci:preview-web ci:release-android ci:release-ios; do
+  gh label delete "$label" --repo "$REPO" --yes >/dev/null 2>&1 || true
+done
+echo "REPO-SETTINGS: no ci labels; nothing triggers on one"
+
+# No secret and no gate: the preview workflow names it so a pull request page
+# shows its branch as deployed.
+gh api -X PUT "repos/$REPO/environments/preview" --silent
+echo "REPO-SETTINGS: preview environment"
 
 # Both Environments hold the same four signing secrets, published by
 # `make android-keystore`. Creating them here is what makes `environment:` in

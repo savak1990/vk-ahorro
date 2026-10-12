@@ -1,29 +1,39 @@
-# Deploys a labeled pull request into the shared ahorro-pr namespace, and
-# removes it when the label goes or the pull request closes.
+# Deploys a pull request into the shared ahorro-pr namespace when somebody
+# runs this workflow on its branch, and removes it on a second run or when the
+# pull request closes.
 #
-# Its own file, never a job in ci.yml. ci.yml relies on the default
-# pull_request types, so a label event does not re-run it, and its one
-# required status check is maintained by hand - a context that never reports
-# blocks every merge.
+# Its own file, never a job in ci.yml: ci.yml's one required status check is
+# maintained by hand, and a context that never reports blocks every merge.
 #
 # Every action is pinned to a full commit SHA; see ci.yml for why.
 name: preview
 
 on:
+  # Run on the pull request's branch. The branch names the pull request, so
+  # the only thing left to choose is the direction.
+  workflow_dispatch:
+    inputs:
+      action:
+        description: up deploys this branch's pull request, down removes it
+        type: choice
+        options: [up, down]
+        default: up
+        required: true
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize, closed]
+    types: [closed]
 
 permissions: {}
 
-# Keyed on the pull request, and never cancelled: a teardown killed half way
-# through leaves a release and a DNS record behind, and nothing else notices.
+# Keyed on the branch, which both triggers know, and never cancelled: a
+# teardown killed half way through leaves a release and a DNS record behind,
+# and nothing else notices.
 concurrency:
-  group: preview-${{ github.event.number }}
+  group: preview-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
-  # One place decides what this event means, so no job below repeats the
-  # guard. Any label other than `ci:preview-web` reaches "none" and nothing runs.
+  # One place decides what this run means and which pull request it is about,
+  # so no job below repeats either.
   decide:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -32,35 +42,35 @@ jobs:
       pull-requests: read
     outputs:
       action: ${{ steps.d.outputs.action }}
+      pr: ${{ steps.d.outputs.pr }}
       version: ${{ steps.v.outputs.version }}
       go: ${{ steps.filter.outputs.go }}
       flutter: ${{ steps.filter.outputs.flutter }}
     steps:
-      # Decided from the event payload alone, before any checkout. Most events
-      # this workflow sees are a push to a pull request nobody has labeled, and
-      # those must not pay for a full-history clone to conclude "do nothing".
+      # A close always tears down: it is the last chance to clean up, and a
+      # teardown with nothing to remove succeeds anyway. A dispatch carries no
+      # pull request, so the open one for this branch is looked up.
       - id: d
         env:
-          EVENT: ${{ github.event.action }}
-          LABEL: ${{ github.event.label.name }}
-          HAS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:preview-web') }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ inputs.action }}
+          CLOSED_PR: ${{ github.event.number }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          set -uo pipefail
-          action=none
-          case "$EVENT" in
-            labeled)     [ "$LABEL" = ci:preview-web ] && action=up ;;
-            unlabeled)   [ "$LABEL" = ci:preview-web ] && action=down ;;
-            # A pull request opened with the label already on it, which happens
-            # when it is created through the API or from a template, would
-            # otherwise need the label removed and re-added to deploy.
-            opened)      [ "$HAS_LABEL" = true ] && action=up ;;
-            synchronize) [ "$HAS_LABEL" = true ] && action=up ;;
-            # Always, label or not: a close is the last chance to clean up, and
-            # a teardown with nothing to remove succeeds anyway.
-            closed)      action=down ;;
-          esac
+          set -euo pipefail
+          if [ "$EVENT" = pull_request ]; then
+            action=down
+            pr="$CLOSED_PR"
+          else
+            action="$INPUT"
+            pr="$(gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+            [ -n "$pr" ] || { echo "::error::no open pull request has the head branch $BRANCH. Run this workflow on a pull request's branch."; exit 1; }
+          fi
           echo "action=$action" >> "$GITHUB_OUTPUT"
-          echo "preview: event=$EVENT label=${LABEL:-none} -> $action"
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "preview: event=$EVENT pr=$pr -> $action"
 
       # version.sh reads the tag history, and the copy source in `images` is
       # found through the log, so when there is work to do the whole history
@@ -74,8 +84,8 @@ jobs:
       - id: v
         if: steps.d.outputs.action == 'up'
         env:
-          PR: ${{ github.event.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR: ${{ steps.d.outputs.pr }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           version="$(./scripts/version.sh pr "$PR" "$HEAD_SHA")"
@@ -88,6 +98,9 @@ jobs:
         id: filter
         if: steps.d.outputs.action == 'up'
         with:
+          # A dispatch is not a pull request event, so the comparison point
+          # has to be named: everything this branch changed since it left main.
+          base: ${{ github.event.repository.default_branch }}
           filters: |
             go:
               - 'cmd/**'
@@ -207,6 +220,9 @@ jobs:
       # issue-comment endpoint and fails here with
       # "Resource not accessible by integration (addComment)".
       pull-requests: write
+    # Holds no secret and no gate. It exists so the pull request page shows
+    # the branch as deployed; it carries no URL, because that embeds the domain.
+    environment: preview
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -226,7 +242,7 @@ jobs:
       - name: Install the preview
         env:
           VERSION: ${{ needs.decide.outputs.version }}
-          PR: ${{ github.event.number }}
+          PR: ${{ needs.decide.outputs.pr }}
         run: |
           set -uo pipefail
           # The script, not `make preview-up`: make collapses every recipe
@@ -271,7 +287,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.decide.outputs.version }}
-          PR: ${{ github.event.number }}
+          PR: ${{ needs.decide.outputs.pr }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -290,13 +306,14 @@ jobs:
             "make preview-url PR=$PR" \
             '```' \
             "" \
-            "It goes away on its own when this pull request is merged or" \
-            "closed. Remove the \`ci:preview-web\` label to take it down sooner.")"
+            "A new push does not update it: run the workflow again. It goes" \
+            "away on its own when this pull request is merged or closed. Run" \
+            "the workflow with \`down\` to take it down sooner.")"
           gh pr comment "$PR" --repo "$REPO" --body "$body"
 
   # Removing a preview must not depend on anything being published, so this
   # needs only `decide`. It must also succeed when there is nothing to remove:
-  # unlabelling can arrive for a pull request that was never deployed.
+  # most pull requests that close were never deployed.
   teardown:
     needs: decide
     if: needs.decide.outputs.action == 'down'
@@ -321,7 +338,7 @@ jobs:
 
       - name: Remove the preview
         env:
-          PR: ${{ github.event.number }}
+          PR: ${{ needs.decide.outputs.pr }}
         run: |
           set -uo pipefail
           PROJECT_NAME="$(make -s print-project)"

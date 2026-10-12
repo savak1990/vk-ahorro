@@ -74,7 +74,7 @@ one-line pull request in `vk-lab-platform`. See
 |---|---|---|---|
 | `ahorro` | the released version | **you promote it, by hand** | yes, Argo restores it |
 | `ahorro-dev` | the last merge to `main` | every merge | no, comes back empty |
-| `ahorro-pr` | a labeled pull request | you add or remove the label | no |
+| `ahorro-pr` | a previewed pull request | you run the `preview` workflow on its branch | no |
 
 `ahorro` is Argo's. The other two belong to the pipeline, which installs them
 with Helm. The credential the pipeline uses is **refused** in `ahorro` by
@@ -178,7 +178,13 @@ A merge starts no `deploy` run at all, because `deploy.yml` ignores `docs/`,
 
 ### Use case: you want to see it running before you merge
 
-Add the label **`ci:preview-web`** to the pull request.
+Run the **`preview`** workflow on the pull request's branch: in Actions, pick
+`preview`, **Run workflow**, choose the branch, leave the action on `up`. From
+a checkout of that branch, the same thing is:
+
+```sh
+make preview-ci ACTION=up
+```
 
 It publishes `<version>-pr-<n>.<sha>` for both components and installs them
 into `ahorro-pr` on their own hostname, against the **real** user pool. The
@@ -194,15 +200,17 @@ the lab domain (constitution section 4).
 
 | What you do | What happens |
 |---|---|
-| add the label | publish, then install |
-| push another commit | the release is upgraded and the pods roll |
-| remove the label | both releases are uninstalled |
+| run it with `up` | publish, then install |
+| push another commit | **nothing**; run it with `up` again to upgrade |
+| run it with `down` | both releases are uninstalled |
 | **merge or close** | **the same, automatically** |
 
-You never have to remove the label to clean up. A merge does it.
+You never have to run `down` to clean up. A merge does it.
 
-Nothing is published without the label, so a pull request nobody previews
-leaves nothing behind.
+Nothing is published until somebody runs it, so a pull request nobody
+previews leaves nothing behind. The pull request page shows the branch as
+deployed to the `preview` Environment, without a link: the link embeds the
+lab domain.
 
 ### Use case: you want to cut a release
 
@@ -310,26 +318,23 @@ channel, so no job carries a condition that decides whether it belongs here.
 **red** when it is reachable and the deploy fails. The lab is off most of the
 time, so a red run on every merge would train you to ignore the colour.
 
-### `preview.yml` - runs on a pull request event
+### `preview.yml` - runs when dispatched on a branch, and when a pull request closes
 
 | Job | Does | Does not run when |
 |---|---|---|
-| `decide` | maps the event to `up`, `down` or `none` | never skips |
+| `decide` | finds the pull request and maps the run to `up` or `down` | never skips |
 | `images` | publishes both components at `<version>-pr-<n>.<sha>` | the action is not `up` |
 | `charts` | pushes both charts at that version | the action is not `up` |
 | `install` | installs into `ahorro-pr`, then comments on the pull request | the action is not `up` |
 | `teardown` | uninstalls both releases | the action is not `down` |
 
-How `decide` reads an event:
+How `decide` reads a run:
 
-| Event | Action |
-|---|---|
-| the `ci:preview-web` label is added | `up` |
-| opened with that label already on it | `up` |
-| a commit is pushed and the label is on | `up` |
-| that label is removed | `down` |
-| closed, merged or not | `down`, **always** |
-| **any other label**, added or removed | `none` - nothing runs |
+| Trigger | Pull request | Action |
+|---|---|---|
+| dispatched on a branch | the open one whose head is that branch | the `action` input, `up` or `down` |
+| dispatched on a branch with no open pull request | none | the run fails and says so |
+| closed, merged or not | the one that closed | `down`, **always** |
 
 `teardown` depends only on `decide`, never on the publish jobs. Those skip on
 a `down` event, and a job whose dependency skipped would skip too - which

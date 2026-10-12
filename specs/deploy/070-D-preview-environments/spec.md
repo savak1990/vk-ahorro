@@ -1,11 +1,13 @@
 ---
 id: "DEPLOY-070"
 status: "DONE"
-updated: "2026-10-06"
+updated: "2026-10-12"
 ---
-# 070 — A deployed preview per labeled pull request
+# 070 — A deployed preview per pull request, on demand
 
-**Status note:** Done. Every criterion has run on the hetzner lab.
+**Status note:** Done. Every criterion has run on the hetzner lab under the
+label trigger. The trigger was replaced by a dispatch on 2026-10-12 (ADR 0012);
+requirements 3 to 4 and the criteria marked below changed with it.
 
 Pull request #33 deployed **itself**: the workflow that introduces previews
 installed its own code at `0.2.2-pr-33.02a1d63`, a second push upgraded it to
@@ -27,7 +29,7 @@ the rules are written in [`docs/delivery.md`](../../../docs/delivery.md) §3.1.
 ## Scope
 
 Deploying a pull request on demand, into one shared namespace, and removing
-every trace of it when the label goes away or the pull request closes.
+every trace of it on a second run or when the pull request closes.
 
 **Excludes:** the version scheme and the merge path, which are `deploy/060`.
 Argo-managed previews through an ApplicationSet pull-request generator, which
@@ -35,23 +37,24 @@ would need a GitHub token living in the cluster. Mobile builds.
 
 ## Requirements
 
-1. A **labeled** pull request MUST publish an image and a chart as `<version>-pr-<n>.<short-sha>` for **every** component, from `preview.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). One version names the whole preview, and the commit is part of it (`deploy/060` req 2b) so a second push actually rolls the pods.
+1. A **previewed** pull request MUST publish an image and a chart as `<version>-pr-<n>.<short-sha>` for **every** component, from `preview.yml`, with an unchanged one copied rather than rebuilt (`deploy/060` req 2a). One version names the whole preview, and the commit is part of it (`deploy/060` req 2b) so a second push actually rolls the pods.
 1a. `ci.yml` MUST NOT publish anything and MUST NOT hold `packages: write`. *(Amended: requirement 1 originally published from `ci.yml` on every pull request. Three reasons it cannot. A fork's `GITHUB_TOKEN` is read-only, so the push would fail there, and today only the `repo` job fails on a fork, deliberately. Both image jobs and the `helm` job are gated on the `changes` filter, so a Go-only pull request packages no chart at all - "every component" would need all three gates reworked. And every pull request that nobody previews would leave four artifacts behind that cannot be deleted; see req 8.)*
 2. Deployment MUST live in a **new** workflow file, `.github/workflows/preview.yml`, and MUST NOT be a job in `ci.yml`. `ci.yml` relies on the default `pull_request` types, so a label event does not re-run it today; its required status checks are maintained by hand, and a context that never reports blocks every merge.
-3. `preview.yml` MUST trigger on `pull_request` types `[opened, labeled, unlabeled, synchronize, closed]` and act only as follows:
+3. `preview.yml` MUST trigger on `workflow_dispatch`, with one input `action` of `up` or `down`, and on `pull_request` type `closed`, and act only as follows:
 
-   | Event | Condition | Action |
+   | Trigger | Condition | Action |
    |---|---|---|
-   | `labeled` | `github.event.label.name == 'ci:preview-web'` | install |
-   | `opened` | the pull request carries `ci:preview-web` | install |
-   | `synchronize` | the pull request carries `ci:preview-web` | upgrade |
-   | `unlabeled` | `github.event.label.name == 'ci:preview-web'` | uninstall |
-   | `closed` | always | uninstall |
+   | `workflow_dispatch`, `up` | the run's branch is the head of an open pull request | install or upgrade |
+   | `workflow_dispatch`, `down` | the same | uninstall |
+   | `pull_request: closed` | always | uninstall |
 
-   Any other label MUST do nothing at all.
-3a. `opened` is in the list because a pull request created with the label already on it - through the API, or from a template that applies labels - emits no `labeled` event, so it would otherwise need the label removed and re-added before it deployed. *(Amended: the original list omitted `opened`.)*
-3b. The action MUST be decided from the event payload **before** any checkout, and the checkout MUST be conditional on there being work to do. Most events this workflow sees are a push to a pull request nobody labeled, and those must not pay for a full-history clone to conclude "do nothing" - the same principle as the `changes` job in `ci/010`.
-4. The label MUST be `ci:preview-web`, created by `make repo-settings` (`ci/010` req 6). A comment trigger MUST NOT be used: `issue_comment` fires on every issue in the repository, runs the workflow file from the default branch rather than the pull request head, and carries no state, so a release nobody cleaned up becomes invisible.
+   A dispatch on a branch with no open pull request MUST fail with a message that says so. *(Amended 2026-10-12, ADR 0012: the original list was `[opened, labeled, unlabeled, synchronize, closed]`, gated on a `ci:preview-web` label. A push no longer upgrades a preview; a second `up` does.)*
+3a. The pull request MUST be found from the run's branch, not typed in: the branch already names it, and a typed number can name somebody else's preview. `github.event.number` is used only on `closed`.
+3b. The action and the pull request MUST be decided **before** any checkout, and the checkout MUST be conditional on the action being `up`. A close of a pull request nobody previewed must not pay for a full-history clone to remove nothing.
+3c. The `install` job MUST name the GitHub Environment `preview`, created by `make repo-settings` with no secret and no protection rule, so the pull request page shows the branch as deployed. It MUST NOT set an Environment `url`: the URL embeds the domain.
+3d. `concurrency` MUST be keyed on the head branch, which both triggers know, with `cancel-in-progress: false`.
+4. No label MUST trigger anything, and `make repo-settings` MUST remove `ci:preview-web`, `ci:release-android` and `ci:release-ios`. A comment trigger MUST NOT be used: `issue_comment` fires on every issue in the repository and runs the workflow file from the default branch rather than the pull request head. *(Amended 2026-10-12: the label was required here. It was the record of "is this deployed"; the `preview` Environment on the pull request page is that record now.)*
+4a. There MUST be a one-line target `make preview-ci ACTION=up|down` that dispatches the workflow on the current branch, and it MUST refuse to run without `ACTION`.
 5. Releases MUST share one namespace, `ahorro-pr`, and MUST be named `pr-<n>-api` and `pr-<n>-web`. `svc.fullname` is `{{- if eq .Release.Name (include "svc.name" .) }}` - **exact equality**, not `contains` - so these render as `pr-42-api-ahorro-api`. The helper MUST NOT be changed to `contains`: it would rename every live object in `ahorro`. *(Amended: the original text said "named per pull request" and cited `<release>-<chart>`, which does not survive two components sharing one number - both would have been `pr-42`.)*
 6. Hostnames MUST be `ahorro-pr-<n>.<fqdn>` — exactly one label below the domain. The platform's wildcard certificate and the external-dns domain filter are both single-label, so `pr-42.ahorro.<fqdn>` would have neither TLS nor DNS.
 7. A preview MUST use the real Cognito user pool, read from SSM as `deploy/060` req 7 describes. There is one pool and one app client per platform project by design, so a preview needs no new identity and no terraform change.
@@ -86,6 +89,17 @@ path in; never read it back from stdout (`deploy/060` req 6f).
 event types, which `github.event.pull_request.number` is not.
 
 ## Testing / acceptance criteria
+
+**Amended 2026-10-12 with the trigger.** Criteria 1, 3, 6 and 8 hold as written.
+In 2, 7 and 9, read "running the workflow with `up`" for adding the label and
+"with `down`" for removing it. Criterion 4 is void: no label reaches the
+workflow. Criterion 5 becomes: a second `up` after a push upgrades the existing
+releases and the pods roll. New, and **not yet run**:
+
+- A dispatch with `up` on a pull request's branch installs both releases, comments on the pull request, and the page shows the branch deployed to `preview`.
+- A dispatch on a branch with no open pull request fails in `decide` and runs nothing else.
+- A dispatch with `down` uninstalls both releases.
+- Merging a previewed pull request uninstalls both releases through `closed`.
 
 1. Opening a pull request without the label publishes **nothing**, and no namespace is created. *(Amended: requirement 1 no longer publishes from `ci.yml`. Verified 2026-10-07: a push to an unlabeled pull request ran `decide` alone - `images`, `charts`, `install` and `teardown` all skipped, and the deferred checkout meant it did not even clone.)*
 2. Adding the `ci:preview-web` label installs both releases into `ahorro-pr`, and `https://ahorro-pr-<n>.<fqdn>` returns the client with a `config.json` naming its own API host. *(Verified 2026-10-07 on pull request #33 itself. Both images were **copied** rather than rebuilt, because #33 touches no Go and no Flutter: the matrix reported `(ahorro-api, false)` and `(ahorro-web, false)`. The namespace is not created here - Argo owns it, per req 8a.)*
