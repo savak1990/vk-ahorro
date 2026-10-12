@@ -54,7 +54,9 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "### Version \`$version\`" >> "$GITHUB_STEP_SUMMARY"
 
-      # Only what changed is rebuilt. Everything else is copied to the new tag.
+      # These two decide one thing only: whether an image is rebuilt or copied
+      # to the new tag. No job is skipped on them, so a path missing here
+      # costs a redundant copy, never a missing artifact.
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -69,7 +71,6 @@ jobs:
             flutter:
               - 'flutter-ui/**'
               - 'Makefile'
-              - 'scripts/android-keystore-restore.sh'
               - 'deploy/docker/ahorro-web.Dockerfile'
               - 'deploy/docker/ahorro-web.nginx.conf'
               - 'deploy/docker/ahorro-web.Dockerfile.dockerignore'
@@ -93,9 +94,14 @@ jobs:
   # which deploy-dev has just upgraded to the same version, and it is signed
   # with the real upload key so it replaces whatever is on the device rather
   # than failing on a signature mismatch.
+  #
+  # Unconditional, like every other job here. One number names everything an
+  # environment runs, so a version that deployed a backend but produced no
+  # phone build would be a number nobody can install. An unchanged image is
+  # copied to the new tag rather than skipped, and this is the same idea: the
+  # artifact is rebuilt because rebuilding is the only copy an artifact has.
   artifacts-android:
     needs: version
-    if: needs.version.outputs.flutter == 'true'
     permissions:
       contents: read
       id-token: write
