@@ -1,7 +1,7 @@
 ---
 id: "CORE-090"
 status: "DRAFT"
-updated: "2026-09-21"
+updated: "2026-10-12"
 ---
 # 090 — Local toolchain
 
@@ -27,6 +27,7 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 1. Homebrew MUST install: `flutter` (cask), `openjdk@17`, `android-commandlinetools` (cask), `cocoapods`, `go`, `golangci-lint`, `helm`, `kubectl`, `kubeconform`, `yamllint`, `argocd`, `jq`. Docker, gh, yq are already present and stay as installed.
 2. Android SDK packages via `sdkmanager`: `platform-tools`, `platforms;android-35`, `build-tools;35.0.0`, `emulator`, `system-images;android-35;google_apis;arm64-v8a`; one AVD created with `avdmanager`, named to match the Makefile default (`pixel_phone`). `ANDROID_HOME` and `JAVA_HOME` MUST be exported from the shell profile. Licences accepted with `flutter doctor --android-licenses`. *(Amended: this named the AVD `ahorro`, as did 100's hint. The committed default is `pixel_phone`, and naming an AVD nobody created makes the first run fail. 100 req 2a replaces the `AVD` variable with `DEVICE`, so this spec names the default rather than a literal.)*
 3. iOS: `sudo xcodebuild -license accept`, `xcodebuild -runFirstLaunch`, the current iOS simulator runtime installed (`xcodebuild -downloadPlatform iOS`).
+3a. A physical iPhone MUST be prepared once, by hand, and every step needs the phone in reach: Developer Mode on (Settings > Privacy & Security), which asks for a restart and the passcode; a USB pairing with the Trust prompt answered; "Show this iPhone when on Wi-Fi" checked in Finder, which is where the toggle lives now that Xcode 27 replaced Window > Devices and Simulators with DeviceHub.app; and Auto-Lock set to Never while testing, because wireless debugging drops when the phone locks and a locked phone is indistinguishable from an absent one. The proof is `xcrun devicectl list devices` reporting the phone as `connected` with the cable out; a checkbox proves nothing. *(Added: this spec installed Xcode and CocoaPods and said nothing about a device, so `core/100` req 3a had no setup behind it.)*
 4. `make tools-check` MUST print the version of every tool above and exit non-zero when one is missing. `make tools-install` MUST run the Homebrew and `sdkmanager` steps and be safe to re-run.
 5. `flutter doctor -v` MUST show no red items for Flutter, Android toolchain, Xcode, CocoaPods. Chrome and IDE plugins are optional.
 6. Versions MUST be recorded in `docs/toolchain.md` after the first successful run, so later drift is visible.
@@ -36,6 +37,8 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 - `brew install --cask flutter` installs to `/opt/homebrew/Caskroom/flutter/...`; `flutter` then lands on PATH through Homebrew's `bin`. `flutter --version` on the first run downloads the Dart SDK.
 - `android-commandlinetools` cask puts `sdkmanager` under `/opt/homebrew/share/android-commandlinetools/cmdline-tools/latest/bin`; set `ANDROID_HOME=/opt/homebrew/share/android-commandlinetools`.
 - `flutter config --android-sdk $ANDROID_HOME` and `flutter config --jdk-dir $(brew --prefix openjdk@17)` stop `flutter doctor` from looking in `~/Library/Android/sdk`.
+- The first build against a new iOS build extracts Device Support symbols from the phone: about 13GB and 15 to 30 minutes, single-threaded, and `flutter run` hides the progress so it reads as a hang. `xcrun xcodebuild -prepareDeviceSupport -destination id=<udid>` does the same work and prints progress. Cancelling restarts it from zero. Measured 2026-10-12 on iOS 27.0.1.
+- `xcrun devicectl list devices` answers in 0.4s where `flutter devices` takes about 10, because it scans no wireless or web targets. `make ios-device-id` wraps it.
 - Java 17 matches the Gradle version Flutter's Android template pins today; check `flutter-ui/android/settings.gradle` before choosing another.
 
 ## Testing / acceptance criteria
@@ -44,4 +47,5 @@ Excludes: cluster access (the platform's `make kubeconfig`), IDE setup.
 - `flutter doctor -v` shows `[✓]` for Flutter, Android toolchain, Xcode, CocoaPods.
 - `emulator -list-avds` shows the Makefile's default AVD; `xcrun simctl list runtimes` shows an iOS runtime.
 - `cd flutter-ui && flutter pub get` succeeds.
+- With the cable out, `xcrun devicectl list devices` shows the iPhone as `connected`, and `make ui-run-ios DEVICE=$(make ios-device-id) ENV=dev` installs and starts the app. *(Verified 2026-10-12 on an iPhone 14 Pro, iOS 27.0.1.)*
 - `go version`, `helm version`, `kubectl version --client`, `kubeconform -v`, `argocd version --client` all print.
