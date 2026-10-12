@@ -1,7 +1,7 @@
 ---
 id: "CI-030"
 status: "DRAFT"
-updated: "2026-09-26"
+updated: "2026-10-12"
 ---
 # 030 — Flutter quality, architecture and build gates
 
@@ -12,12 +12,19 @@ in CI compiled native code at all - the `flutter-checks` job ran `ui-get`, `ui-a
 and `ui-test`, so a Gradle break or a plugin incompatibility passed cleanly
 and surfaced only on someone's laptop.
 
+The iOS slice is delivered too (2026-10-12): requirement 6's `ui-build-ios`
+and requirement 7's `build-ios` job on `macos-latest`, which joins the same
+`needs:` list. It waited on [`deploy/040`](../../deploy/040-P-ios-testflight/spec.md)
+req 0, now answered: the Apple team is free, which blocks TestFlight and
+blocks nothing here, because `--no-codesign` needs no team at all. The job is
+free to run as well, because this repository is public and a private one
+would bill `macos-latest` at ten times a Linux minute.
+
 The rest is deferred deliberately, and named here rather than dropped:
 
 | Deferred | Why |
 |---|---|
 | reqs 2-5: format check, deps check, import lint, coverage floor | quality gates, not release work, and the 60% floor may need tests written before it can be turned on |
-| req 6's `make ui-build-ios` and req 7's `build-ios` job | both wait on `deploy/040` req 0, which establishes whether the committed Apple team is paid or free |
 | req 8: Gradle and CocoaPods caches | measured at 4m52s without them, against a 15 minute criterion, so they buy nothing yet. Revisit when the job approaches it |
 | req 1's `make tools-check` clause | that target does not exist; it is `core/090` req 4, and nothing guards the three Flutter version literals from drifting apart |
 
