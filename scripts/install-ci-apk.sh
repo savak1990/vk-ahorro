@@ -97,7 +97,7 @@ got="${name#"ahorro-android-$env-"}"
 serial="$("$REPO_ROOT/scripts/android-emulator.sh" "$device")"
 echo "INSTALL-CI: installing $got on $serial, built against $env."
 
-if ! adb -s "$serial" install -r "$apk"; then
+if ! adb -s "$serial" install --user 0 -r "$apk"; then
   echo >&2
   echo "INSTALL-CI: signatures do not match -> the app on the device was signed" >&2
   echo "INSTALL-CI: with a different key:  make ui-uninstall-android DEVICE=$serial" >&2

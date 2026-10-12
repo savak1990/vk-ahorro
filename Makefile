@@ -1,4 +1,4 @@
-.PHONY: require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: release require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -119,6 +119,10 @@ repo-settings:
 ## Print the version the next build publishes under
 version:
 	@echo $(VERSION)
+
+## Dispatch the release workflow on main. Usage: make release BUMP=patch
+release:
+	@gh workflow run release.yml --ref main -f bump=$(or $(BUMP),$(error BUMP is required: patch, minor or major))
 
 ## Print the platform project this repository targets
 print-project:
@@ -290,7 +294,7 @@ ui-build-aab: require-deployed-env ui-config
 # sideload against `make go-run`, and this is the target that knows the device.
 ## Install the release APK onto $DEVICE and forward $PORT back to this machine
 ui-install-android: require-env
-	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && { adb -s $$serial install -r $(APK) || { echo "if this says the signatures do not match, run: make ui-uninstall-android DEVICE=$$serial" >&2; exit 1; }; }
+	@serial=$$($(CURDIR)/scripts/android-emulator.sh $(ANDROID_DEVICE)) && adb -s $$serial reverse tcp:$(PORT) tcp:$(PORT) >/dev/null && { adb -s $$serial install --user 0 -r $(APK) || { echo "if this says the signatures do not match, run: make ui-uninstall-android DEVICE=$$serial" >&2; exit 1; }; }
 
 # No ui-config and no reverse: nothing is compiled here, and a CI artifact is
 # never ENV=local, so there is no local server for the phone to reach back to.

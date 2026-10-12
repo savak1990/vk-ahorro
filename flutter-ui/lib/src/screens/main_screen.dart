@@ -50,7 +50,10 @@ class _MainScreenState extends State<MainScreen> {
           icon: const Icon(Icons.home_outlined),
           selectedIcon: const Icon(Icons.home),
           appBarActions: appBarActions,
-          builder: (_) => const TabPlaceholder(icon: Icons.home, label: 'Home'),
+          builder: (_) => const TabPlaceholder(
+            icon: Icons.home,
+            label: 'Home (delivery test)',
+          ),
         ),
         AppShellTab(
           label: 'Activity',
