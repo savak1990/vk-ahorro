@@ -1,4 +1,4 @@
-.PHONY: release ui-list-ci require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: release preview-ci ui-list-ci require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -112,7 +112,7 @@ specs-check:
 domain-check:
 	@./scripts/domain-guard.sh
 
-## Apply branch protection, the labels and the release environment on GitHub
+## Apply branch protection and the Environments on GitHub, and remove the retired ci labels
 repo-settings:
 	@./scripts/repo-settings.sh
 
@@ -132,7 +132,11 @@ print-project:
 deploy-dev:
 	@./scripts/deploy-dev.sh $(VERSION)
 
-## Deploy one pull request to ahorro-pr. Usage: make preview-up PR=42 VERSION=0.2.3-pr-42
+## Run the preview workflow on this branch's pull request. Usage: make preview-ci ACTION=up|down
+preview-ci:
+	@gh workflow run preview.yml --ref $$(git branch --show-current) -f action=$(or $(ACTION),$(error ACTION is required: up or down))
+
+## Deploy one pull request to ahorro-pr from this machine. Usage: make preview-up PR=42 VERSION=0.2.3-pr-42
 preview-up:
 	@./scripts/preview.sh up $(PR) $(VERSION)
 
@@ -304,7 +308,7 @@ ui-install-android: require-env
 ui-install-ci: require-deployed-env
 	@./scripts/install-ci-apk.sh install $(ENV) $(ANDROID_DEVICE) $(if $(filter command line environment,$(origin VERSION)),$(VERSION))
 
-## List the 20 newest CI-built mobile artifacts. ENV=dev or ENV=prod narrows it to one channel
+## List the CI-built versions per channel, 20 newest each. ENV=dev or ENV=prod prints one channel
 ui-list-ci:
 	@./scripts/install-ci-apk.sh list $(filter-out local,$(ENV))
 

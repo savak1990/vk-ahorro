@@ -14,7 +14,7 @@ versions) and ADR 0010 (the pipeline reaching the cluster).
 |---|---|---|---|---|
 | `ahorro` | Argo CD | a released version, pinned | `ahorro.<fqdn>`, `api-ahorro.<fqdn>` | the platform's pin is bumped by hand |
 | `ahorro-dev` | the pipeline | the newest `main` build | `ahorro-dev.<fqdn>`, `api-ahorro-dev.<fqdn>` | every merge |
-| `ahorro-pr` | the pipeline | one release per labeled pull request | `ahorro-pr-<n>.<fqdn>` | a label is added or removed |
+| `ahorro-pr` | the pipeline | one release per previewed pull request | `ahorro-pr-<n>.<fqdn>` | the `preview` workflow is run, or the pull request closes |
 
 Each stage makes a stronger claim about the code than the one before it. A
 preview proves the change builds and runs. `ahorro-dev` proves it runs beside
@@ -144,31 +144,28 @@ Only a component whose inputs changed is **built**. A change under
 
 ## 3.1 Pull request
 
-`ci.yml` runs the checks. Every component publishes an image and a chart as
-`-pr-<n>`.
+`ci.yml` runs the checks and publishes nothing.
 
-A deployment happens only when the pull request carries the `ci:preview-web` label.
-That lives in its own workflow file, `preview.yml`, so a label event never
-restarts `ci.yml` — whose required status checks are maintained by hand, and
-one of which failing to report blocks every merge.
+A deployment happens only when somebody runs `preview.yml` on the pull
+request's branch (ADR 0012). It is its own workflow file, never a job in
+`ci.yml` — whose required status check is maintained by hand, and which
+failing to report blocks every merge.
 
-| Event | Condition | Action |
+| Trigger | Condition | Action |
 |---|---|---|
-| `labeled` | the label is `ci:preview-web` | install into `ahorro-pr` |
-| `opened` | the pull request already carries it | install |
-| `synchronize` | the pull request carries `ci:preview-web` | upgrade that release |
-| `unlabeled` | the label is `ci:preview-web` | uninstall |
-| `closed` | always | the same |
+| `workflow_dispatch`, `action: up` | the branch has an open pull request | publish `-pr-<n>.<sha>`, install into `ahorro-pr` or upgrade |
+| `workflow_dispatch`, `action: down` | the same | uninstall |
+| `pull_request: closed` | always | uninstall |
 
-The label is state, not an event: it answers "is this pull request deployed
-right now" by looking at the pull request, so a release nobody cleaned up is
-visible. `make repo-settings` creates the label.
+The branch names the pull request, so the run takes no number. A push does
+not upgrade a preview; a second `up` does.
 
-`opened` is there because a pull request created with the label already on it
-emits no `labeled` event, and would otherwise need the label removed and
-re-added before anything happened.
+"Is this pull request deployed right now" is answered on the pull request
+page: the `install` job names the `preview` Environment, so the page shows the
+branch as deployed, and the run comments with the version. Neither carries a
+link, because the link embeds the domain.
 
-**Nothing is published without the label.** `ci.yml` builds both images to
+**Nothing is published until somebody runs it.** `ci.yml` builds both images to
 prove the Dockerfiles work and pushes neither, and it holds no
 `packages: write`, so it cannot push even by mistake. Artifacts exist only for
 pull requests somebody actually previewed - which is also why they are never

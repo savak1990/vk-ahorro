@@ -145,7 +145,7 @@ environment. Mobile builds bake the same keys in with `--dart-define`.
 shape only.
 
 ```text
-  pull request ──▶ -pr-<n>    ──▶ ahorro-pr    (on the `preview` label)
+  pull request ──▶ -pr-<n>    ──▶ ahorro-pr    (when `preview` is run)
   merge        ──▶ -main.<sha>──▶ ahorro-dev   (every merge)
   release      ──▶ 0.3.0      ──▶ ahorro       (Argo, when the platform pin moves)
 ```
