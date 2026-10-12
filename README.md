@@ -479,13 +479,14 @@ is slower and larger, so what you demo should come from one of the other three.
 
 ```sh
 make ui-list-ci                                  # what exists right now
+make ui-list-ci ENV=prod                         # the same, one channel only
 make ui-install-ci ENV=dev                       # newest dev build
 make ui-install-ci ENV=prod                      # newest release build
 make ui-install-ci ENV=dev VERSION=0.2.2-main.8e7138f   # that exact one
 ```
 
-`ui-list-ci` prints every artifact that has not expired, with the date it was
-built. `VERSION` is the part of the artifact name after the backend, so
+`ui-list-ci` prints the 20 newest artifacts that have not expired, with the
+date each was built; `ENV=dev` or `ENV=prod` narrows it to that channel. `VERSION` is the part of the artifact name after the backend, so
 `ahorro-android-dev-0.2.2-main.8e7138f` is reached with
 `ENV=dev VERSION=0.2.2-main.8e7138f`. Omit `VERSION` and the newest wins.
 
