@@ -58,13 +58,13 @@ local:
 # rendered manifest unchanged, so Argo creates no pod at all.
 services:
   ahorro-api:
-    chartVersion: "0.2.1"
-    tag: "0.2.1"
+    chartVersion: "0.2.2"
+    tag: "0.2.2"
     hostPrefix: api-ahorro
     wave: 1
 
 web:
-  chartVersion: "0.2.1"
-  tag: "0.2.1"
+  chartVersion: "0.2.2"
+  tag: "0.2.2"
   hostPrefix: ahorro
   wave: 2
