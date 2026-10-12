@@ -51,18 +51,29 @@ version="${4:-}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# With a version the name is exact; without one the pattern takes the newest.
-# Neither form needs a run id: gh searches every workflow, which is what lets
-# one command reach both deploy.yml's dev builds and release.yml's prod ones.
+# Resolve a single artifact name first, then download that one.
+#
+# Not `gh run download --pattern`: it keeps the newest run *per name*, and
+# every version is its own name, so a pattern pulls down every build that has
+# not expired and leaves the choice to whatever `find` happens to hit. Asking
+# the API which is newest is the only way to mean "newest".
 if [ -n "$version" ]; then
-  echo "INSTALL-CI: looking for ahorro-android-$env-$version."
-  found=$(gh run download --name "ahorro-android-$env-$version" --dir "$tmp" 2>&1) || found=FAIL
+  name="ahorro-android-$env-$version"
 else
-  echo "INSTALL-CI: looking for the newest ahorro-android-$env-* artifact."
-  found=$(gh run download --pattern "ahorro-android-$env-*" --dir "$tmp" 2>&1) || found=FAIL
+  echo "INSTALL-CI: finding the newest $env build."
+  name="$(gh api "repos/$repo/actions/artifacts?per_page=100" \
+    --jq "[.artifacts[]
+           | select(.name | startswith(\"ahorro-android-$env-\"))
+           | select(.expired == false)]
+          | sort_by(.created_at) | last | .name // empty")"
 fi
 
-if [ "$found" = FAIL ]; then
+if [ -n "$name" ]; then
+  echo "INSTALL-CI: downloading $name."
+  gh run download --name "$name" --dir "$tmp" >/dev/null 2>&1 || name=""
+fi
+
+if [ -z "$name" ]; then
   echo "INSTALL-CI: no such artifact. A dev build comes from a merge that" >&2
   echo "INSTALL-CI: touched the flutter filter; a prod build comes from a" >&2
   echo "INSTALL-CI: release. They expire after 30 and 90 days." >&2
@@ -79,15 +90,9 @@ fi
 apk="$(find "$tmp" -name '*.apk' -print -quit)"
 [ -n "$apk" ] || { echo "INSTALL-CI: the artifact holds no APK." >&2; exit 1; }
 
-# A single --name extracts into the root with no artifact directory, while
-# --pattern always makes one. So the version is only ever read back on the
-# pattern path - on the other it is what was asked for.
-if [ -n "$version" ]; then
-  got="$version"
-else
-  dir="$(find "$tmp" -maxdepth 1 -type d -name "ahorro-android-$env-*" -print -quit)"
-  got="$(basename "$dir" | sed "s/^ahorro-android-$env-//")"
-fi
+# A single --name extracts into the root with no artifact directory, so the
+# name resolved above is the only record of which build this is.
+got="${name#"ahorro-android-$env-"}"
 
 serial="$("$REPO_ROOT/scripts/android-emulator.sh" "$device")"
 echo "INSTALL-CI: installing $got on $serial, built against $env."
