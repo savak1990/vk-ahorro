@@ -1,12 +1,29 @@
 ---
 id: "DEPLOY-040"
 status: "DRAFT"
-updated: "2026-09-26"
+updated: "2026-10-12"
 ---
 # 040 — iOS: signed build to the TestFlight internal group
 
-**Status note:** Draft. The Apple Developer Program membership does not exist
-yet; enrollment comes first and can take days.
+**Status note:** Draft. **Requirement 0 is answered (2026-10-12), by hardware.**
+The team is a free Personal Team, not a Developer Program membership, so this
+spec costs $99 and the enrollment has not been bought. Everything else here
+waits on that decision.
+
+Two things fell out of answering it. `47Y43AMN4K` was never this operator's
+team: it arrived with the import commit `b783027`, belongs to the previous
+author, and no account on this machine could sign against it. It is now
+`7YZNW7LF73`, the operator's own Personal Team. And a free team is enough for
+`core/100` req 3a, which was verified the same day on a physical iPhone 14 Pro
+running iOS 27.0.1, over wifi.
+
+What a free team cannot do is the whole of this spec: no distribution
+certificate, no App Store provisioning profile, no TestFlight. Its profile
+lasts seven days and is locked to registered devices, and there is no headless
+way to mint one on a runner.
+
+The pull-request build of [`ci/030`](../../ci/030-P-flutter-gates/spec.md) is
+delivered anyway, because `--no-codesign` needs no team.
 
 **Complexity:** Medium
 **Risk:** Medium — code signing on a runner is the classic failure point; manual signing with a committed export options file is the most predictable form.
@@ -27,11 +44,11 @@ submission, Xcode Cloud.
 
 ## Requirements
 
-0. Before any money moves, establish what `DEVELOPMENT_TEAM = 47Y43AMN4K` in `ios/Runner.xcodeproj` actually is. A free personal team yields a committed team id exactly as a paid one does, so the id proves nothing about the membership. Xcode > Settings > Accounts names the team type, and `developer.apple.com/account` shows whether a Developer Program membership is active. A personal team installs on the operator's own iPhone with a seven-day profile and cannot reach TestFlight, so this answer decides whether this spec costs nothing or $99, and `core/100` req 3a is reachable either way. *(Added: `core/100` req 3 claimed the signing team is left empty; it is not, and nobody had checked which kind it is.)*
+0. Before any money moves, establish what `DEVELOPMENT_TEAM = 47Y43AMN4K` in `ios/Runner.xcodeproj` actually is. A free personal team yields a committed team id exactly as a paid one does, so the id proves nothing about the membership. Xcode > Settings > Accounts names the team type, and `developer.apple.com/account` shows whether a Developer Program membership is active. A personal team installs on the operator's own iPhone with a seven-day profile and cannot reach TestFlight, so this answer decides whether this spec costs nothing or $99, and `core/100` req 3a is reachable either way. *(Added: `core/100` req 3 claimed the signing team is left empty; it is not, and nobody had checked which kind it is.)* *(Answered 2026-10-12: free Personal Team. The id in the project was the previous author's and is now `7YZNW7LF73`.)*
 
 1. Runbook, once, by hand: enroll as an individual (legal name, two-factor Apple ID); create the app record for `com.vkdev1.ahorro` in App Store Connect; create an App Store Connect API key with the App Manager role and download the `.p8` once; create an Apple Distribution certificate and export it as `.p12` with a password; create an App Store provisioning profile for the bundle id; create an internal tester group and add the testers as App Store Connect users.
 2. `release` Environment secrets, by name: `APPSTORE_ISSUER_ID`, `APPSTORE_API_KEY_ID`, `APPSTORE_API_PRIVATE_KEY` (the `.p8` text), `IOS_DIST_CERT_BASE64`, `IOS_DIST_CERT_PASSWORD`, `IOS_PROFILE_BASE64`.
-3. `flutter-ui/ios/ExportOptions.plist` MUST be committed with `method: app-store-connect`, `signingStyle: manual`, `teamID`, and the profile name for the bundle id. The team id is already in the Xcode project and is a public identifier; core 100 req 3's "team is left empty" is amended by this spec.
+3. `flutter-ui/ios/ExportOptions.plist` MUST be committed with `method: app-store-connect`, `signingStyle: manual`, `teamID`, and the profile name for the bundle id. The team id is already in the Xcode project and is a public identifier; core 100 req 3's "team is left empty" is amended by this spec. *(Amended: the id in the project was the previous author's. It is `7YZNW7LF73` from 2026-10-12, and a paid membership issues its own team id, which replaces it again at enrollment.)*
 4. `make ui-build-ipa` runs `flutter build ipa --release --export-options-plist=ios/ExportOptions.plist` and accepts `BUILD_NUMBER=`.
 5. `mobile-ios.yml` on `macos-latest` MUST: import the certificate into a temporary keychain with `apple-actions/import-codesign-certs` (SHA-pinned); install the profile under `~/Library/MobileDevice/Provisioning Profiles/`; run `make ui-build-ipa BUILD_NUMBER=${{ github.run_number }} ENV=prod`; upload with `apple-actions/upload-testflight-build` (SHA-pinned, default App Store Connect API backend) using the three `APPSTORE_*` secrets; remove the keychain and the profile in an `always()` step.
 6. The build number rule is 030 req 6: `github.run_number` of `deploy.yml`, passed in as an input, shared by both stores, so one run yields one number on both. The rename hazard is the same.

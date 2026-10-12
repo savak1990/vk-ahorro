@@ -1,7 +1,7 @@
 ---
 id: "CORE-100"
 status: "DRAFT"
-updated: "2026-10-08"
+updated: "2026-10-12"
 ---
 # 100 — Flutter on Android, iOS, and web
 
@@ -16,6 +16,13 @@ exist. Requirement 6 is done.
 
 The two sign-in acceptance checks are done (2026-10-08), on the operator's own
 devices, together with 080's.
+
+Requirement 3a is verified on hardware (2026-10-12): the app builds, installs
+and runs on a physical iPhone 14 Pro on iOS 27.0.1, over wifi rather than USB,
+against `ENV=dev`. `make ios-device-id` prints the attached iPhone's UDID for
+`DEVICE=`, through `xcrun devicectl` rather than `flutter devices`, which is
+twenty times slower because it also scans for wireless and web targets. The
+signing team is the operator's own Personal Team; see `deploy/040` req 0.
 
 Requirements 2a, 2b and 3a are implemented (2026-10-08). `DEVICE` names an
 emulator, an `adb` serial over USB or wifi, or an iOS device; Android reaches

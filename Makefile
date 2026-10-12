@@ -1,4 +1,4 @@
-.PHONY: release preview-ci ui-list-ci require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
+.PHONY: release preview-ci ui-list-ci require-env require-deployed-env android-keystore ui-install-ci ui-build-aab ui-build-ios ui-build-apk ui-install-android ui-uninstall-android help go-build go-test go-lint go-run specs-check domain-check repo-settings version print-project deploy-dev preview-up preview-down preview-url kubeconfig gitops-lint gitops-template gitops-check cognito-config token buildx-init image-build image-push images-push require-svc require-chart helm-lint helm-template helm-package helm-push emulator-android emulator-ios ios-device-id emulator-stop ui-get ui-fix ui-format ui-analyze ui-test ui-build-web ui-build-android ui-run-web ui-run-android ui-run-ios forward-up forward-down ui-config
 
 .DEFAULT_GOAL := help
 
@@ -294,6 +294,12 @@ ui-build-apk: require-env ui-config
 ui-build-aab: require-deployed-env ui-config
 	cd $(UI_DIR) && flutter build appbundle --release --build-name=$(VERSION) $(if $(BUILD_NUMBER),--build-number=$(BUILD_NUMBER)) $(MOBILE_DEFINES)
 
+# require-env, not require-deployed-env: an unsigned app reaches no store, so
+# it takes the same exemption as ui-build-apk.
+## Build the unsigned iOS app against $ENV, to prove it compiles
+ui-build-ios: require-env ui-config
+	cd $(UI_DIR) && flutter build ios --release --no-codesign --build-name=$(VERSION) $(if $(BUILD_NUMBER),--build-number=$(BUILD_NUMBER)) $(MOBILE_DEFINES) $(LOCAL_API)
+
 # The reverse lives here and not on the build: ENV=local is a legitimate way to
 # sideload against `make go-run`, and this is the target that knows the device.
 ## Install the release APK onto $DEVICE and forward $PORT back to this machine
@@ -319,6 +325,10 @@ emulator-android:
 ## Start the iOS $DEVICE without waiting for it to boot
 emulator-ios:
 	@$(CURDIR)/scripts/ios-simulator.sh "$(IOS_TARGET)" nowait
+
+## Print the UDID of the attached physical iPhone, to pass as DEVICE
+ios-device-id:
+	@xcrun devicectl list devices | awk '/connected/ && /physical/ { match($$0, /[0-9A-Fa-f]{8}-[0-9A-Fa-f]{16}/); print substr($$0, RSTART, RLENGTH) }' | head -1 | grep . || { echo "no physical iPhone attached" >&2; exit 1; }
 
 ## Run the Flutter app on the Android $DEVICE, emulator or handset, against $ENV
 ui-run-android: ui-config

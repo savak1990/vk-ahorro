@@ -1,12 +1,18 @@
 ---
 id: "DEPLOY-020"
 status: "DRAFT"
-updated: "2026-10-11"
+updated: "2026-10-12"
 ---
 # 020 — Mobile artifacts on every channel
 
-**Status note:** Draft. The Android half is delivered (2026-10-11); the iOS
-half waits on [`deploy/040`](../040-P-ios-testflight/spec.md) req 0.
+**Status note:** Draft. The Android half is delivered (2026-10-11). The iOS
+half no longer waits on [`deploy/040`](../040-P-ios-testflight/spec.md) req 0,
+which was answered on 2026-10-12: it waits on the $99 enrollment that answer
+revealed. A free team signs nothing a runner can produce, so `mobile-ios.yml`
+would publish an artifact no tester can install, and no `ui-install-ci`
+equivalent can exist for it. The pull-request build of
+[`ci/030`](../../ci/030-P-flutter-gates/spec.md) is unaffected and is
+delivered; it proves compilation and signs nothing.
 
 **This spec changed shape twice, and the second time its premise went.** It was
 "the deploy button and the release labels": a `workflow_dispatch` with
